@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and click to start. Media is read from the paths in `README.md` (`art/models/<name>.glb`, `audio/<file>.mp3`, `audio/voice/lines/<line id>_<speaker>.wav`). Files are found when the dev server starts, so restart `npm run dev` after adding or removing media.
+Open http://localhost:5173 and click to start. Media is read from the paths in `README.md` (`art/models/<name>.glb`, `audio/<file>.mp3`, `audio/voice/lines/<line id>_<speaker>.wav`); with access to the private repository `hskelp9527-pixel/fries-tea-party-assets`, copy its `art/` and `audio/` folders into the root of this checkout (they are gitignored, never commit them here). Files are found when the dev server starts, so restart `npm run dev` after adding or removing media.
 
 `npm run build` writes a static site to `dist/`, with whatever media is on disk bundled in.
 
@@ -44,15 +44,20 @@ WASD to walk, mouse to look (click the game to capture the mouse, Esc to release
   - **Frozen magic:** teacups, hats, spoons, plates and pocket watches floating at real size; tea frozen in glossy arcs from four teapot spouts into cups, syrup in four arcs from the fountain's bowl, golden syrup drops hanging round the fountain, and larger petals that catch the light.
 - **Models:** each object loads `art/models/<name>.glb` when present and its boxes otherwise, with no code change. Colliders come from a mesh named `<name>_collider` in the glb, or else from the boxes.
 - **Controller and camera:** third-person controller on Rapier's kinematic character controller; V toggles first person. The third-person camera sweeps a ball back from Fries's eye and stops at the first solid, so it pulls in rather than entering the canopy or anything else.
-- **Sizes:** pink tea shrinks, blue tea grows, cake restores. Scale, eye height, field of view, speed, jump, reach, footstep pitch, camera shake and the pitch at which Fries hears the others ease together over about a second. The first shrink and the first grow cut to first person (the Hatter leans over a tiny Fries; the Hatter and the March Hare shout up at a giant one); after that the view stays where the player leaves it.
-- **Gears:** three gears in any order. They are taken by reach plus a line-of-sight ray, so the geometry decides the size: the tablecloth hangs to 0.3 m (gear 1, small); a 0.35 by 0.3 m crack at the foot of the fountain basin's west wall leads through a tunnel to a hollow under the fountain (gear 2, small); the tallest hat on the rack is out of reach unless Fries is big, standing at the top of the terrace steps (gear 3). Gears lie flat. Each gear wakes its own layer with a placeholder effect (tea steams and the frozen petals fall; syrup flows and butterflies take off; the bushes sway), plays its GR line, and moves the explore music a third of the way from frozen to awake. With all three, E at the watch mends it and starts the song.
+- **Sizes:** pink tea shrinks, blue tea grows, cake restores (E when a pink or blue teacup on the table, or a cake, is offered). Scale, eye height, field of view, speed, jump, reach, footstep pitch, camera shake and the pitch at which Fries hears the others ease together over about a second. The first shrink and the first grow cut to first person (the Hatter leans over a tiny Fries; the Hatter and the March Hare shout up at a giant one); after that the view stays where the player leaves it.
+- **Gears:** three 6 cm gears in any order, each for one size: under the tablecloth, which hangs to 0.3 m (gear 1, small); in a hollow under the fountain, reached through a 0.35 by 0.3 m crack and tunnel at the foot of the basin's west wall (gear 2, small); on the tallest hat at the front edge of the cottage porch, at a big Fries's chest height from the top of the terrace steps (gear 3, big). Fries takes a gear when he is that size, near it on the level of its stand point and can see it; the geometry keeps the other sizes away too. Each gear wakes its own layer with a placeholder effect (tea steams and the frozen petals fall; syrup flows and butterflies take off; the bushes sway), plays its GR line, and moves the explore music a third of the way from frozen to awake. With all three, E at the watch mends it and starts the song.
 - **Hints and barks:** the Dormouse sleep-talks a hint for the nearest missing gear after 45 s without progress, clearer each time, then every 35 s. EX-10 plays the first time the tea is in reach. Ambient and later size lines come from one table of conditions in `src/explore.js`, each at most once, only after 8 s of quiet.
 - **Animation:** one `AnimationMixer` per character model, crossfading between clips by name in 0.2 s (`src/animation.js`). Clips are looked up by these names: `idle`, `walk`, `run`, `jump`, `drink`, `pick_up`, `reach`, `look_around`, `surprised`, `clap`, `cheer`, `dance_swing`, `dance_silly`, `talk`. At load, every clip keeps the vertical track of `mixamorig:Hips` and loses its horizontal travel; the ground speed that travel implied is kept per clip.
   - Fries idles when standing, walks or runs by speed and jumps while airborne. Walk and run play at the rate that makes their recorded ground speed match his real speed at his current size, so the feet do not slide. After 8 s standing still he looks around once, then idles.
-  - Fries's one-shots, each returning to locomotion: `drink` when he drinks, `pick_up` for something at or below his knee (the two ground gears, which now lie flat) and `reach` for anything higher (gear 3, the page in the opening and the ending), `surprised` on the first shrink and the first grow, `clap` on every scored tap, `cheer` at 6:01. `talk` plays while one of his own lines does, when he is not moving.
+  - Fries's one-shots, each returning to locomotion: `drink` for the teas and cakes, `pick_up` for gears 1 and 2, `reach` for gear 3, the page in the ending and (without touching it) the watch in the opening, `surprised` on the first shrink and the first grow, `clap` on every scored tap, `cheer` at 6:01. `talk` plays while one of his own lines does, when he is not moving.
   - First person hides Fries from the camera but not from the sun's shadow camera (he is on layer 1), so his animated shadow stays.
   - The Hatter, the March Hare and the Dormouse idle, talk while their own line plays, and dance in the second (`dance_swing`) and third (`dance_silly`) passes of the song (`src/cast.js`).
   - A box placeholder, or a glb without a given clip, simply plays nothing for that clip.
+- **Hands and props** (`src/hands.js`): props meet Fries's hand and never pass through him or come from thin air. Before a one-shot that touches a prop he walks to the prop's stand point and turns to face it, so his palm meets the prop at the contact time in `docs/fries_hand_contacts.json`; the prop then follows the hand bone, set in the palm by its grip offset. Stand points, facings, grips and the size each prop is for are in `src/layout.js`.
+  - `pick_up` (gears 1 and 2): into the right hand at contact (2.33 s), kept to the end of the clip, then flown to the watch.
+  - `reach` (gear 3 and the page) is at chest height, not up: gear 3 sits where a big Fries's right palm comes at contact (4.0 s), standing at the top of the terrace steps; the page flies from the watch into his palm, arriving and attaching at contact, and stays in his hand to the freeze frame.
+  - `drink` (teacups and cakes): the clip holds the cup at his waist from its start, so the cup flies the short way into his left hand in the first 0.6 s, goes to his mouth (4.88 s) and flies back to the tray at the end; then he changes size. The teapots pour frozen tea into the teacups.
+  - A box Fries has no hand bones: there a held prop sits where the clip's palm is at contact.
 - **Floating teacups and hats:** they drift on non-repeating paths, teacups glide out of Fries's way, hats turn to look at him, and every gear adds a batch and livelier motion.
 - **Song:** three passes driven by the measured beats in `audio/04t_little_bat_a.beats.json`. Every table cup, floating object and swaying bush pulses on each beat. Taps are scored against the nearest beat within 120 ms, timed from the key event on the audio output clock; taps in the first pass are ignored. SG-02 to SG-05 are cued on beats, the light rises each pass, the March Hare and the Dormouse join from the second pass, and the camera cranes up in the last.
 - **Ending:** after SG-06 and a short silence, every clock jumps to 6:01, the sky turns pink, the Dormouse goes into the pink teapot, the page flies to Fries, the tree door opens, Fries walks through, the roses appear for the first time, and the render loop stops on that frame.
@@ -77,6 +82,7 @@ WASD to walk, mouse to look (click the game to capture the mouse, Esc to release
 | Sun, sky, fog, hemisphere fill, bloom and the colour grade | `src/scene.js` |
 | Everything that changes with size, walking and running speed | `SIZES` and `RUN` in `src/player.js` |
 | Which clip plays when | `animate()` in `src/player.js`, `src/cast.js` |
+| Stand points, facings, grips and sizes of props | `gears`, `drinks` and `page` in `src/layout.js` |
 | Bark conditions, hint timings, the watch | `src/explore.js` |
 | Opening and ending scripts | `src/story.js` |
 | Song passes, line cues, light per pass, camera keyframes, tap window | top of `src/song.js` |
@@ -106,6 +112,7 @@ A `<name>_collider` mesh must be indexed (Blender's glTF export always is) and m
 | `src/player.js` | Controller, sizes, cameras, reach, Fries's animation |
 | `src/animation.js` | Clip playback with crossfades |
 | `src/cast.js` | The other characters' animation |
+| `src/hands.js` | Props in Fries's hands, the one-shots that touch them |
 | `src/explore.js` | Drinks, first shrink and grow, gears, hints, barks, mending the watch |
 | `src/floating.js` | Floating teacups and hats |
 | `src/song.js` | The song and tap scoring |
@@ -124,6 +131,20 @@ The same three cameras before and after the space, levels and atmosphere pass, r
 | Eye level down the long table: position (0.6, 1.5, 5), looking at (0, 1.2, -6) | ![](images/before-2.jpg) | ![](images/after-2.jpg) |
 | From the fountain side toward the cottage: position (5.5, 2.4, 2.5), looking at (-8, 2.2, -3) | ![](images/before-3.jpg) | ![](images/after-3.jpg) |
 
+## Hands at the contact frame
+
+The real `fries.glb`, rendered on WebGPU at the frame where each prop meets the hand: the real game sequence runs on a freshly loaded page (dev server restarted, so no module is loaded twice) and the render loop is stopped the moment the prop is taken into the hand (for the teacup, as the cup reaches his mouth at 4.88 s). The long table (gear 1) and the fountain (gear 2) are hidden in their shots so the camera can see under them.
+
+| Prop | Front | Side |
+|---|---|---|
+| Gear 1, `pick_up`, small Fries under the table | ![](images/contact-gear1-front.jpg) | ![](images/contact-gear1-side.jpg) |
+| Gear 2, `pick_up`, small Fries in the hollow under the fountain | ![](images/contact-gear2-front.jpg) | ![](images/contact-gear2-side.jpg) |
+| Gear 3, `reach`, big Fries at the top of the terrace steps | ![](images/contact-gear3-front.jpg) | ![](images/contact-gear3-side.jpg) |
+| Blue teacup, `drink`, at his mouth | ![](images/contact-teacup-front.jpg) | ![](images/contact-teacup-side.jpg) |
+| Book page, `reach`, in the ending | ![](images/contact-page-front.jpg) | ![](images/contact-page-side.jpg) |
+
+Measured at those frames (metres; the hand bone is the wrist, the prop sits in the palm): gear 1 held 1 mm from where it rested, gear 3 with the hand bone exactly where the clip data puts it and the gear 1.6 cm from its rest at giant scale, the page 6 mm from the predicted palm, the teacup at 0.94 m, his mouth.
+
 ## Tested
 
 In headless Chromium with no media present, under software rendering at a few to 14 frames a second. Most runs used the WebGL 2 fallback; WebGPU runs through SwiftShader with `--enable-unsafe-webgpu --enable-features=Vulkan --use-vulkan=swiftshader --use-webgpu-adapter=swiftshader --disable-vulkan-surface`, which was used to start the game, walk, and take the screenshots.
@@ -138,4 +159,6 @@ In headless Chromium with no media present, under software rendering at a few to
 - After the space, levels and atmosphere pass, with the same tests: normal and big Fries still cannot take gears 1 and 2 nor normal Fries gear 3 (also from the porch); small Fries walks from the table under the cloth for gear 1 and on through the crack and tunnel for gear 2; big Fries walks from the tea tray past the fences, straight up the terrace steps and takes gear 3; normal Fries climbs the terrace, the fountain and the tree-door steps. The ending walks up the door steps into the tree, turns sky and grade pink and freezes, on the WebGL fallback.
 - `npm run build` succeeds; the bundle is about 5 MB (1.9 MB gzipped), mostly three.js's WebGPU build and Rapier's inlined WebAssembly.
 
-Not run here: real media, real models, a full playthrough on WebGPU, and a playthrough by hand.
+- With the real media from the assets repository: the opening, the drink of pink tea (the cup into his left hand, to his mouth and back to the tray), gear 1, the contact frames above, and the ending to the freeze frame with the page still in his hand.
+
+Not run here: a full playthrough on WebGPU in one go, the Hatter, March Hare and Dormouse models (not delivered yet), and a playthrough by hand.
