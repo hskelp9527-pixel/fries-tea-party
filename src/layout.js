@@ -310,13 +310,14 @@ const row = (model, [x0, z0], [x1, z1], length) => {
 }
 const bed = (x, z, rot = 0) => ({ model: 'flower_bed', pos: [x, 0, z], rot })
 const cypresses = ([x0, z0], [x1, z1], n) => Array.from({ length: n }, (_, i) => ({
-  model: 'cypress', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], scale: 0.85 + i * 37 % 26 / 100, solid: false,
+  model: 'cypress', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], scale: 0.85 + i * 37 % 26 / 100, solid: false, shadow: false,
 }))
 const path = ([x0, z0], [x1, z1], n) => Array.from({ length: n }, (_, i) => ({
   model: 'stone_path', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], rot: i * 37 % 40 - 20, solid: false,
 }))
 
-// Every fixed object. `solid: false` leaves it without colliders; `scale` is uniform.
+// Every fixed object. `solid: false` leaves it without colliders, `shadow: false` keeps it from casting a
+// shadow (the backdrop cypresses would otherwise darken the whole garden under the low sun); `scale` is uniform.
 export const placed = [
   { model: 'big_tree', pos: [0, 0, -12] },
   { model: 'tree_door', pos: [-0.5, 0.45, -10.24] },

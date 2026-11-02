@@ -21,7 +21,7 @@ const CUES = [
 ]
 const WINDOW = 0.12 // seconds either side of a beat that count as a hit
 // Light rises with each pass, since the three passes are about equally loud.
-const LIGHT = [[0.9, 1.6], [1.3, 2.4], [1.8, 3.2]] // [hemisphere, sun] intensity per pass
+const LIGHT = [[1.2, 2.2], [1.6, 3], [2.1, 3.8]] // [hemisphere, sun] intensity per pass
 // Camera keyframes on beats; each holds until the next one, or glides to it. The crane in the final chorus
 // first backs out from under the canopy, then rises over the garden.
 const SHOTS = [

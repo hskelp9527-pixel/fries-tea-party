@@ -1,4 +1,4 @@
-import { renderer, scene, camera, webgpu } from './scene.js'
+import { renderer, camera, webgpu, pipeline } from './scene.js'
 import { world } from './physics.js'
 import { updateGarden } from './garden.js'
 import { player, updatePlayer } from './player.js'
@@ -39,5 +39,5 @@ renderer.setAnimationLoop(now => {
   updateSong()
   updateCast(dt)
   world.step()
-  renderer.render(scene, camera)
+  pipeline.render()
 })

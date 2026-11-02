@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { renderer, scene, camera, SKY, hemi } from './scene.js'
+import { renderer, scene, camera, SKY, hemi, sky, grade } from './scene.js'
 import { things, gears, clocks, drinks, wake } from './garden.js'
 import { model } from './models.js'
 import { start, song } from './layout.js'
@@ -13,7 +13,7 @@ import { game } from './state.js'
 
 const DEG = Math.PI / 180
 const v = (...a) => new THREE.Vector3(...a)
-const PINK = new THREE.Color(0xf6c4d4)
+const PINK = new THREE.Color(0xf6c4d4), WHITE = new THREE.Color(1, 1, 1), PINK_GRADE = new THREE.Color(1, 0.86, 0.92)
 
 // Starts the chapter. `from` (the ?start= parameter) skips ahead for testing: explore, song or ending.
 export async function begin(from) {
@@ -122,7 +122,7 @@ async function ending() {
   document.getElementById('hud').textContent = ''
   const watch = things.pocket_watch, page = things.book_page, door = things.tree_door
 
-  // 6:01: the click, every clock moves on a minute, the sky turns pink.
+  // 6:01: the click, every clock moves on a minute, the sky and the whole picture turn pink.
   await shot(v(-2.8, 2.2, -1.8), v(0, 1.2, -8))
   burst(4, 1)
   for (const c of clocks) {
@@ -131,10 +131,12 @@ async function ending() {
   }
   setMusic({ ending: 1 }, 0)
   act('cheer')
+  const hemiSky = hemi.color.clone()
   tween(3, t => {
-    scene.background.lerpColors(SKY, PINK, t)
+    sky.material.color.lerpColors(WHITE, PINK, t)
     scene.fog.color.lerpColors(SKY, PINK, t)
-    hemi.color.lerpColors(new THREE.Color(0xfff4e6), PINK, t)
+    hemi.color.lerpColors(hemiSky, PINK, t)
+    grade.value.lerpColors(WHITE, PINK_GRADE, t)
   })
   await say('ED-01')
 

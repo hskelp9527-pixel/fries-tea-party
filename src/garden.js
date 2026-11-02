@@ -20,13 +20,14 @@ for (const card of layout.backdrop) {
   scene.add(mesh)
 }
 
-function place({ model: name, pos, rot = 0, scale = 1, solid = true }) {
+function place({ model: name, pos, rot = 0, scale = 1, solid = true, shadow = true }) {
   const object = model(name)
   object.position.set(...pos)
   object.rotation.y = rot * DEG
   object.scale.setScalar(scale)
   scene.add(object)
   if (solid) addColliders(name, object)
+  if (!shadow) object.traverse(o => { o.castShadow = false })
   return object
 }
 
