@@ -101,7 +101,7 @@ export function updateCast(dt) {
     play(m, line)
     m.anim.mixer.update(dt)
     if (!m.armature) continue
-    if (m.seated) lift.set(0, stage[m.name].seat - m.object.position.y - m.rests.sitting.y, 0)
+    if (m.seated && m.anim.current.getClip().name.startsWith('sit_')) lift.set(0, stage[m.name].seat - m.object.position.y - m.rests.sitting.y, 0)
     else lift.copy(m.rests[m.anim.current.getClip().name] ?? lift.set(0, 0, 0)).negate()
     m.armature.position.lerp(lift, Math.min(1, dt * 10))
   }

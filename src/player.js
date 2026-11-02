@@ -42,7 +42,7 @@ scene.add(player.mesh)
 // it, so he still casts his animated shadow.
 player.mesh.traverse(o => o.layers.set(1))
 camera.layers.enable(1)
-const anim = new Animator(player.mesh, 'fries')
+export const anim = new Animator(player.mesh, 'fries')
 
 const keys = new Set()
 let jump = false
@@ -252,19 +252,3 @@ function sees(point) {
   return world.castRay(ray, length, true, undefined, undefined, collider) === null
 }
 
-// ?anims shows a row of buttons across the top to try each of Fries's clips by hand and judge the blends
-if (new URLSearchParams(location.search).has('anims')) {
-  const bar = document.createElement('div')
-  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10;display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#0009'
-  for (const name of Object.keys(anim.actions)) {
-    const button = document.createElement('button')
-    button.textContent = name
-    button.style.cssText = 'font:14px sans-serif;padding:6px 10px;cursor:pointer'
-    button.addEventListener('click', event => {
-      event.stopPropagation()
-      act(name)
-    })
-    bar.append(button)
-  }
-  document.body.append(bar)
-}

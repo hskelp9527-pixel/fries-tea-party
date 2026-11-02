@@ -12,6 +12,9 @@ import { updateSong } from './song.js'
 import { updateCast } from './cast.js'
 import { updateHands } from './hands.js'
 
+// ?anims: buttons to try every character's clips by hand.
+if (new URLSearchParams(location.search).has('anims')) import('./anims.js')
+
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
 camera.position.set(-6, 9, 12)
