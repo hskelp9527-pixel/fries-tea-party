@@ -4,7 +4,7 @@ import { model } from './models.js'
 import { floating } from './layout.js'
 import { player } from './player.js'
 import { game, hop } from './state.js'
-import { meanSize } from './garden.js'
+import { meanSize, keepOut } from './garden.js'
 
 // Teacups, hats, spoons, plates and pocket watches drifting in the air on paths that never repeat. Teacups
 // glide out of Fries's way, hats turn to look at him, everything pulses on the beat of the song, and every
@@ -68,6 +68,7 @@ export function updateFloating(dt) {
     } else o.rotation.y += it.spin * dt
     o.rotation.z = Math.sin(t * 0.7) * 0.15 + hop(it.seed, it.extent * it.size, offset)
     o.position.add(offset)
+    keepOut(o.position, it.extent * it.size / 2)
     o.scale.setScalar(it.size * it.grow * (1 + 0.3 * game.pulse))
   }
 }

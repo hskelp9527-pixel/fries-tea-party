@@ -500,6 +500,17 @@ export const zones = {
   cottage: { pos: [-8, -2], r: 4.5 },
 }
 
+// Room kept clear of floating things, falling petals and steam: the cast at their seats and song spots and
+// Fries at his song spot, as upright cylinders [x, z, radius, bottom, top].
+export const keepClear = [
+  [-1.35, -6.8, 0.35, 0, 1.7], // the Hatter in his armchair
+  [1.35, -7.4, 0.35, 0, 1.8], // the March Hare in his armchair
+  [-0.1, -6.3, 0.3, 0.75, 2.6], // the Hatter on the table in the song
+  [2.3, -7.4, 0.35, 0, 1.8], // the March Hare beside his chair in the song
+  [0.1, -7.9, 0.2, 0.75, 1.1], // the Dormouse on its plate
+  [-1.15, -4.2, 0.3, 0, 1.35], // Fries at his song spot
+]
+
 // Where the world-waking effects sit.
 export const effects = {
   // Tea frozen mid-pour from the teapots' spouts into cups: from, to and how high the arc rises

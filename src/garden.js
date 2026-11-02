@@ -33,6 +33,17 @@ for (const entry of layout.placed) {
   if (entry.onTable) onTable.set(entry, object)
 }
 
+// Pushes a point sideways out of the room kept clear around the cast and Fries's song spot, `margin` further.
+export function keepOut(p, margin) {
+  for (const [x, z, r, bottom, top] of layout.keepClear) {
+    const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz), clear = r + margin
+    if (d < clear && p.y > bottom - margin && p.y < top + margin) {
+      p.x = x + dx / d * clear
+      p.z = z + dz / d * clear
+    }
+  }
+}
+
 // The mean of an object's width, height and depth.
 export const meanSize = object => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).toArray().reduce((a, b) => a + b) / 3
 things.roses.visible = false
@@ -130,6 +141,7 @@ const petal = Array.from({ length: petals.count }, () => ({
   fall: 0.2 + Math.random() * 0.2,
   phase: Math.random() * 6,
 }))
+for (const p of petal) keepOut(p.pos, 0.05)
 const dummy = new THREE.Object3D()
 function placePetals() {
   petal.forEach((p, i) => {
@@ -184,6 +196,7 @@ export function updateGarden(dt, time) {
       p.age = Math.min(1, p.age + dt / 2)
       p.mesh.visible = p.age < 1
       p.mesh.position.y += dt * 0.25
+      keepOut(p.mesh.position, 0.05)
       p.mesh.scale.setScalar(0.07 * Math.sin(p.age * Math.PI))
     }
     for (const p of petal) {
@@ -192,6 +205,7 @@ export function updateGarden(dt, time) {
       p.turn.x += dt
       p.turn.z += dt * 0.7
       if (p.pos.y < 0.02) p.pos.y = P.center[1] + P.size[1] / 2
+      keepOut(p.pos, 0.05)
     }
     placePetals()
   }
