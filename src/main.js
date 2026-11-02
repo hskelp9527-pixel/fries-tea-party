@@ -1,10 +1,11 @@
 import { renderer, scene, camera, webgpu } from './scene.js'
 import { world } from './physics.js'
-import './garden.js'
+import { updateGarden } from './garden.js'
 import { player, updatePlayer } from './player.js'
 import { ctx } from './audio.js'
 import { updateTweens } from './tweens.js'
-import { begin, updateStory } from './story.js'
+import { begin } from './story.js'
+import { updateExplore } from './explore.js'
 
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
@@ -22,13 +23,15 @@ renderer.domElement.addEventListener('click', () => {
   if (player.control) renderer.domElement.requestPointerLock()
 })
 
-let last = 0
+let last = 0, time = 0
 renderer.setAnimationLoop(now => {
   const dt = Math.min((now - last) / 1000, 0.05)
   last = now
+  time += dt
   updateTweens(dt)
   updatePlayer(dt)
-  updateStory(dt)
+  updateExplore(dt)
+  updateGarden(dt, time)
   world.step()
   renderer.render(scene, camera)
 })

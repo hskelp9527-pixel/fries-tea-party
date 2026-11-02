@@ -307,7 +307,7 @@ export const effects = {
   teaStream: { from: [-0.55, 1.3, -6.2], to: [-0.55, 0.82, -6.2] }, // tea frozen mid-pour over a cup
   syrupStream: { from: [9.55, 3, -3], to: [9.55, 1.44, -3] }, // syrup frozen over the fountain's lip
   petals: { center: [0, 2.2, -4], size: [12, 3.4, 14], count: 240 },
-  butterflies: { center: [9, 1.2, -3], radius: 4, count: 14 },
+  butterflies: { center: [9, 1.72, -3], perch: 1.4, radius: 4, count: 14 }, // perched round the basin rim
 }
 
 // Staging for the song: Fries faces the table with a teacup in front of him; the Hatter sings on the table.
