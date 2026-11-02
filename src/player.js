@@ -5,9 +5,10 @@ import { model } from './models.js'
 import { start } from './layout.js'
 import { burst, setVoicePitch, currentSpeaker } from './audio.js'
 import { Animator } from './animation.js'
+import { tween } from './tweens.js'
 
 const DEG = Math.PI / 180
-const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, KNEE = 0.35, GRAVITY = 18, RUN = 2.6
+const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, GRAVITY = 18, RUN = 2.6
 
 // Everything that changes with Fries's size; at scale 1 he is 1.2 m tall. speed is walking speed (Shift runs
 // at RUN times that); reach is how far from his body he can take things; voice is the pitch at which he hears
@@ -189,9 +190,13 @@ export function act(name) {
   anim.play(name, true)
 }
 
-// Picks up something at or below his knee, reaches for anything higher.
-export function take(point) {
-  act(point.y - player.feet.y <= KNEE * player.p.scale ? 'pick_up' : 'reach')
+// Walks Fries to a stand point at walking speed, then turns him to face `rot` degrees.
+export async function walkTo([x, y, z], rot) {
+  const from = player.feet.clone(), to = new THREE.Vector3(x, y, z), distance = from.distanceTo(to)
+  if (distance > 0) player.mesh.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
+  await tween(distance / player.p.speed, t => player.feet.lerpVectors(from, to, t))
+  const start = player.mesh.rotation.y, turn = rot * DEG - start
+  await tween(0.3, t => { player.mesh.rotation.y = start + Math.atan2(Math.sin(turn), Math.cos(turn)) * t })
 }
 
 // Locomotion from his real ground speed: idle, walk or run paced so the feet do not slide, jump in the air,
@@ -227,7 +232,18 @@ export function facePoint(point, k = 1) {
 export function reaches(point) {
   const s = player.p.scale, f = player.feet
   const y = Math.min(Math.max(point.y, f.y), f.y + HEIGHT * s)
-  if (Math.hypot(point.x - f.x, point.y - y, point.z - f.z) > player.p.reach) return false
+  return Math.hypot(point.x - f.x, point.y - y, point.z - f.z) <= player.p.reach && sees(point)
+}
+
+// Whether Fries, at the size a prop is for, is close to it on the level of its stand point and can see it.
+export function nearProp(prop, point) {
+  const s = player.p.scale, f = player.feet
+  return player.size === prop.by && Math.hypot(point.x - f.x, point.z - f.z) < 1.2 * s && Math.abs(f.y - prop.stand[1]) < 0.35 * s && sees(point)
+}
+
+// Whether nothing solid lies between Fries's eye and `point`.
+function sees(point) {
+  const s = player.p.scale, f = player.feet
   eye.copy(f).setY(f.y + EYE * s)
   dir.subVectors(point, eye)
   const length = dir.length()

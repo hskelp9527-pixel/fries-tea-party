@@ -186,20 +186,20 @@ export const shapes = {
     [0, 0.2, 3.5, 6, 0.4, 2, PLANK], // porch, step and railings
     [0, 0.1, 4.75, 1.4, 0.2, 0.5, PLANK],
     [-1.875, 0.85, 4.46, 2.25, 0.9, 0.08, PLANK],
-    [1.875, 0.85, 4.46, 2.25, 0.9, 0.08, PLANK],
+    [2.275, 0.85, 4.46, 1.45, 0.9, 0.08, PLANK], // stops short of the hat rack
     [-2.96, 0.85, 3.5, 0.08, 0.9, 2, PLANK],
     [2.96, 0.85, 3.5, 0.08, 0.9, 2, PLANK],
   ],
-  hat_rack: [ // the tallest hat (top_hat) sits on top of the pole, out of reach unless Fries is big
-    [0, 0.04, 0, 0.5, 0.08, 0.5, WOOD],
-    [0, 1.3, 0, 0.08, 2.6, 0.08, WOOD],
-    [0, 1.7, 0, 0.6, 0.04, 0.04, WOOD],
-    [0, 2.1, 0, 0.04, 0.04, 0.6, WOOD],
-    [-0.3, 1.82, 0, 0.22, 0.2, 0.22, HATBAND],
-    [0.3, 1.82, 0, 0.22, 0.2, 0.22, COAT],
-    [0, 2.22, 0.3, 0.22, 0.2, 0.22, HARE_COAT],
+  hat_rack: [ // the tallest hat (top_hat) sits on top of the 1.425 m pole
+    [0, 0.04, 0, 0.3, 0.08, 0.3, WOOD],
+    [0, 0.7125, 0, 0.08, 1.425, 0.08, WOOD],
+    [0, 0.95, 0, 0.5, 0.04, 0.04, WOOD],
+    [0, 1.2, 0, 0.04, 0.04, 0.5, WOOD],
+    [-0.25, 1.07, 0, 0.2, 0.2, 0.2, HATBAND],
+    [0.25, 1.07, 0, 0.2, 0.2, 0.2, COAT],
+    [0, 1.32, -0.25, 0.2, 0.2, 0.2, HARE_COAT],
   ],
-  top_hat: [ // not solid, so it does not hide the gear sitting on it from a big Fries's reach
+  top_hat: [ // not solid, so it never comes between a big Fries and the gear sitting on it
     [0, 0.02, 0, 0.42, 0.04, 0.42, HAT],
     [0, 0.25, 0, 0.3, 0.46, 0.3, HAT],
   ],
@@ -219,14 +219,22 @@ export const shapes = {
     [0, 0.005, 0, 0.02, 0.01, 0.14, SILVER],
     [0, 0.01, 0.085, 0.045, 0.015, 0.06, SILVER],
   ],
+  pink_teacup: [
+    ...[[0, 0.005, 0, 0.13, 0.01, 0.13, CHINA], [0, 0.045, 0, 0.08, 0.07, 0.08, CHINA], [0.05, 0.05, 0, 0.02, 0.04, 0.01, CHINA]],
+    [0, 0.077, 0, 0.066, 0.006, 0.066, PINK],
+  ],
+  blue_teacup: [
+    ...[[0, 0.005, 0, 0.13, 0.01, 0.13, CHINA], [0, 0.045, 0, 0.08, 0.07, 0.08, CHINA], [0.05, 0.05, 0, 0.02, 0.04, 0.01, CHINA]],
+    [0, 0.077, 0, 0.066, 0.006, 0.066, BLUE],
+  ],
   pink_teapot: teapot(PINK),
   blue_teapot: teapot(BLUE),
   tea_tray: [[0, 0.01, 0, 0.5, 0.02, 0.9, SILVER]],
-  cake: [
-    [0, 0.005, 0, 0.22, 0.01, 0.22, CHINA],
-    [0, 0.05, 0, 0.14, 0.08, 0.1, 0xe8c08a],
-    [0, 0.095, 0, 0.14, 0.01, 0.1, 0xfff0f4],
-    [0, 0.115, 0, 0.03, 0.03, 0.03, ROSE],
+  cake: [ // a small "eat me" cake on a plate, small enough for a small Fries's hand
+    [0, 0.005, 0, 0.1, 0.01, 0.1, CHINA],
+    [0, 0.023, 0, 0.04, 0.025, 0.03, 0xe8c08a],
+    [0, 0.038, 0, 0.04, 0.005, 0.03, 0xfff0f4],
+    [0, 0.045, 0, 0.01, 0.01, 0.01, ROSE],
   ],
   cake_stand: [
     [0, 0.14, 0, 0.04, 0.28, 0.04, SILVER],
@@ -243,10 +251,10 @@ export const shapes = {
   ],
   book_page: [[0, 0.034, 0, 0.08, 0.004, 0.1, GLOW]],
   butter: [[0, 0.02, 0, 0.12, 0.04, 0.07, 0xf6dc6a]],
-  gear: [ // lying flat
-    [0, 0, 0, 0.22, 0.05, 0.22, BRASS],
-    [0, 0, 0, 0.3, 0.04, 0.06, BRASS],
-    [0, 0, 0, 0.06, 0.04, 0.3, BRASS],
+  gear: [ // a 6 cm watch gear lying flat
+    [0, 0, 0, 0.05, 0.012, 0.05, BRASS],
+    [0, 0, 0, 0.064, 0.008, 0.014, BRASS],
+    [0, 0, 0, 0.014, 0.008, 0.064, BRASS],
   ],
   wall_clock: [
     [0, 0, 0, 0.62, 0.62, 0.05, WOOD],
@@ -340,6 +348,8 @@ export const placed = [
   { model: 'plate', pos: [0.1, 0.75, -7.9], solid: false },
   { model: 'dormouse', pos: [0.1, 0.76, -7.9], rot: -60, solid: false },
   { model: 'tea_tray', pos: [-0.45, 0.75, -5], solid: false },
+  { model: 'pink_teapot', pos: [-0.45, 0.77, -5.25], rot: 180, solid: false }, // spouts toward the teacups
+  { model: 'blue_teapot', pos: [-0.45, 0.77, -4.75], rot: 180, solid: false },
   { model: 'cake_stand', pos: [0.2, 0.75, -3.4], solid: false },
   { model: 'teapot', pos: [0.3, 0.75, -2.6], solid: false },
   { model: 'teapot', pos: [-0.2, 0.75, 0.2], rot: 180, solid: false },
@@ -348,8 +358,8 @@ export const placed = [
   { model: 'fountain', pos: [7, 0, -3] }, // about 6 m east of the table
   { model: 'terrace', pos: [-11, 0, -2] }, // west of the table
   { model: 'cottage', pos: [-11.5, 1.2, -2], rot: 90 }, // on the terrace, porch facing the table
-  { model: 'hat_rack', pos: [-7.4, 1.6, -3.4] }, // on the porch, by the top of the steps
-  { model: 'top_hat', pos: [-7.4, 4.43, -3.4], solid: false },
+  { model: 'hat_rack', pos: [-7.169, 1.6, -3.205] }, // at the front edge of the porch, by the top of the steps
+  { model: 'top_hat', pos: [-7.169, 3.03, -3.205], solid: false }, // its crown under gear 3
   // The walkable garden, about 30 by 25 m, closed by a tall hedge
   ...row('hedge', [-17, -16], [12.5, -16], 4),
   ...row('hedge', [-17, 9], [12.5, 9], 4),
@@ -393,20 +403,56 @@ export const bushes = [
 ]
 
 // The three gears, collectable in any order. Each wakes its own layer of the world.
+// Props Fries takes in his hands. Each is for one size (`by`) and one clip; before the clip Fries walks to the
+// `stand` point (his feet) and turns to face `rot`, so that his palm meets the prop at the contact time in
+// docs/fries_hand_contacts.json: stand = prop - palm offset in the clip, turned to `rot` and scaled to his size
+// (small 0.18, big 2.6). `grip` (metres at scale 1, in the hand bone's frame) sets the prop in the palm.
+
+// The three gears, collectable in any order. Each wakes its own layer of the world, and once picked up flies
+// to the watch. Each rests where the palm comes at contact: the pick_up palm stops 2.2 cm above the ground for
+// a small Fries, so gears 1 and 2 hang just off it in the frozen air.
 export const gears = [
-  { pos: [0.1, 0.03, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'] }, // under the long table
-  { pos: [7, 0.03, -3], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'] }, // in the hollow under the fountain
-  { pos: [-7.4, 4.94, -3.4], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'] }, // on the tallest hat
+  { // under the long table
+    pos: [0.1, 0.022, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
+    by: 'small', clip: 'pick_up', stand: [0.055, 0, -2.203], rot: 90, grip: [-0.004, -0.03, 0.072],
+  },
+  { // in the hollow under the fountain
+    pos: [7, 0.022, -3], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
+    by: 'small', clip: 'pick_up', stand: [6.955, 0, -3.003], rot: 90, grip: [-0.004, -0.03, 0.072],
+  },
+  { // on the tallest hat, where a big Fries at the top of the terrace steps reaches at chest height
+    pos: [-7.169, 3.516, -3.205], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
+    by: 'big', clip: 'reach', stand: [-6.09, 1.2, -3.03], rot: -90, grip: [0, 0.05, 0.007],
+  },
 ]
 
-// Things that change Fries's size.
+// Things that change Fries's size into `becomes`. The drink clip holds them at his waist from its start, so
+// each flies the short way into his left hand, goes to his mouth and flies back to its place at the end.
 export const drinks = [
-  { model: 'pink_teapot', pos: [-0.45, 0.77, -5.25], size: 'small', label: 'Drink the pink tea' },
-  { model: 'blue_teapot', pos: [-0.45, 0.77, -4.75], size: 'big', label: 'Drink the blue tea' },
-  { model: 'cake', pos: [1.6, 0, 2.6], size: 'normal', label: 'Eat the cake' },
-  { model: 'cake', pos: [3.4, 0, -1.6], size: 'normal', label: 'Eat the cake' },
-  { model: 'cake', pos: [-7.2, 1.2, 2.2], size: 'normal', label: 'Eat the cake' },
+  {
+    model: 'pink_teacup', pos: [-0.62, 0.75, -5.6], becomes: 'small', label: 'Drink the pink tea',
+    by: 'normal', clip: 'drink', stand: [-1.12, 0, -5.557], rot: 90, grip: [-0.008, 0.045, 0.003],
+  },
+  {
+    model: 'blue_teacup', pos: [-0.62, 0.75, -4.45], becomes: 'big', label: 'Drink the blue tea',
+    by: 'normal', clip: 'drink', stand: [-1.12, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
+  },
+  {
+    model: 'cake', pos: [1.6, 0, 2.6], becomes: 'normal', label: 'Eat the cake',
+    by: 'small', clip: 'drink', stand: [1.6, 0, 2.5], rot: 0, grip: [-0.008, 0.045, 0.003],
+  },
+  {
+    model: 'cake', pos: [3.4, 0, -1.6], becomes: 'normal', label: 'Eat the cake',
+    by: 'small', clip: 'drink', stand: [3.3, 0, -1.6], rot: 90, grip: [-0.008, 0.045, 0.003],
+  },
+  {
+    model: 'cake', pos: [-7.6, 1.2, 2.9], becomes: 'normal', label: 'Eat the cake',
+    by: 'big', clip: 'drink', stand: [-7.6, 1.2, 1.95], rot: 0, grip: [-0.008, 0.045, 0.003],
+  },
 ]
+
+// The book page in the ending flies into Fries's palm as he reaches, standing where the song left him.
+export const page = { stand: [-1.15, 0, -4.2], rot: 90, grip: [0, 0.05, 0.007] }
 
 // Teacups standing on the long table. They pulse on every beat of the song.
 export const tableCups = [
@@ -457,8 +503,8 @@ export const zones = {
 export const effects = {
   // Tea frozen mid-pour from the teapots' spouts into cups: from, to and how high the arc rises
   teaArcs: [
-    { from: [-0.26, 0.89, -5.25], to: [-0.55, 0.83, -6.2], height: 0.3 },
-    { from: [-0.26, 0.89, -4.75], to: [-0.55, 0.83, -4.2], height: 0.22 },
+    { from: [-0.64, 0.89, -5.25], to: [-0.62, 0.82, -5.6], height: 0.08 },
+    { from: [-0.64, 0.89, -4.75], to: [-0.62, 0.82, -4.45], height: 0.07 },
     { from: [0.49, 0.87, -2.6], to: [0.45, 0.83, -2.2], height: 0.18 },
     { from: [-0.39, 0.87, 0.2], to: [-0.45, 0.83, -0.1], height: 0.16 },
   ],

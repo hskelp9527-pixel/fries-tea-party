@@ -1,0 +1,65 @@
+import * as THREE from 'three/webgpu'
+import contacts from '../docs/fries_hand_contacts.json'
+import { player, act, walkTo } from './player.js'
+import { tween, wait } from './tweens.js'
+
+const bone = name => player.mesh.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name))
+const bones = { right: bone('mixamorig:RightHand'), left: bone('mixamorig:LeftHand') }
+
+// Props in Fries's hands: object -> { hand, grip, clip }.
+const held = new Map()
+const offset = new THREE.Vector3(), turn = new THREE.Quaternion()
+
+// Where a prop held this way sits now: on the hand bone, moved by `grip` (metres at scale 1, in the hand's frame)
+// into the palm. A box Fries has no hand bones, so there the prop sits where the clip puts the palm at contact.
+function inHand({ hand, grip, clip }, target) {
+  const s = player.p.scale
+  if (bones[hand]) return bones[hand].getWorldPosition(target).add(offset.set(...grip).multiplyScalar(s).applyQuaternion(bones[hand].getWorldQuaternion(turn)))
+  return palmAt(clip, target)
+}
+
+// The palm at a clip's contact time, around Fries as he stands now.
+export function palmAt(clip, target) {
+  return target.set(...contacts[clip].palm).multiplyScalar(player.p.scale).applyAxisAngle(THREE.Object3D.DEFAULT_UP, player.mesh.rotation.y).add(player.feet)
+}
+
+export function hold(object, prop) {
+  held.set(object, { hand: contacts[prop.clip].hand, grip: prop.grip, clip: prop.clip })
+}
+
+export function release(object) {
+  held.delete(object)
+}
+
+export function updateHands() {
+  for (const [object, how] of held) inHand(how, object.position)
+}
+
+// Moves a prop along an arc to a target that may itself be moving (`to` fills in a Vector3).
+export function fly(object, to, seconds, height) {
+  const from = object.position.clone(), end = new THREE.Vector3()
+  return tween(seconds, t => {
+    object.position.lerpVectors(from, to(end), t)
+    object.position.y += Math.sin(t * Math.PI) * height
+  })
+}
+
+// A one-shot that touches a prop. Fries walks to the prop's stand point and faces it, plays the clip, and
+// `contact` runs when his palm meets the prop: pick_up and reach take it into the hand there and keep it to the
+// end of the clip; drink holds it from the start, so the prop flies the short way into his hand first.
+// Resolves at the end of the clip with the prop still held.
+export async function use(prop, object, contact) {
+  await walkTo(prop.stand, prop.rot)
+  const { time, duration } = contacts[prop.clip]
+  act(prop.clip)
+  if (prop.clip === 'drink') {
+    await fly(object, end => inHand({ hand: 'left', grip: prop.grip, clip: 'drink' }, end), 0.6, 0.08)
+    hold(object, prop)
+    await wait(time - 0.6)
+  } else {
+    await wait(time)
+    hold(object, prop)
+  }
+  contact()
+  await wait(duration - time)
+}

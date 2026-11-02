@@ -1,9 +1,11 @@
 import * as THREE from 'three/webgpu'
 import { renderer, scene, camera, SKY, hemi, sky, grade } from './scene.js'
-import { things, gears, clocks, drinks, wake } from './garden.js'
+import { things, gears, clocks, wake } from './garden.js'
 import { model } from './models.js'
-import { start, song } from './layout.js'
-import { player, placePlayer, act, take } from './player.js'
+import { start, song, page as pageStand } from './layout.js'
+import contacts from '../docs/fries_hand_contacts.json'
+import { player, placePlayer, act, walkTo } from './player.js'
+import { hold, fly, palmAt } from './hands.js'
 import { setMusic, say, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { startExplore } from './explore.js'
@@ -90,7 +92,7 @@ async function opening() {
   // Shot 2: Fries reaches for the glowing page in the Hatter's watch; it snaps shut.
   placePlayer([-1.3, 0, -5.7], 143)
   await shot(v(-2.15, 1.5, -4.55), home)
-  take(home)
+  act('reach')
   await tween(0.8, t => { player.mesh.rotation.x = 0.25 * t })
   await say('OP-04')
   page.visible = false
@@ -141,17 +143,19 @@ async function ending() {
   await say('ED-01')
 
   // The March Hare grabs the Dormouse and stuffs him into the pink teapot.
-  const hare = things.hare, dormouse = things.dormouse, teapot = drinks.find(d => d.model === 'pink_teapot').object
+  const hare = things.hare, dormouse = things.dormouse, teapot = things.pink_teapot
   await Promise.all([say('ED-02'), arc(hare, v(0.95, 0, -7.7), 0.2, 0.8)])
   await Promise.all([say('ED-03'), arc(dormouse, teapot.position.clone().setY(teapot.position.y + 0.12), 0.5, 1.2)])
 
-  // The page flies into Fries's hands and the door at the foot of the big tree opens.
+  // Fries reaches out and the page flies from the watch into his palm, arriving as his hand does; it stays in
+  // his hand. The door at the foot of the big tree opens.
+  await walkTo(pageStand.stand, pageStand.rot)
   page.position.copy(watch.position)
   page.visible = true
-  const hands = player.feet.clone().setY(0.8)
-  take(hands)
-  await arc(page, hands, 1, 1.5)
-  page.visible = false
+  act('reach')
+  await wait(contacts.reach.time - 1.5)
+  await fly(page, end => palmAt('reach', end), 1.5, 0.4)
+  hold(page, { clip: 'reach', grip: pageStand.grip })
   await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = -100 * DEG * t })])
 
   // Fries walks to the door; the three ignore him completely.

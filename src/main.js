@@ -10,6 +10,7 @@ import { updateExplore } from './explore.js'
 import { updateFloating } from './floating.js'
 import { updateSong } from './song.js'
 import { updateCast } from './cast.js'
+import { updateHands } from './hands.js'
 
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
@@ -40,5 +41,6 @@ renderer.setAnimationLoop(now => {
   updateSong()
   updateCast(dt)
   world.step()
+  updateHands()
   pipeline.render()
 })

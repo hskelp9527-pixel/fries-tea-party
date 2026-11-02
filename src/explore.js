@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
-import { player, setSize, reaches, facePoint, act, take } from './player.js'
+import { player, setSize, reaches, nearProp, facePoint, act } from './player.js'
+import { use, release, fly } from './hands.js'
 import { things, drinks, gears, wake } from './garden.js'
 import { zones } from './layout.js'
 import { setMusic, say, speaking } from './audio.js'
@@ -34,8 +35,8 @@ const prompt = document.getElementById('prompt')
 const hud = document.getElementById('hud')
 const head = (character, height) => character.localToWorld(new THREE.Vector3(0, height, 0))
 
-// What E can do: { pos, label, can(), use() }. The nearest one in reach is offered.
-const uses = drinks.map(d => ({ ...d, can: () => player.size !== d.size, use: () => drink(d) }))
+// What E can do: { pos, label, can(), use() }. The nearest one Fries can use is offered.
+const uses = drinks.map(d => ({ ...d, can: () => nearProp(d, d.pos), use: () => drink(d) }))
 let target, toldAboutTea = false, drank = false
 
 addEventListener('keydown', e => {
@@ -52,12 +53,30 @@ export function startExplore(mended) {
   setMusic({ frozen: 1 - game.gears / 3, awake: game.gears / 3 })
 }
 
+// Drinking a tea or eating a cake: it flies into his hand, goes to his mouth and back to its place, then he
+// changes size.
 async function drink(d) {
   drank = true
-  act('drink')
-  setSize(d.size)
-  if (d.size === 'small' && player.shrinks === 1) await firstShrink()
-  if (d.size === 'big' && player.grows === 1) await firstGrow()
+  player.control = false
+  await use(d, d.object, () => {})
+  release(d.object)
+  await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
+  setSize(d.becomes)
+  if (d.becomes === 'small' && player.shrinks === 1) await firstShrink()
+  else if (d.becomes === 'big' && player.grows === 1) await firstGrow()
+  else player.control = true
+}
+
+// Picking up a gear: it is found the moment it is in his hand, stays there to the end of the clip, then flies
+// to the watch.
+const watchPoint = things.pocket_watch.position.clone().setY(things.pocket_watch.position.y + 0.03)
+async function pickUp(gear) {
+  player.control = false
+  await use(gear, gear.object, () => find(gear))
+  release(gear.object)
+  player.control = true
+  await fly(gear.object, end => end.copy(watchPoint), 1.2, 0.6)
+  gear.object.visible = false
 }
 
 // The first shrink: the Hatter's huge face presses down from the sky.
@@ -96,8 +115,6 @@ async function firstGrow() {
 
 function find(gear) {
   gear.found = true
-  gear.object.visible = false
-  take(gear.pos)
   game.gears++
   wake(gear.layer)
   setFloatingLevel(game.gears)
@@ -148,9 +165,9 @@ function bark() {
 }
 
 uses.push({
-  pos: things.pocket_watch.position.clone().setY(things.pocket_watch.position.y + 0.06),
+  pos: watchPoint,
   label: 'Mend the watch',
-  can: () => game.gears === 3,
+  can: () => game.gears === 3 && reaches(watchPoint),
   use: mend,
 })
 
@@ -168,16 +185,16 @@ export function updateExplore(dt) {
   prompt.textContent = ''
   if (!player.control) return
   for (const u of uses) {
-    if (u.can() && reaches(u.pos) && (!target || u.pos.distanceTo(player.feet) < target.pos.distanceTo(player.feet))) target = u
+    if (u.can() && (!target || u.pos.distanceTo(player.feet) < target.pos.distanceTo(player.feet))) target = u
   }
   if (target) prompt.textContent = `E  ${target.label}`
 
-  for (const g of gears) if (!g.found && reaches(g.pos)) find(g)
+  for (const g of gears) if (!g.found && nearProp(g, g.pos)) pickUp(g)
 
   trackCircling()
   quiet = speaking() ? 0 : quiet + dt
   sinceGear += dt
-  if (target?.model?.endsWith('teapot') && !toldAboutTea) {
+  if (target?.model?.endsWith('teacup') && !toldAboutTea) {
     toldAboutTea = true
     say('EX-10')
   } else if (game.gears < 3 && sinceGear > FIRST_HINT && quiet > 3) hint()

@@ -54,9 +54,10 @@ export const gears = layout.gears.map(g => {
   return { ...g, object, pos: new THREE.Vector3(...g.pos), found: false }
 })
 
-export const drinks = layout.drinks.map(d => ({
-  ...d, object: place({ ...d, solid: false }), pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + 0.1),
-}))
+export const drinks = layout.drinks.map(d => {
+  const object = place({ ...d, solid: false })
+  return { ...d, object, pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + 0.05), home: object.position.clone() }
+})
 
 // Layers of the world that each gear wakes: 'tea', 'syrup', 'flowers'.
 const awake = {}
@@ -100,7 +101,7 @@ function placeDrips() {
 scene.add(syrupDrops)
 
 // Steam puffs rising from the cups and teapots once the tea wakes.
-const steamFrom = [...cups, ...drinks.filter(d => d.model.endsWith('teapot')).map(d => d.object)]
+const steamFrom = [...cups, things.pink_teapot, things.blue_teapot, things.teapot]
 const puffs = Array.from({ length: 40 }, () => {
   const mesh = new THREE.Mesh(box, effect(0xffffff, 0.45))
   mesh.visible = false
@@ -152,7 +153,7 @@ const to = new THREE.Vector3()
 
 export function updateGarden(dt, time) {
   gears.forEach((g, i) => {
-    g.object.rotation.y += dt * 1.5
+    if (!g.found) g.object.rotation.y += dt * 1.5
     g.object.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 1 + 0.8 * Math.sin(time * 3 + i * 2) })
   })
 
