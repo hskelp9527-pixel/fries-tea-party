@@ -3,8 +3,9 @@
 // the March Hare's cottage west. `rot` is a turn about +Y in degrees; every model faces +Z before it is turned.
 
 // Placeholder shapes, one per model name. Each box is [x, y, z, width, height, depth, colour] in the model's
-// own frame (y is the box centre). They are drawn when art/models/<name>.glb is missing, and they are the
-// model's colliders unless its glb contains a mesh named <name>_collider.
+// own frame (y is the box centre), optionally followed by a turn [rx, ry, rz] in degrees (applied Y, then X,
+// then Z). They are drawn when art/models/<name>.glb is missing, and they are the model's colliders unless
+// its glb contains a mesh named <name>_collider.
 const BARK = 0x6b4a32, LEAF = 0x4f7d3c, LEAF2 = 0x5d8f45, HEDGE = 0x3f6b35, DOOR = 0x5a3a26, BRASS = 0xd9a441
 const CLOTH = 0xf4efe6, FRINGE = 0xe6d6bd, WOOD = 0x7a5536, PLANK = 0x9b7a55, CHAIR = 0x9b3b3b
 const STONE = 0xaaa59b, SYRUP = 0xc98a2b, WALL = 0xe8dcc4, ROOF = 0x8a4b3a, BRICK = 0xa0503c, GLASS = 0x9fc3d6

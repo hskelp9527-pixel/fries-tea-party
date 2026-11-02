@@ -36,15 +36,17 @@ function stripRootMotion(gltf) {
 export const clips = name => gltfs[name] ? gltfs[name].animations : []
 
 const box = new THREE.BoxGeometry()
+const DEG = Math.PI / 180
 const materials = {}
 
 // A new instance of a model: the glb when present, otherwise its placeholder boxes.
 export function model(name) {
   const object = gltfs[name] ? clone(gltfs[name].scene) : new THREE.Group()
   if (!gltfs[name]) {
-    for (const [x, y, z, w, h, d, colour] of shapes[name]) {
+    for (const [x, y, z, w, h, d, colour, rx = 0, ry = 0, rz = 0] of shapes[name]) {
       const mesh = new THREE.Mesh(box, materials[colour] ??= new THREE.MeshStandardMaterial({ color: colour, roughness: 0.85 }))
       mesh.position.set(x, y, z)
+      mesh.rotation.set(rx * DEG, ry * DEG, rz * DEG, 'YXZ')
       mesh.scale.set(w, h, d)
       object.add(mesh)
     }
@@ -64,7 +66,7 @@ export function glow(object, colour, intensity) {
   })
 }
 
-const v = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3()
+const v = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(), turn = new THREE.Euler()
 
 // Static colliders for a placed object: the glb's <name>_collider mesh, or else the placeholder boxes.
 export function addColliders(name, object) {
@@ -83,9 +85,9 @@ export function addColliders(name, object) {
   }
   object.getWorldQuaternion(q)
   object.getWorldScale(s)
-  for (const [x, y, z, w, h, d] of shapes[name]) {
+  for (const [x, y, z, w, h, d, , rx = 0, ry = 0, rz = 0] of shapes[name]) {
     v.set(x, y, z).applyMatrix4(object.matrixWorld)
     world.createCollider(RAPIER.ColliderDesc.cuboid(w * s.x / 2, h * s.y / 2, d * s.z / 2)
-      .setTranslation(v.x, v.y, v.z).setRotation(q))
+      .setTranslation(v.x, v.y, v.z).setRotation(new THREE.Quaternion().setFromEuler(turn.set(rx * DEG, ry * DEG, rz * DEG, 'YXZ')).premultiply(q)))
   }
 }
