@@ -30,7 +30,7 @@ const onTable = new Map()
 for (const entry of layout.placed) {
   const object = place(entry)
   things[entry.model] ??= object
-  if (entry.onTable) onTable.set(entry, object)
+  if (entry.onTable || entry.on) onTable.set(entry, object)
 }
 
 // Pushes a point sideways out of the room kept clear around the cast and Fries's song spot, `margin` further.
@@ -75,11 +75,14 @@ export const drinks = layout.drinks.map(d => {
   return { ...d, object, pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + 0.05), home: object.position.clone() }
 })
 
-// Everything standing on the table, which dances in the final chorus: { object, home, turn, seed, size }.
-const tableObjects = [...cups, ...layout.placed.filter(p => p.onTable).map(p => onTable.get(p)), ...drinks.filter(d => d.onTable).map(d => d.object)]
+// Everything standing on the table, which dances in the final chorus: { object, home, turn, seed, size, on }, where
+// `on` is the prop it stands on.
+const tableObjects = [...cups, ...onTable.values(), ...drinks.filter(d => d.onTable).map(d => d.object)]
 export const tableProps = tableObjects.map(object => ({
   object, home: object.position.clone(), turn: object.rotation.y, seed: Math.random() * 100, size: meanSize(object),
 }))
+const tableProp = object => tableProps.find(p => p.object === object)
+for (const [entry, object] of onTable) if (entry.on) tableProp(object).on = tableProp(things[entry.on])
 
 // Layers of the world that each gear wakes: 'tea', 'syrup', 'flowers'.
 const awake = {}

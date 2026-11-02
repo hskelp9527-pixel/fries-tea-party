@@ -134,11 +134,13 @@ export function updateSong() {
   placeProps()
 }
 
-const offset = new THREE.Vector3()
+// Each prop hops by its own size; one standing on another (a teapot on the tray) rides with that one instead.
+const offset = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0)
 function placeProps() {
   for (const p of tableProps) {
-    p.object.rotation.y = p.turn + hop(p.seed, p.size, offset, true)
-    p.object.position.copy(p.home).add(offset)
+    const base = p.on ?? p, spin = hop(base.seed, base.size, offset, true)
+    p.object.rotation.y = p.turn + spin
+    p.object.position.copy(p.home).sub(base.home).applyAxisAngle(UP, spin).add(base.home).add(offset)
   }
   tapCup.position.y += cupJump
 }
