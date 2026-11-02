@@ -5,6 +5,7 @@ import { zones } from './layout.js'
 import { setMusic, say, speaking } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { game } from './state.js'
+import { setFloatingLevel, cupDodging } from './floating.js'
 
 // Ambient lines, highest priority first. Each plays once, when the garden has been quiet for a while;
 // `then` follows straight after. c describes what Fries is doing (see context() below).
@@ -18,6 +19,7 @@ const BARKS = [
   { id: 'BK-12', when: c => c.size === 'big' && c.near('table') },
   { id: 'BK-13', when: c => c.size === 'big' && c.near('table') },
   { id: 'BK-04', when: c => c.near('hareChair') },
+  { id: 'BK-03', when: c => c.cupDodging },
   { id: 'BK-02', when: c => c.near('tray') && c.still > 3 },
   { id: 'BK-06', when: c => c.near('tray') && !c.drank && c.still > 6 },
   { id: 'BK-05', when: c => c.circled, then: 'BK-09' },
@@ -94,6 +96,7 @@ function find(gear) {
   gear.object.visible = false
   game.gears++
   wake(gear.layer)
+  setFloatingLevel(game.gears)
   setMusic({ frozen: 1 - game.gears / 3, awake: game.gears / 3 }, 3)
   hud.textContent = `Gears ${game.gears}/3`
   sinceGear = 0
@@ -123,7 +126,7 @@ function trackCircling() {
 function context() {
   return {
     size: player.size, shrinks: player.shrinks, grows: player.grows, still: player.still, drank, near,
-    circled: Math.abs(circling) > Math.PI * 2, played: id => played.has(id),
+    circled: Math.abs(circling) > Math.PI * 2, played: id => played.has(id), cupDodging: cupDodging(),
   }
 }
 

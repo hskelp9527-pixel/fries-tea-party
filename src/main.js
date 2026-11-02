@@ -6,6 +6,7 @@ import { ctx } from './audio.js'
 import { updateTweens } from './tweens.js'
 import { begin } from './story.js'
 import { updateExplore } from './explore.js'
+import { updateFloating } from './floating.js'
 
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
@@ -32,6 +33,7 @@ renderer.setAnimationLoop(now => {
   updatePlayer(dt)
   updateExplore(dt)
   updateGarden(dt, time)
+  updateFloating(dt)
   world.step()
   renderer.render(scene, camera)
 })
