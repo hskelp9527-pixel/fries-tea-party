@@ -1,5 +1,6 @@
 import { renderer, camera, webgpu, pipeline } from './scene.js'
 import { world } from './physics.js'
+import './ground.js'
 import { updateGarden } from './garden.js'
 import { player, updatePlayer } from './player.js'
 import { ctx } from './audio.js'

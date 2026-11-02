@@ -461,6 +461,19 @@ export const song = {
   hatter: [-0.1, 0.75, -6.3],
 }
 
+// Grass and small flowers on the open lawn: inside `area` [x0, z0, x1, z1], off the `bare` rectangles (terrace,
+// fountain basin, tree) and away from the stone path. The WebGL fallback gets a third of the grass and half the
+// flowers.
+export const grass = {
+  area: [-16.8, -15.8, 12.3, 8.8],
+  bare: [[-16, -8, -6, 4], [4, -6, 10, 0], [-1.8, -13.8, 1.8, -10.2]],
+  perSquareMetre: 45,
+  height: [0.06, 0.18],
+  flowerPatches: 40,
+  flowersPerPatch: 30,
+  flowerRadius: 0.6,
+}
+
 // Painted backdrop cards beyond the garden, one entry per card: a flat silhouette for now, `outline` in metres
 // on the card ([x, y], y up from the ground), facing +Z before `rot`. Fog melts them into the evening haze.
 const hills = (width, peaks) => [[-width / 2, 0], ...Array.from({ length: 49 }, (_, i) => {

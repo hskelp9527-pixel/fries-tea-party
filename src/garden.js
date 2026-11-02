@@ -1,17 +1,10 @@
 import * as THREE from 'three/webgpu'
 import { scene, webgpu } from './scene.js'
-import { RAPIER, world } from './physics.js'
 import { model, glow, addColliders } from './models.js'
 import * as layout from './layout.js'
 import { game } from './state.js'
 
 const DEG = Math.PI / 180
-
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x7fa66a, roughness: 1 }))
-ground.rotation.x = -Math.PI / 2
-ground.receiveShadow = true
-scene.add(ground)
-world.createCollider(RAPIER.ColliderDesc.cuboid(40, 0.5, 40).setTranslation(0, -0.5, 0))
 
 for (const card of layout.backdrop) {
   const mesh = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(card.outline.map(([x, y]) => new THREE.Vector2(x, y)))), new THREE.MeshBasicMaterial({ color: card.colour }))
