@@ -7,6 +7,7 @@ import { updateTweens } from './tweens.js'
 import { begin } from './story.js'
 import { updateExplore } from './explore.js'
 import { updateFloating } from './floating.js'
+import { updateSong } from './song.js'
 
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
@@ -34,6 +35,7 @@ renderer.setAnimationLoop(now => {
   updateExplore(dt)
   updateGarden(dt, time)
   updateFloating(dt)
+  updateSong()
   world.step()
   renderer.render(scene, camera)
 })
