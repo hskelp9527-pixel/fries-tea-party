@@ -1,21 +1,23 @@
 import * as THREE from 'three/webgpu'
-import { scene, camera } from './scene.js'
-import { things, gears, wake } from './garden.js'
+import { renderer, scene, camera, SKY, hemi } from './scene.js'
+import { things, gears, clocks, drinks, wake } from './garden.js'
 import { model } from './models.js'
-import { start } from './layout.js'
+import { start, song } from './layout.js'
 import { player, placePlayer } from './player.js'
-import { setMusic, say } from './audio.js'
+import { setMusic, say, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { startExplore } from './explore.js'
 import { setFloatingLevel } from './floating.js'
 import { playSong } from './song.js'
 import { game } from './state.js'
 
+const DEG = Math.PI / 180
 const v = (...a) => new THREE.Vector3(...a)
+const PINK = new THREE.Color(0xf6c4d4)
 
-// Starts the chapter. `from` (the ?start= parameter) skips ahead for testing: explore or song.
+// Starts the chapter. `from` (the ?start= parameter) skips ahead for testing: explore, song or ending.
 export async function begin(from) {
-  if (from === 'song') {
+  if (from === 'song' || from === 'ending') {
     for (const g of gears) {
       g.found = true
       g.object.visible = false
@@ -24,6 +26,10 @@ export async function begin(from) {
     game.gears = 3
     setFloatingLevel(3)
   }
+  if (from === 'ending') {
+    placePlayer(song.fries.pos, song.fries.rot)
+    return ending()
+  }
   if (from === 'song') return finale()
   if (from !== 'explore') await opening()
   startExplore(finale)
@@ -31,6 +37,8 @@ export async function begin(from) {
 
 async function finale() {
   await playSong()
+  await wait(1.5)
+  await ending()
 }
 
 // Cutscene camera: from one position and target to another over `seconds` (0 cuts).
@@ -106,4 +114,60 @@ async function opening() {
 
   player.mesh.rotation.x = 0
   placePlayer([-1.3, 0, -5.7], 200)
+}
+
+async function ending() {
+  cutscene()
+  document.getElementById('hud').textContent = ''
+  const watch = things.pocket_watch, page = things.book_page, door = things.tree_door
+
+  // 6:01: the click, every clock moves on a minute, the sky turns pink.
+  await shot(v(-2.8, 2.2, -1.8), v(0, 1.2, -8))
+  burst(4, 1)
+  for (const c of clocks) {
+    c.minute.rotation.z = -6 * DEG
+    c.hour.rotation.z = Math.PI - 0.5 * DEG
+  }
+  setMusic({ ending: 1 }, 0)
+  tween(3, t => {
+    scene.background.lerpColors(SKY, PINK, t)
+    scene.fog.color.lerpColors(SKY, PINK, t)
+    hemi.color.lerpColors(new THREE.Color(0xfff4e6), PINK, t)
+  })
+  await say('ED-01')
+
+  // The March Hare grabs the Dormouse and stuffs him into the pink teapot.
+  const hare = things.hare, dormouse = things.dormouse, teapot = drinks.find(d => d.model === 'pink_teapot').object
+  await Promise.all([say('ED-02'), arc(hare, v(0.95, 0, -7.7), 0.2, 0.8)])
+  await Promise.all([say('ED-03'), arc(dormouse, teapot.position.clone().setY(teapot.position.y + 0.12), 0.5, 1.2)])
+
+  // The page flies into Fries's hands and the door at the foot of the big tree opens.
+  page.position.copy(watch.position)
+  page.visible = true
+  await arc(page, player.feet.clone().setY(0.8), 1, 1.5)
+  page.visible = false
+  await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = -100 * DEG * t })])
+
+  // Fries walks to the door; the three ignore him completely.
+  const walking = walk([[-2.2, -5.4], [-2.2, -9.2], [0, -9.9], [0, -10.4]], 1.3)
+  await say('ED-05')
+  await say('ED-06')
+  await walking
+  await say('ED-07')
+
+  // He steps through and sees red roses; the picture freezes.
+  things.roses.visible = true
+  await shot(v(0, 1.35, -8.6), v(0, 1.05, -12.6))
+  await Promise.all([say('ED-08'), walk([[0, -11.3]], 1)])
+  await wait(0.4)
+  renderer.setAnimationLoop(null)
+}
+
+// Scripted walk along [x, z] points at `speed` metres per second.
+async function walk(points, speed) {
+  for (const [x, z] of points) {
+    const from = player.feet.clone(), to = v(x, 0, z)
+    player.mesh.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
+    await tween(from.distanceTo(to) / speed, t => player.feet.lerpVectors(from, to, t))
+  }
 }
