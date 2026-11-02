@@ -90,7 +90,7 @@ function resize(dt) {
   collider.setRadius(RADIUS * s)
   controller.setOffset(0.01 * s)
   controller.enableSnapToGround(0.3 * s)
-  controller.enableAutostep(0.3 * s, 0.05 * s, false)
+  controller.enableAutostep(0.3 * s, 0.2 * s, false) // a narrower minimum width fails on 0.2 m steps
   player.mesh.scale.setScalar(s)
   setVoicePitch(player.p.voice)
 }

@@ -153,7 +153,7 @@ async function ending() {
   await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = -100 * DEG * t })])
 
   // Fries walks to the door; the three ignore him completely.
-  const walking = walk([[-2.2, -5.4], [-2.2, -9.2], [0, -9.9], [0, -10.4]], 1.3)
+  const walking = walk([[-2.4, 0, -5.6], [-2.5, 0, -8.6], [-1, 0, -9.45], [0, 0, -9.45], [0, 0.15, -9.75], [0, 0.3, -10.05], [0, 0.45, -10.45]], 1.3)
   await say('ED-05')
   await say('ED-06')
   await walking
@@ -161,16 +161,16 @@ async function ending() {
 
   // He steps through and sees red roses; the picture freezes.
   things.roses.visible = true
-  await shot(v(0, 1.35, -8.6), v(0, 1.05, -12.6))
-  await Promise.all([say('ED-08'), walk([[0, -11.3]], 1)])
+  await shot(v(0, 1.6, -8.6), v(0, 1.4, -12.6))
+  await Promise.all([say('ED-08'), walk([[0, 0.45, -11.2]], 1)])
   await wait(0.4)
   renderer.setAnimationLoop(null)
 }
 
-// Scripted walk along [x, z] points at `speed` metres per second.
+// Scripted walk along [x, y, z] points at `speed` metres per second.
 async function walk(points, speed) {
-  for (const [x, z] of points) {
-    const from = player.feet.clone(), to = v(x, 0, z)
+  for (const point of points) {
+    const from = player.feet.clone(), to = v(...point)
     player.mesh.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
     await tween(from.distanceTo(to) / speed, t => player.feet.lerpVectors(from, to, t))
   }
