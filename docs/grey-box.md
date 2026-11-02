@@ -159,6 +159,6 @@ In headless Chromium with no media present, under software rendering at a few to
 - After the space, levels and atmosphere pass, with the same tests: normal and big Fries still cannot take gears 1 and 2 nor normal Fries gear 3 (also from the porch); small Fries walks from the table under the cloth for gear 1 and on through the crack and tunnel for gear 2; big Fries walks from the tea tray past the fences, straight up the terrace steps and takes gear 3; normal Fries climbs the terrace, the fountain and the tree-door steps. The ending walks up the door steps into the tree, turns sky and grade pink and freezes, on the WebGL fallback.
 - `npm run build` succeeds; the bundle is about 5 MB (1.9 MB gzipped), mostly three.js's WebGPU build and Rapier's inlined WebAssembly.
 
-- With the real media from the assets repository: the opening, the drink of pink tea (the cup into his left hand, to his mouth and back to the tray), gear 1, the contact frames above, and the ending to the freeze frame with the page still in his hand.
+- With the real media from the assets repository: the pink tea from E to the shrink (the cup into his left hand, to his mouth at 0.97 m and back to exactly its place on the table), gear 1, the contact frames above, and the ending to the freeze frame with the page still in his hand. The opening and the song were not rerun with the real media.
 
 Not run here: a full playthrough on WebGPU in one go, the Hatter, March Hare and Dormouse models (not delivered yet), and a playthrough by hand.
