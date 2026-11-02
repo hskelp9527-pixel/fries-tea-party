@@ -13,9 +13,10 @@ renderer.shadowMap.enabled = true
 document.body.prepend(renderer.domElement)
 
 export const scene = new THREE.Scene()
-export const SKY = new THREE.Color(0xc4d6e4)
+// Warm evening haze: the far garden, the cypresses and the backdrop cards fade into it.
+export const SKY = new THREE.Color(0xefc4a2)
 scene.background = SKY.clone()
-scene.fog = new THREE.Fog(SKY, 22, 58)
+scene.fog = new THREE.Fog(SKY, 24, 120)
 
 export const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 200)
 camera.rotation.order = 'YXZ'

@@ -14,7 +14,7 @@ const SKIN = 0xf1c9a5, NOSE = 0xe0a080, COAT = 0x6a4a8c, TROUSERS = 0x4a5a3a, HA
 const FUR = 0xc8a27a, HARE_COAT = 0x3f6f8f, MOUSE = 0x8a6a52, SHIRT = 0xf2c230, JEANS = 0x35507a, HAIR = 0x5a3a20
 const ROSE = 0xd0182c, GLOW = 0xfff2e0, BLACK = 0x222222, TERRACE = 0xb7ab96, WALLSTONE = 0x9d9283, LANTERN = 0xffc070
 const FENCE = 0xd8c8a8, ARCH = 0xf0ece0, BLOSSOM = 0xf6d6e2, BLOSSOM2 = 0xfff6ee, SOIL = 0x6e5038
-const FLOWERS = [0xe88ab0, 0xf2d04a, 0xffffff, 0xb08ae0, 0xf6a86a]
+const FLOWERS = [0xe88ab0, 0xf2d04a, 0xffffff, 0xb08ae0, 0xf6a86a], CYPRESS = 0x2c4630
 
 // A box along a line from one point to another, `t` thick: one segment of a branch.
 const limb = ([x0, y0, z0], [x1, y1, z1], t, colour) => {
@@ -290,6 +290,12 @@ export const shapes = {
     ...[-1, -0.4, 0.3, 0.9].map((x, i) => [x, 0.64, -0.2, 0.32, 0.24 + i % 2 * 0.06, 0.3, FLOWERS[i]]),
     ...[-1.2, -0.4, 0.4, 1.2].map((x, i) => [x, 0.36, 0.44, 0.26, 0.12, 0.2, FLOWERS[(i + 2) % 5]]),
   ],
+  cypress: [ // outside the hedge, tall and dark against the evening sky
+    [0, 0.4, 0, 0.3, 0.8, 0.3, BARK],
+    [0, 3.2, 0, 1.3, 5, 1.3, CYPRESS],
+    [0, 6.2, 0, 0.9, 1.4, 0.9, CYPRESS],
+    [0, 7.3, 0, 0.5, 0.9, 0.5, CYPRESS],
+  ],
   stone_path: [[0, 0.01, 0, 0.7, 0.02, 0.5, PATH]],
 }
 
@@ -303,6 +309,9 @@ const row = (model, [x0, z0], [x1, z1], length) => {
   return Array.from({ length: n }, (_, i) => ({ model, pos: [x0 + (x1 - x0) * (i + 0.5) / n, 0, z0 + (z1 - z0) * (i + 0.5) / n], rot }))
 }
 const bed = (x, z, rot = 0) => ({ model: 'flower_bed', pos: [x, 0, z], rot })
+const cypresses = ([x0, z0], [x1, z1], n) => Array.from({ length: n }, (_, i) => ({
+  model: 'cypress', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], scale: 0.85 + i * 37 % 26 / 100, solid: false,
+}))
 const path = ([x0, z0], [x1, z1], n) => Array.from({ length: n }, (_, i) => ({
   model: 'stone_path', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], rot: i * 37 % 40 - 20, solid: false,
 }))
@@ -338,6 +347,11 @@ export const placed = [
   ...row('hedge', [-17, 9], [12.5, 9], 4),
   ...row('hedge', [-17, -16], [-17, 9], 4),
   ...row('hedge', [12.5, -16], [12.5, 9], 4),
+  // A row of cypresses beyond the hedge on every side
+  ...cypresses([-19.5, -18.5], [15, -18.5], 15),
+  ...cypresses([-19.5, 11.5], [15, 11.5], 15),
+  ...cypresses([-19.8, -16], [-19.8, 9.5], 11),
+  ...cypresses([15.2, -16], [15.2, 9.5], 11),
   // Fences along the path, and arches over it
   ...row('fence', [-1, 4.6], [-1, 8.6], 2),
   ...row('fence', [1, 4.6], [1, 8.6], 2),
@@ -445,3 +459,18 @@ export const song = {
   tapCup: 5, // index into tableCups
   hatter: [-0.1, 0.75, -6.3],
 }
+
+// Painted backdrop cards beyond the garden, one entry per card: a flat silhouette for now, `outline` in metres
+// on the card ([x, y], y up from the ground), facing +Z before `rot`. Fog melts them into the evening haze.
+const hills = (width, peaks) => [[-width / 2, 0], ...Array.from({ length: 49 }, (_, i) => {
+  const t = i / 48 * (peaks.length - 1), k = Math.min(Math.floor(t), peaks.length - 2), f = t - k
+  return [-width / 2 + width * i / 48, peaks[k] + (peaks[k + 1] - peaks[k]) * (1 - Math.cos(f * Math.PI)) / 2]
+}), [width / 2, 0]]
+export const backdrop = [
+  { name: 'hills_north', pos: [0, 0, -62], rot: 0, colour: 0x7f8f78, outline: hills(170, [9, 16, 12, 20, 14, 10, 17, 11]) },
+  { name: 'hills_north_far', pos: [-15, 0, -95], rot: 0, colour: 0x9c9fa6, outline: hills(240, [18, 26, 20, 30, 22, 27, 19]) },
+  { name: 'hills_east', pos: [65, 0, -8], rot: -90, colour: 0x86907e, outline: hills(170, [8, 13, 10, 15, 9, 12]) },
+  { name: 'hills_south', pos: [5, 0, 60], rot: 180, colour: 0x8a957f, outline: hills(170, [7, 12, 9, 14, 10, 8]) },
+  { name: 'hills_west', pos: [-65, 0, -5], rot: 90, colour: 0x6f6878, outline: hills(170, [10, 15, 12, 18, 13, 9]) },
+  { name: 'far_cottage', pos: [-24, 0, -52], rot: 25, colour: 0x5f5866, outline: [[-3, 0], [-3, 3], [0, 5.5], [1.6, 4.2], [1.6, 5.6], [2.3, 5.6], [2.3, 3.6], [3, 3], [3, 0]] },
+]
