@@ -9,8 +9,31 @@ const files = import.meta.glob('/art/models/*.glb', { eager: true, query: '?url'
 const loader = new GLTFLoader()
 const gltfs = {}
 await Promise.all(Object.entries(files).map(async ([path, url]) => {
-  gltfs[path.slice('/art/models/'.length, -'.glb'.length)] = await loader.loadAsync(url)
+  const gltf = gltfs[path.slice('/art/models/'.length, -'.glb'.length)] = await loader.loadAsync(url)
+  stripRootMotion(gltf)
 }))
+
+// Root motion: the clips carry the hips across the ground, but the game moves the character itself. Every
+// clip keeps the hips' height and loses their horizontal travel, remembering the ground speed that travel
+// implied (metres per second at scale 1) so walk and run can be paced to the real speed.
+function stripRootMotion(gltf) {
+  const hips = THREE.PropertyBinding.sanitizeNodeName('mixamorig:Hips')
+  gltf.scene.updateMatrixWorld(true)
+  for (const clip of gltf.animations) {
+    const track = clip.tracks.find(t => t.name === `${hips}.position`)
+    if (!track) continue
+    const v = track.values, end = v.length - 3
+    const scale = gltf.scene.getObjectByName(hips).parent.getWorldScale(new THREE.Vector3()).x
+    clip.userData.groundSpeed = Math.hypot(v[end] - v[0], v[end + 2] - v[2]) * scale / clip.duration
+    for (let i = 0; i < v.length; i += 3) {
+      v[i] = v[0]
+      v[i + 2] = v[2]
+    }
+  }
+}
+
+// The glTF clips of a model; none for a box placeholder.
+export const clips = name => gltfs[name] ? gltfs[name].animations : []
 
 const box = new THREE.BoxGeometry()
 const materials = {}
