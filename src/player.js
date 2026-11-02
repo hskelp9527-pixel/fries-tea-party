@@ -10,7 +10,7 @@ const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, GRAVITY = 18
 
 // Everything that changes with Fries's size; at scale 1 he is 1.2 m tall. reach is how far from his body he
 // can take things; voice is the pitch at which he hears the others.
-export const SIZES = {
+const SIZES = {
   small: { scale: 0.18, fov: 82, speed: 1.1, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
   normal: { scale: 1, fov: 70, speed: 3.2, jump: 0.7, reach: 0.9, stepPitch: 1, stepGain: 0.5, shake: 0, voice: 1 },
   big: { scale: 2.6, fov: 58, speed: 6.5, jump: 1.2, reach: 2.2, stepPitch: 0.45, stepGain: 1, shake: 0.07, voice: 1.45 },

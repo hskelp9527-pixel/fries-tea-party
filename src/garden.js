@@ -32,7 +32,7 @@ for (const entry of layout.placed) {
 things.roses.visible = false
 glow(things.book_page, 0xfff0b0, 2)
 
-export const bushes = layout.bushes.map(([x, z]) => place({ model: 'bush', pos: [x, 0, z] }))
+const bushes = layout.bushes.map(([x, z]) => place({ model: 'bush', pos: [x, 0, z] }))
 export const cups = layout.tableCups.map(pos => place({ model: 'teacup', pos, solid: false }))
 
 export const clocks = layout.clocks.map(c => {

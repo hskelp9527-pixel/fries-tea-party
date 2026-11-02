@@ -143,8 +143,12 @@ function bark() {
   })
 }
 
-const watch = { pos: things.pocket_watch.position.clone().setY(things.pocket_watch.position.y + 0.06), label: 'Mend the watch' }
-uses.push({ ...watch, can: () => game.gears === 3, use: () => mend() })
+uses.push({
+  pos: things.pocket_watch.position.clone().setY(things.pocket_watch.position.y + 0.06),
+  label: 'Mend the watch',
+  can: () => game.gears === 3,
+  use: mend,
+})
 
 function mend() {
   exploring = false
@@ -155,9 +159,10 @@ function mend() {
 }
 
 export function updateExplore(dt) {
+  if (!exploring) return
   target = undefined
   prompt.textContent = ''
-  if (!exploring || !player.control) return
+  if (!player.control) return
   for (const u of uses) {
     if (u.can() && reaches(u.pos) && (!target || u.pos.distanceTo(player.feet) < target.pos.distanceTo(player.feet))) target = u
   }
