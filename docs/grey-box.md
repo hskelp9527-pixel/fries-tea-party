@@ -34,11 +34,18 @@ WASD to walk, mouse to look (click the game to capture the mouse, Esc to release
 
 ## What works
 
-- **Garden:** one continuous garden laid out with boxes at real-world scale: Fries 1.2 m, table top 0.75 m, chair seats 0.45 m, cottage door 2 m, the big tree's canopy from 4 m over the whole long table. The fountain and the cottage are a few steps from the table, the hat rack is on the porch, hedges close the edges.
+- **Garden:** one continuous, layered storybook garden laid out with boxes at real-world scale (Fries 1.2 m, table top 0.75 m, chair seats 0.45 m, cottage door 2 m):
+  - **Levels:** the long table on the main lawn under the big tree. The March Hare's cottage on a stone terrace 1.2 m up, about 7 m west, reached by a wide flight of five steps, its porch and hat rack facing the table. The fountain in a raised stone basin with low walls about 6 m east, up two steps. Three steps up to the door in the tree's base. Dry-stone walls edge the terrace.
+  - **The big tree:** a thick hollow trunk at the head of the table, five huge branches arching over the whole table, leaf clumps from about 4.2 m up, four clocks frozen at six and eight glowing lanterns hanging from the branches. Branches and leaves are solid, so the camera stays out of them.
+  - **Density:** a 3 m hedge closes the walkable garden to about 30 by 25 m (too tall for a big Fries to climb out). A stone path links the table, the fountain, the terrace steps and the tree door, lined with wooden fences and spanned by three arches; layered flower beds and bushes break up every open patch. The arches' climbers are pale pink and white: the design keeps red roses for the final shot.
+  - **The edge of the world:** cypress rows beyond the hedge, rolling hills in four directions and a far cottage as flat silhouette cards (one `backdrop` entry each in `src/layout.js`, ready for painted cards), and warm fog matched to the sky, so nothing ends in a hard line.
+  - **Six o'clock light:** a low warm sun about 15 degrees up behind the cottage with long soft shadows across the table, a sky dome from peach at the horizon to soft lavender overhead with the sun's disc, cool and warm hemisphere fill, ACES tone mapping, gentle bloom on the lanterns, gears, page and sun (WebGPU only), and a colour grade that turns pink at 6:01 with the sky, fog and fill.
+  - **Ground:** a large lawn with gentle colour variation, instanced grass and patches of small flowers swaying in one wind computed on the GPU (`src/ground.js`), off the paths and paved areas.
+  - **Frozen magic:** teacups, hats, spoons, plates and pocket watches floating at real size; tea frozen in glossy arcs from four teapot spouts into cups, syrup in four arcs from the fountain's bowl, golden syrup drops hanging round the fountain, and larger petals that catch the light.
 - **Models:** each object loads `art/models/<name>.glb` when present and its boxes otherwise, with no code change. Colliders come from a mesh named `<name>_collider` in the glb, or else from the boxes.
 - **Controller and camera:** third-person controller on Rapier's kinematic character controller; V toggles first person. The third-person camera sweeps a ball back from Fries's eye and stops at the first solid, so it pulls in rather than entering the canopy or anything else.
 - **Sizes:** pink tea shrinks, blue tea grows, cake restores. Scale, eye height, field of view, speed, jump, reach, footstep pitch, camera shake and the pitch at which Fries hears the others ease together over about a second. The first shrink and the first grow cut to first person (the Hatter leans over a tiny Fries; the Hatter and the March Hare shout up at a giant one); after that the view stays where the player leaves it.
-- **Gears:** three gears in any order. They are taken by reach plus a line-of-sight ray, so the geometry decides the size: the tablecloth hangs to 0.3 m (gear 1, small), the fountain's plinth has a 0.35 by 0.3 m crack (gear 2, small), the tallest hat is out of reach unless Fries is big (gear 3). Each gear wakes its own layer with a placeholder effect (tea steams and the frozen petals fall; syrup flows and butterflies take off; the bushes sway), plays its GR line, and moves the explore music a third of the way from frozen to awake. With all three, E at the watch mends it and starts the song.
+- **Gears:** three gears in any order. They are taken by reach plus a line-of-sight ray, so the geometry decides the size: the tablecloth hangs to 0.3 m (gear 1, small); a 0.35 by 0.3 m crack at the foot of the fountain basin's west wall leads through a tunnel to a hollow under the fountain (gear 2, small); the tallest hat on the rack is out of reach unless Fries is big, standing at the top of the terrace steps (gear 3). Gears lie flat. Each gear wakes its own layer with a placeholder effect (tea steams and the frozen petals fall; syrup flows and butterflies take off; the bushes sway), plays its GR line, and moves the explore music a third of the way from frozen to awake. With all three, E at the watch mends it and starts the song.
 - **Hints and barks:** the Dormouse sleep-talks a hint for the nearest missing gear after 45 s without progress, clearer each time, then every 35 s. EX-10 plays the first time the tea is in reach. Ambient and later size lines come from one table of conditions in `src/explore.js`, each at most once, only after 8 s of quiet.
 - **Animation:** one `AnimationMixer` per character model, crossfading between clips by name in 0.2 s (`src/animation.js`). Clips are looked up by these names: `idle`, `walk`, `run`, `jump`, `drink`, `pick_up`, `reach`, `look_around`, `surprised`, `clap`, `cheer`, `dance_swing`, `dance_silly`, `talk`. At load, every clip keeps the vertical track of `mixamorig:Hips` and loses its horizontal travel; the ground speed that travel implied is kept per clip.
   - Fries idles when standing, walks or runs by speed and jumps while airborne. Walk and run play at the rate that makes their recorded ground speed match his real speed at his current size, so the feet do not slide. After 8 s standing still he looks around once, then idles.
@@ -50,13 +57,13 @@ WASD to walk, mouse to look (click the game to capture the mouse, Esc to release
 - **Song:** three passes driven by the measured beats in `audio/04t_little_bat_a.beats.json`. Every table cup, floating object and swaying bush pulses on each beat. Taps are scored against the nearest beat within 120 ms, timed from the key event on the audio output clock; taps in the first pass are ignored. SG-02 to SG-05 are cued on beats, the light rises each pass, the March Hare and the Dormouse join from the second pass, and the camera cranes up in the last.
 - **Ending:** after SG-06 and a short silence, every clock jumps to 6:01, the sky turns pink, the Dormouse goes into the pink teapot, the page flies to Fries, the tree door opens, Fries walks through, the roses appear for the first time, and the render loop stops on that frame.
 - **Audio:** music by role with crossfades (`setMusic`), voice lines by ID (`say`) with subtitles from `src/lang/<code>.json`. `npm run subtitles` regenerates `src/lang/en.json` and `src/speakers.json` from `docs/script.md`.
-- **Renderer:** `WebGPURenderer`, falling back to WebGL 2; the fallback gets half the floating objects and petals and a smaller shadow map.
+- **Renderer:** `WebGPURenderer`, falling back to WebGL 2, drawn through a `RenderPipeline` for bloom and the colour grade. The fallback gets half the floating objects, petals and flowers, a third of the grass, a smaller shadow map and no bloom.
 
 ## What is stubbed
 
 - **Character staging** is still whole-body tweens on top of any clips: the Hatter's lean in the first shrink, his hop onto the table, the box bobbing on the beat, the Dormouse going into the teapot. Box placeholders have no clips, so they keep only these tweens.
 - **Prop sounds** (SE-01 to SE-12) are not wired. Footsteps and the 6:01 click are a generated noise burst, a hit tap is a generated tone. `05t_little_bat_instrumental_a.mp3` (title and results) is not used.
-- **Not built:** the spoon bridge, the Dormouse's breath pushing Fries, character business (pouring tea, changing seats), chairs shuffling, the watch lid, grass and flower instancing, depth of field, tilt-shift, bloom, backdrop cards, a title or results screen, settings and latency calibration.
+- **Not built:** the spoon bridge, the Dormouse's breath pushing Fries, character business (pouring tea, changing seats), chairs shuffling, the watch lid, depth of field, tilt-shift, painted textures for the backdrop cards, a title or results screen, settings and latency calibration.
 - **Song pass boundaries** are assumed to start on beats 0, 40 and 88; confirm by ear and edit `PASSES` in `src/song.js`.
 - **Cutscene cameras** are keyframes in code (`src/story.js`, `src/song.js`), not loaded from glTF.
 - **Voices** are not positional and the music is not ducked under them.
@@ -66,7 +73,8 @@ WASD to walk, mouse to look (click the game to capture the mouse, Esc to release
 
 | What | Where |
 |---|---|
-| Positions of everything, placeholder boxes, gears, drinks, floating clouds, bark zones, song staging | `src/layout.js` |
+| Positions of everything, placeholder boxes, gears, drinks, floating things, frozen tea and syrup, grass densities, backdrop cards, bark zones, song staging | `src/layout.js` |
+| Sun, sky, fog, hemisphere fill, bloom and the colour grade | `src/scene.js` |
 | Everything that changes with size, walking and running speed | `SIZES` and `RUN` in `src/player.js` |
 | Which clip plays when | `animate()` in `src/player.js`, `src/cast.js` |
 | Bark conditions, hint timings, the watch | `src/explore.js` |
@@ -80,7 +88,7 @@ WASD to walk, mouse to look (click the game to capture the mouse, Esc to release
 
 A glb is placed with its origin at the layout position and faces +Z: feet for characters, the hinge for `tree_door`, the pivot for `clock_hand`, the face centre for `wall_clock`, the centre for `gear`, the bottom for everything else. Names in use:
 
-`big_tree`, `tree_door`, `roses`, `long_table`, `armchair`, `hatter`, `hare`, `dormouse`, `fries`, `fountain`, `cottage`, `hat_rack`, `hat`, `teacup`, `plate`, `pink_teapot`, `blue_teapot`, `tea_tray`, `cake`, `cake_stand`, `pocket_watch`, `book_page`, `butter`, `gear`, `wall_clock`, `clock_hand`, `bush`, `hedge`, `stone_path`.
+`big_tree`, `tree_door`, `roses`, `long_table`, `armchair`, `hatter`, `hare`, `dormouse`, `fries`, `fountain`, `cottage`, `hat_rack`, `hat`, `teacup`, `plate`, `pink_teapot`, `blue_teapot`, `tea_tray`, `cake`, `cake_stand`, `pocket_watch`, `book_page`, `butter`, `gear`, `wall_clock`, `clock_hand`, `bush`, `hedge`, `stone_path`, `terrace`, `top_hat`, `hanging_clock`, `lantern`, `fence`, `rose_arch`, `flower_bed`, `cypress`, `teapot`, `spoon`. A box in a placeholder shape may carry a turn `[rx, ry, rz]` in degrees after its colour.
 
 A `<name>_collider` mesh must be indexed (Blender's glTF export always is) and must keep the gaps the gears depend on: the 0.3 m under the tablecloth, the fountain's crack, and the canopy underside, which also keeps the camera out of the leaves.
 
@@ -89,11 +97,12 @@ A `<name>_collider` mesh must be indexed (Blender's glTF export always is) and m
 | File | Role |
 |---|---|
 | `src/main.js` | Start screen and the frame loop |
-| `src/scene.js` | Renderer, scene, camera, lights |
+| `src/scene.js` | Renderer, render pipeline, camera, sun, sky |
 | `src/physics.js` | Rapier world |
 | `src/layout.js` | The garden as data |
 | `src/models.js` | glb or boxes, colliders |
-| `src/garden.js` | Places the layout; wake-layer effects |
+| `src/garden.js` | Places the layout and backdrop cards; frozen tea and syrup; wake-layer effects |
+| `src/ground.js` | Lawn, grass and flowers |
 | `src/player.js` | Controller, sizes, cameras, reach, Fries's animation |
 | `src/animation.js` | Clip playback with crossfades |
 | `src/cast.js` | The other characters' animation |
@@ -104,6 +113,16 @@ A `<name>_collider` mesh must be indexed (Blender's glTF export always is) and m
 | `src/audio.js` | Music mix, voice lines, subtitles, stand-in sounds, audio clock |
 | `src/tweens.js` | Game-time tweens for scripts |
 | `scripts/subtitles.mjs` | Generates subtitles from the script |
+
+## Before and after
+
+The same three cameras before and after the space, levels and atmosphere pass, rendered on WebGPU (headless Chromium through SwiftShader, so no antialiasing to speak of), with Fries placed at (-1.4, 0, 2.6).
+
+| Camera | Before | After |
+|---|---|---|
+| Over the garden from the south-east: position (13, 11, 15), looking at (-2, 1, -4) | ![](images/before-1.jpg) | ![](images/after-1.jpg) |
+| Eye level down the long table: position (0.6, 1.5, 5), looking at (0, 1.2, -6) | ![](images/before-2.jpg) | ![](images/after-2.jpg) |
+| From the fountain side toward the cottage: position (5.5, 2.4, 2.5), looking at (-8, 2.2, -3) | ![](images/before-3.jpg) | ![](images/after-3.jpg) |
 
 ## Tested
 
@@ -116,6 +135,7 @@ In headless Chromium with no media present, under software rendering at a few to
 - The song plays its cues, light and camera on the beat map, scores taps and ignores the first pass. A key press in the second pass is judged and shown. Taps fired by timers in the page arrive late under this much CPU load (synthetic events are stamped when the delayed timer runs), so timing accuracy itself was not measured here; real key events carry their input time.
 - The ending reaches the roses, and the render loop stops on that frame.
 - Animation, with a generated stand-in `fries.glb` (a `mixamorig:Hips` bone with all fourteen clip names, walk and run carrying 1 and 3 m/s of root motion): root motion is flattened with height kept and the ground speeds read back as 1 and 3 m/s; idle, walk, run, jump, talk, drink and surprised play in turn and return to locomotion; look_around plays once after 8 s still; walking at 1.8 m/s plays walk at 1.8 times; first person drops Fries's layer from the camera while the shadow camera keeps it. The same file as `hatter.glb` idles, talks on a Hatter line and dances in passes 2 and 3. Your real models have not been run here.
+- After the space, levels and atmosphere pass, with the same tests: normal and big Fries still cannot take gears 1 and 2 nor normal Fries gear 3 (also from the porch); small Fries walks from the table under the cloth for gear 1 and on through the crack and tunnel for gear 2; big Fries walks from the tea tray past the fences, straight up the terrace steps and takes gear 3; normal Fries climbs the terrace, the fountain and the tree-door steps. The ending walks up the door steps into the tree, turns sky and grade pink and freezes, on the WebGL fallback.
 - `npm run build` succeeds; the bundle is about 5 MB (1.9 MB gzipped), mostly three.js's WebGPU build and Rapier's inlined WebAssembly.
 
 Not run here: real media, real models, a full playthrough on WebGPU, and a playthrough by hand.
