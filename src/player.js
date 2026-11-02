@@ -3,6 +3,7 @@ import { RAPIER, world } from './physics.js'
 import { renderer, scene, camera } from './scene.js'
 import { model } from './models.js'
 import { start } from './layout.js'
+import { burst, setVoicePitch } from './audio.js'
 
 const DEG = Math.PI / 180
 const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, GRAVITY = 18
@@ -81,10 +82,11 @@ function resize(dt) {
   controller.enableSnapToGround(0.3 * s)
   controller.enableAutostep(0.3 * s, 0.05 * s, false)
   player.mesh.scale.setScalar(s)
+  setVoicePitch(player.p.voice)
 }
 
 const move = new THREE.Vector3(), eye = new THREE.Vector3(), dir = new THREE.Vector3()
-let velY = 0, grounded = false, shake = 0
+let velY = 0, grounded = false, stride = 0, shake = 0
 
 export function updatePlayer(dt) {
   resize(dt)
@@ -108,6 +110,12 @@ export function updatePlayer(dt) {
 
     const travelled = Math.hypot(m.x, m.z)
     player.still = travelled > 1e-4 * s ? 0 : player.still + dt
+    stride += grounded ? travelled : 0
+    if (stride > 0.7 * s) {
+      stride = 0
+      burst(p.stepPitch, p.stepGain)
+      shake = p.shake
+    }
     if (f || r) {
       const turn = Math.atan2(move.x, move.z) - player.mesh.rotation.y
       player.mesh.rotation.y += Math.atan2(Math.sin(turn), Math.cos(turn)) * Math.min(1, dt * 12)
@@ -148,6 +156,14 @@ function updateCamera(dt) {
   camera.position.x += (Math.random() - 0.5) * shake
   camera.position.y += (Math.random() - 0.5) * shake
   shake *= Math.exp(-dt * 12)
+}
+
+// Turns the view toward a point; k below 1 eases part of the way.
+export function facePoint(point, k = 1) {
+  dir.subVectors(point, eye.copy(player.feet).setY(player.feet.y + EYE * player.p.scale))
+  const yaw = Math.atan2(-dir.x, -dir.z), turn = yaw - player.yaw
+  player.yaw += Math.atan2(Math.sin(turn), Math.cos(turn)) * k
+  player.pitch += (Math.atan2(dir.y, Math.hypot(dir.x, dir.z)) - player.pitch) * k
 }
 
 // Whether Fries can take something at `point`: within reach of his body, with nothing solid in between.
