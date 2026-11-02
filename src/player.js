@@ -3,17 +3,19 @@ import { RAPIER, world } from './physics.js'
 import { renderer, scene, camera } from './scene.js'
 import { model } from './models.js'
 import { start } from './layout.js'
-import { burst, setVoicePitch } from './audio.js'
+import { burst, setVoicePitch, currentSpeaker } from './audio.js'
+import { Animator } from './animation.js'
 
 const DEG = Math.PI / 180
-const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, GRAVITY = 18
+const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, KNEE = 0.35, GRAVITY = 18, RUN = 2.2
 
-// Everything that changes with Fries's size; at scale 1 he is 1.2 m tall. reach is how far from his body he
-// can take things; voice is the pitch at which he hears the others.
+// Everything that changes with Fries's size; at scale 1 he is 1.2 m tall. speed is walking speed (Shift runs
+// at RUN times that); reach is how far from his body he can take things; voice is the pitch at which he hears
+// the others.
 const SIZES = {
-  small: { scale: 0.18, fov: 82, speed: 1.1, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
-  normal: { scale: 1, fov: 70, speed: 3.2, jump: 0.7, reach: 0.9, stepPitch: 1, stepGain: 0.5, shake: 0, voice: 1 },
-  big: { scale: 2.6, fov: 58, speed: 6.5, jump: 1.2, reach: 2.2, stepPitch: 0.45, stepGain: 1, shake: 0.07, voice: 1.45 },
+  small: { scale: 0.18, fov: 82, speed: 0.6, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
+  normal: { scale: 1, fov: 70, speed: 1.8, jump: 0.7, reach: 0.9, stepPitch: 1, stepGain: 0.5, shake: 0, voice: 1 },
+  big: { scale: 2.6, fov: 58, speed: 4.7, jump: 1.2, reach: 2.2, stepPitch: 0.45, stepGain: 1, shake: 0.07, voice: 1.45 },
 }
 
 const collider = world.createCollider(RAPIER.ColliderDesc.capsule(HEIGHT / 2 - RADIUS, RADIUS))
@@ -34,6 +36,11 @@ export const player = {
   still: 0, // seconds since Fries last moved
 }
 scene.add(player.mesh)
+// Fries lives on layer 1. First person takes that layer off the camera, while the sun's shadow camera keeps
+// it, so he still casts his animated shadow.
+player.mesh.traverse(o => o.layers.set(1))
+camera.layers.enable(1)
+const anim = new Animator(player.mesh, 'fries')
 
 const keys = new Set()
 let jump = false
@@ -54,7 +61,9 @@ export function placePlayer(pos, rot) {
   player.yaw = (rot - 180) * DEG
   player.mesh.rotation.y = rot * DEG
   player.mesh.position.copy(player.feet)
+  last.copy(player.feet)
 }
+const last = new THREE.Vector3()
 placePlayer(start.pos, start.rot)
 
 let from = SIZES.normal, ease = 0, duration = 0
@@ -95,7 +104,7 @@ export function updatePlayer(dt) {
     const f = keys.has('KeyW') - keys.has('KeyS'), r = keys.has('KeyD') - keys.has('KeyA')
     const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw)
     move.set(r * cos - f * sin, 0, -r * sin - f * cos)
-    if (f || r) move.normalize().multiplyScalar(p.speed * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 1.8 : 1))
+    if (f || r) move.normalize().multiplyScalar(p.speed * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? RUN : 1))
     if (jump && grounded) velY = Math.sqrt(2 * GRAVITY * p.jump)
     velY -= GRAVITY * dt
 
@@ -122,6 +131,8 @@ export function updatePlayer(dt) {
     }
   }
   jump = false
+  animate(dt, Math.hypot(player.feet.x - last.x, player.feet.z - last.z) / dt, player.control && !grounded)
+  last.copy(player.feet)
   player.mesh.position.copy(player.feet)
   collider.setTranslation({ x: player.feet.x, y: player.feet.y + HEIGHT / 2 * s, z: player.feet.z })
   updateCamera(dt)
@@ -132,7 +143,7 @@ const ball = new RAPIER.Ball(0.1)
 const NO_TURN = { x: 0, y: 0, z: 0, w: 1 }
 
 function updateCamera(dt) {
-  player.mesh.visible = player.cinematic || player.view === 'third'
+  camera.layers.enable(1)
   if (player.cinematic) return
   const s = player.p.scale
   camera.fov = player.p.fov
@@ -140,7 +151,10 @@ function updateCamera(dt) {
   camera.updateProjectionMatrix()
   camera.rotation.set(player.pitch, player.yaw, 0)
   eye.copy(player.feet).setY(player.feet.y + EYE * s)
-  if (player.view === 'first') camera.position.copy(eye)
+  if (player.view === 'first') {
+    camera.position.copy(eye)
+    camera.layers.disable(1)
+  }
   else {
     // Orbit behind the head. A ball wider than the near plane is swept back from the eye and stops at the
     // first solid, so the camera pulls in toward Fries instead of entering the canopy, a wall or the table.
@@ -151,11 +165,45 @@ function updateCamera(dt) {
     const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, undefined, undefined, collider)
     const distance = hit ? hit.time_of_impact : far
     camera.position.copy(eye).addScaledVector(dir, distance)
-    player.mesh.visible = distance > 0.6 * s
+    if (distance < 0.6 * s) camera.layers.disable(1)
   }
   camera.position.x += (Math.random() - 0.5) * shake
   camera.position.y += (Math.random() - 0.5) * shake
   shake *= Math.exp(-dt * 12)
+}
+
+let oneShot = null, still = 0
+
+// Plays a one-shot clip such as drink or clap; locomotion takes over again when it ends.
+export function act(name) {
+  if (!anim.has(name)) return
+  oneShot = name
+  anim.play(name, true)
+}
+
+// Picks up something at or below his knee, reaches for anything higher.
+export function take(point) {
+  act(point.y - player.feet.y <= KNEE * player.p.scale ? 'pick_up' : 'reach')
+}
+
+// Locomotion from his real ground speed: idle, walk or run paced so the feet do not slide, jump in the air,
+// talk while one of his own lines plays, and a look around after 8 s standing still.
+function animate(dt, speed, airborne) {
+  const s = player.p.scale
+  const moving = speed > 0.1 * s
+  still = moving || airborne ? 0 : still + dt
+  if (oneShot && !anim.playing(oneShot)) oneShot = null
+  if (!oneShot) {
+    if (airborne) anim.play('jump')
+    else if (moving) {
+      const gait = speed > 1.5 * player.p.speed ? 'run' : 'walk'
+      anim.play(gait)
+      anim.pace(gait, speed, s)
+    } else if (currentSpeaker() === 'fries') anim.play('talk')
+    else if (still > 8 && still - dt <= 8) act('look_around')
+    else anim.play('idle')
+  }
+  anim.mixer.update(dt)
 }
 
 // Turns the view toward a point; k below 1 eases part of the way.

@@ -4,7 +4,7 @@ import { camera, hemi, sun } from './scene.js'
 import { things, cups } from './garden.js'
 import { glow } from './models.js'
 import { song as staging } from './layout.js'
-import { player, placePlayer, setSize } from './player.js'
+import { player, placePlayer, setSize, act } from './player.js'
 import { setMusic, say, playing, heard, musicLength, ting } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { game } from './state.js'
@@ -52,6 +52,7 @@ function tap(at) {
     scored.add(beat)
     hits++
     ting(1320)
+    act('clap')
     tween(0.25, k => {
       tapCup.position.y = cupY + Math.sin(k * Math.PI) * 0.08
       tapCup.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 2 * (1 - k) })

@@ -27,6 +27,7 @@ sun.castShadow = true
 sun.shadow.mapSize.setScalar(webgpu ? 2048 : 1024)
 Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 80 })
 sun.shadow.bias = -0.0005
+sun.shadow.camera.layers.enable(1) // Fries's layer: he casts a shadow even when first person hides him
 scene.add(hemi, sun)
 
 addEventListener('resize', () => {

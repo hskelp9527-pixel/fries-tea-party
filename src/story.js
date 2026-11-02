@@ -3,7 +3,7 @@ import { renderer, scene, camera, SKY, hemi } from './scene.js'
 import { things, gears, clocks, drinks, wake } from './garden.js'
 import { model } from './models.js'
 import { start, song } from './layout.js'
-import { player, placePlayer } from './player.js'
+import { player, placePlayer, act, take } from './player.js'
 import { setMusic, say, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { startExplore } from './explore.js'
@@ -90,6 +90,7 @@ async function opening() {
   // Shot 2: Fries reaches for the glowing page in the Hatter's watch; it snaps shut.
   placePlayer([-1.3, 0, -5.7], 143)
   await shot(v(-2.15, 1.5, -4.55), home)
+  take(home)
   await tween(0.8, t => { player.mesh.rotation.x = 0.25 * t })
   await say('OP-04')
   page.visible = false
@@ -129,6 +130,7 @@ async function ending() {
     c.hour.rotation.z = Math.PI - 0.5 * DEG
   }
   setMusic({ ending: 1 }, 0)
+  act('cheer')
   tween(3, t => {
     scene.background.lerpColors(SKY, PINK, t)
     scene.fog.color.lerpColors(SKY, PINK, t)
@@ -144,7 +146,9 @@ async function ending() {
   // The page flies into Fries's hands and the door at the foot of the big tree opens.
   page.position.copy(watch.position)
   page.visible = true
-  await arc(page, player.feet.clone().setY(0.8), 1, 1.5)
+  const hands = player.feet.clone().setY(0.8)
+  take(hands)
+  await arc(page, hands, 1, 1.5)
   page.visible = false
   await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = -100 * DEG * t })])
 

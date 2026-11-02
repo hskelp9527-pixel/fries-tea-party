@@ -183,10 +183,10 @@ export const shapes = {
   ],
   book_page: [[0, 0.034, 0, 0.08, 0.004, 0.1, GLOW]],
   butter: [[0, 0.02, 0, 0.12, 0.04, 0.07, 0xf6dc6a]],
-  gear: [
-    [0, 0, 0, 0.22, 0.22, 0.05, BRASS],
-    [0, 0, 0, 0.3, 0.06, 0.04, BRASS],
-    [0, 0, 0, 0.06, 0.3, 0.04, BRASS],
+  gear: [ // lying flat
+    [0, 0, 0, 0.22, 0.05, 0.22, BRASS],
+    [0, 0, 0, 0.3, 0.04, 0.06, BRASS],
+    [0, 0, 0, 0.06, 0.04, 0.3, BRASS],
   ],
   wall_clock: [
     [0, 0, 0, 0.62, 0.62, 0.05, WOOD],
@@ -254,9 +254,9 @@ export const bushes = [
 
 // The three gears, collectable in any order. Each wakes its own layer of the world.
 export const gears = [
-  { pos: [0.1, 0.12, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'] }, // under the long table
-  { pos: [9, 0.12, -3], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'] }, // inside the fountain's plinth
-  { pos: [-7.4, 3.83, -4.2], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'] }, // on the tallest hat
+  { pos: [0.1, 0.03, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'] }, // under the long table
+  { pos: [9, 0.03, -3], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'] }, // inside the fountain's plinth
+  { pos: [-7.4, 3.74, -4.2], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'] }, // on the tallest hat
 ]
 
 // Things that change Fries's size.

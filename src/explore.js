@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { player, setSize, reaches, facePoint } from './player.js'
+import { player, setSize, reaches, facePoint, act, take } from './player.js'
 import { things, drinks, gears, wake } from './garden.js'
 import { zones } from './layout.js'
 import { setMusic, say, speaking } from './audio.js'
@@ -54,6 +54,7 @@ export function startExplore(mended) {
 
 async function drink(d) {
   drank = true
+  act('drink')
   setSize(d.size)
   if (d.size === 'small' && player.shrinks === 1) await firstShrink()
   if (d.size === 'big' && player.grows === 1) await firstGrow()
@@ -73,6 +74,7 @@ async function firstShrink() {
     facePoint(head(hatter, 1.3), 0.2)
   }
   await wait(1.2)
+  act('surprised')
   await tween(1.6, t => lean(t * t * (3 - 2 * t)))
   await say('SZ-01')
   await say('SZ-02')
@@ -84,6 +86,7 @@ async function firstShrink() {
 async function firstGrow() {
   player.control = false
   await wait(1.2)
+  act('surprised')
   await tween(0.8, () => facePoint(head(things.hatter, 1.3), 0.15))
   await say('SZ-03')
   await tween(0.6, () => facePoint(head(things.hare, 1.2), 0.15))
@@ -94,6 +97,7 @@ async function firstGrow() {
 function find(gear) {
   gear.found = true
   gear.object.visible = false
+  take(gear.pos)
   game.gears++
   wake(gear.layer)
   setFloatingLevel(game.gears)
