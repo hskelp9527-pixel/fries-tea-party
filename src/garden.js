@@ -67,16 +67,37 @@ export function wake(layer) {
 const box = new THREE.BoxGeometry()
 const effect = (colour, opacity = 1) => new THREE.MeshStandardMaterial({ color: colour, transparent: opacity < 1, opacity })
 
-// Tea frozen mid-pour and syrup frozen over the fountain's lip.
-function stream({ from, to }, width, colour) {
-  const mesh = new THREE.Mesh(box, effect(colour, 0.85))
-  mesh.position.set((from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2)
-  mesh.scale.set(width, from[1] - to[1], width)
-  scene.add(mesh)
-  return mesh
+// Tea and syrup frozen mid-pour in glossy arcs that catch the light, each with droplets that hang on it and
+// run along it once its layer wakes.
+const drop = new THREE.IcosahedronGeometry(1, 1)
+const shine = colour => new THREE.MeshStandardMaterial({ color: colour, emissive: colour, emissiveIntensity: 0.4, roughness: 0.15, transparent: true, opacity: 0.85 })
+function arc({ from, to, height }, radius, material) {
+  const a = new THREE.Vector3(...from), b = new THREE.Vector3(...to)
+  const curve = new THREE.QuadraticBezierCurve3(a, a.clone().lerp(b, 0.5).setY(Math.max(a.y, b.y) + 2 * height), b)
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, radius, 8), material))
+  const drops = [0, 1, 2].map(i => {
+    const mesh = new THREE.Mesh(drop, material)
+    mesh.scale.setScalar(radius * 1.8)
+    mesh.position.copy(curve.getPoint((i + 0.5) / 3))
+    scene.add(mesh)
+    return mesh
+  })
+  return { curve, drops }
 }
-const tea = stream(layout.effects.teaStream, 0.02, 0x9a5a2a)
-const syrup = stream(layout.effects.syrupStream, 0.06, 0xd99a30)
+const teaArcs = layout.effects.teaArcs.map(a => arc(a, 0.012, shine(0xb5652a)))
+const syrupArcs = layout.effects.syrupArcs.map(a => arc(a, 0.025, shine(0xe8a830)))
+const flow = (arcs, time, speed) => arcs.forEach(({ curve, drops }) => drops.forEach((d, i) => curve.getPoint((time * speed + i / 3) % 1, d.position)))
+
+// Golden syrup drops hanging in the air round the fountain; once the syrup wakes they fall into the basin.
+const D = layout.effects.syrupDrops
+const syrupDrops = new THREE.InstancedMesh(drop, shine(0xf0b838), D.count)
+const drips = Array.from({ length: D.count }, () => new THREE.Vector3(...D.center.map((c, i) => c + (Math.random() - 0.5) * D.size[i])))
+const dripMatrix = new THREE.Matrix4(), dripTurn = new THREE.Quaternion(), dripSize = new THREE.Vector3(0.03, 0.03, 0.03)
+function placeDrips() {
+  drips.forEach((p, i) => syrupDrops.setMatrixAt(i, dripMatrix.compose(p, dripTurn, dripSize)))
+  syrupDrops.instanceMatrix.needsUpdate = true
+}
+scene.add(syrupDrops)
 
 // Steam puffs rising from the cups and teapots once the tea wakes.
 const steamFrom = [...cups, ...drinks.filter(d => d.model.endsWith('teapot')).map(d => d.object)]
@@ -90,7 +111,7 @@ let puffTimer = 0
 
 // Petals hanging still in the air; they fall once the tea wakes.
 const P = layout.effects.petals
-const petals = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 0.004, 0.035), effect(0xf4a8c0), Math.round(P.count * (webgpu ? 1 : 0.5)))
+const petals = new THREE.InstancedMesh(new THREE.BoxGeometry(0.09, 0.004, 0.06), new THREE.MeshStandardMaterial({ color: 0xf4a8c0, emissive: 0xf4a8c0, emissiveIntensity: 0.25, roughness: 0.4 }), Math.round(P.count * (webgpu ? 1 : 0.5)))
 const petal = Array.from({ length: petals.count }, () => ({
   pos: new THREE.Vector3(...P.center.map((c, i) => c + (Math.random() - 0.5) * P.size[i])),
   turn: new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6),
@@ -108,6 +129,7 @@ function placePetals() {
   petals.instanceMatrix.needsUpdate = true
 }
 placePetals()
+placeDrips()
 scene.add(petals)
 
 // Butterflies perched round the fountain; they take off once the syrup wakes.
@@ -138,7 +160,7 @@ export function updateGarden(dt, time) {
   bubble.scale.setScalar(breath < 0.9 ? 0.02 + breath * 0.1 : 0.001)
 
   if (awake.tea) {
-    tea.scale.x = tea.scale.z = 0.02 + 0.006 * Math.sin(time * 9)
+    flow(teaArcs, time, 0.9)
     puffTimer -= dt
     if (puffTimer < 0) {
       puffTimer = 0.08
@@ -163,7 +185,12 @@ export function updateGarden(dt, time) {
   }
 
   if (awake.syrup) {
-    syrup.scale.x = syrup.scale.z = 0.06 + 0.015 * Math.sin(time * 5)
+    flow(syrupArcs, time, 0.5)
+    for (const p of drips) {
+      p.y -= dt * 0.6
+      if (p.y < 0.9) p.y = D.center[1] + D.size[1] / 2
+    }
+    placeDrips()
     for (const b of butterflies) {
       b.lift = Math.min(1, b.lift + dt * 0.5)
       const a = b.phase + time * b.speed

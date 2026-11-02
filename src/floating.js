@@ -5,8 +5,9 @@ import { floating } from './layout.js'
 import { player } from './player.js'
 import { game } from './state.js'
 
-// Teacups and hats drifting in the air on paths that never repeat. They glide out of Fries's way, hats turn
-// to look at him, everything pulses on the beat of the song, and every gear found adds another batch.
+// Teacups, hats, spoons, plates and pocket watches drifting in the air on paths that never repeat. Teacups
+// glide out of Fries's way, hats turn to look at him, everything pulses on the beat of the song, and every
+// gear found adds another batch.
 const items = []
 const density = webgpu ? 1 : 0.5
 
@@ -17,7 +18,7 @@ function add(kind, n) {
   items.push({
     kind,
     object,
-    size: kind === 'teacup' ? 1 + Math.random() * 0.4 : 0.9 + Math.random() * 0.3, // near real size, varied
+    size: 0.9 + Math.random() * 0.4, // near real size, varied
     home: new THREE.Vector3(...cloud.center.map((c, k) => c + (Math.random() - 0.5) * cloud.size[k])),
     phase: Math.random() * 100,
     wander: 0.3 + Math.random() * 0.5,
@@ -28,9 +29,9 @@ function add(kind, n) {
 }
 
 export function setFloatingLevel(gearsFound) {
-  const count = kind => items.filter(it => it.kind === kind).length
-  for (let n = count('teacup'); n < Math.round(floating.cups * (gearsFound + 1) * density); n++) add('teacup', n)
-  for (let n = count('hat'); n < Math.round(floating.hats * (gearsFound + 1) * density); n++) add('hat', n)
+  for (const [kind, perGear] of Object.entries(floating.perGear)) {
+    for (let n = items.filter(it => it.kind === kind).length; n < Math.round(perGear * (gearsFound + 1) * density); n++) add(kind, n)
+  }
 }
 setFloatingLevel(0)
 

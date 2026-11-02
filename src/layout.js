@@ -214,6 +214,11 @@ export const shapes = {
     [0.05, 0.05, 0, 0.02, 0.04, 0.01, CHINA],
   ],
   plate: [[0, 0.005, 0, 0.24, 0.01, 0.24, CHINA]],
+  teapot: teapot(CHINA),
+  spoon: [
+    [0, 0.005, 0, 0.02, 0.01, 0.14, SILVER],
+    [0, 0.01, 0.085, 0.045, 0.015, 0.06, SILVER],
+  ],
   pink_teapot: teapot(PINK),
   blue_teapot: teapot(BLUE),
   tea_tray: [[0, 0.01, 0, 0.5, 0.02, 0.9, SILVER]],
@@ -336,6 +341,8 @@ export const placed = [
   { model: 'dormouse', pos: [0.1, 0.76, -7.9], rot: -60, solid: false },
   { model: 'tea_tray', pos: [-0.45, 0.75, -5], solid: false },
   { model: 'cake_stand', pos: [0.2, 0.75, -3.4], solid: false },
+  { model: 'teapot', pos: [0.3, 0.75, -2.6], solid: false },
+  { model: 'teapot', pos: [-0.2, 0.75, 0.2], rot: 180, solid: false },
   { model: 'pocket_watch', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false },
   { model: 'book_page', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false },
   { model: 'fountain', pos: [7, 0, -3] }, // about 6 m east of the table
@@ -424,10 +431,10 @@ export const lanterns = [
   [-1.7, 3.2, 0.4], [1.7, 3.4, 1], [0.3, 3.6, -4.6], [-0.2, 3.5, -1.2],
 ]
 
-// Floating teacups and hats drift inside these boxes. Each gear found adds another `cups` and `hats`.
+// Floating things drift inside these boxes, at about their real size. Each gear found adds another batch of
+// `perGear` of each kind.
 export const floating = {
-  cups: 12,
-  hats: 5,
+  perGear: { teacup: 14, hat: 5, spoon: 8, plate: 6, pocket_watch: 3 },
   clouds: [
     { center: [0, 2.4, -3.5], size: [4.6, 2, 10] },
     { center: [7, 2.4, -3], size: [5, 2, 5] },
@@ -448,8 +455,21 @@ export const zones = {
 
 // Where the world-waking effects sit.
 export const effects = {
-  teaStream: { from: [-0.55, 1.3, -6.2], to: [-0.55, 0.82, -6.2] }, // tea frozen mid-pour over a cup
-  syrupStream: { from: [7.55, 2.45, -3], to: [7.55, 0.87, -3] }, // syrup frozen over the fountain's lip
+  // Tea frozen mid-pour from the teapots' spouts into cups: from, to and how high the arc rises
+  teaArcs: [
+    { from: [-0.26, 0.89, -5.25], to: [-0.55, 0.83, -6.2], height: 0.3 },
+    { from: [-0.26, 0.89, -4.75], to: [-0.55, 0.83, -4.2], height: 0.22 },
+    { from: [0.49, 0.87, -2.6], to: [0.45, 0.83, -2.2], height: 0.18 },
+    { from: [-0.39, 0.87, 0.2], to: [-0.45, 0.83, -0.1], height: 0.16 },
+  ],
+  // Syrup frozen in arcs from the fountain's bowl into its basin, and golden drops hanging round it
+  syrupArcs: [
+    { from: [7.6, 2.5, -3], to: [8.15, 0.87, -3], height: 0.25 },
+    { from: [6.4, 2.5, -3], to: [5.85, 0.87, -3], height: 0.25 },
+    { from: [7, 2.5, -2.4], to: [7, 0.87, -1.85], height: 0.25 },
+    { from: [7, 2.5, -3.6], to: [7, 0.87, -4.15], height: 0.25 },
+  ],
+  syrupDrops: { center: [7, 1.7, -3], size: [4.4, 2, 4.4], count: 70 },
   petals: { center: [0, 2.2, -4], size: [12, 3.4, 14], count: 240 },
   butterflies: { center: [7, 0.97, -3], perch: 1.4, radius: 3.5, count: 14 }, // perched round the basin rim
 }
