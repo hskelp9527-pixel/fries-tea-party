@@ -120,6 +120,8 @@ export function updatePlayer(dt) {
 }
 
 const ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 })
+const ball = new RAPIER.Ball(0.1)
+const NO_TURN = { x: 0, y: 0, z: 0, w: 1 }
 
 function updateCamera(dt) {
   player.mesh.visible = player.cinematic || player.view === 'third'
@@ -132,15 +134,16 @@ function updateCamera(dt) {
   eye.copy(player.feet).setY(player.feet.y + EYE * s)
   if (player.view === 'first') camera.position.copy(eye)
   else {
-    // Orbit behind the head, pulled in when something is in the way.
-    eye.y += 0.15 * s
+    // Orbit behind the head. A ball wider than the near plane is swept back from the eye and stops at the
+    // first solid, so the camera pulls in toward Fries instead of entering the canopy, a wall or the table.
     const cp = Math.cos(player.pitch)
     dir.set(Math.sin(player.yaw) * cp, -Math.sin(player.pitch), Math.cos(player.yaw) * cp)
-    ray.origin = eye
-    ray.dir = dir
+    ball.radius = 0.1 * s
     const far = 3.2 * s
-    const hit = world.castRay(ray, far, true, undefined, undefined, collider)
-    camera.position.copy(eye).addScaledVector(dir, hit ? Math.max(hit.timeOfImpact - 0.15 * s, 0.1 * s) : far)
+    const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, undefined, undefined, collider)
+    const distance = hit ? hit.time_of_impact : far
+    camera.position.copy(eye).addScaledVector(dir, distance)
+    player.mesh.visible = distance > 0.6 * s
   }
   camera.position.x += (Math.random() - 0.5) * shake
   camera.position.y += (Math.random() - 0.5) * shake

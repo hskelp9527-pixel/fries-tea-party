@@ -31,9 +31,9 @@ export const shapes = {
     [0, 6.75, 0, 2, 0.5, 2, BARK],
     [-1.9, 0.25, 0.4, 1, 0.5, 1.4, BARK],
     [1.9, 0.25, -0.3, 1, 0.5, 1.6, BARK],
-    [0, 8.8, -1, 16, 3.5, 12, LEAF], // canopy, reaching over the long table
-    [1, 8.2, 6, 11, 2.5, 9, LEAF],
-    [-5, 9.6, -3, 7, 3, 7, LEAF],
+    [0, 5.75, -1, 16, 3.5, 12, LEAF], // canopy from 4 m up, reaching over the whole long table
+    [0, 5.25, 8.5, 11, 2.5, 12, LEAF],
+    [-5, 6.5, -3, 7, 3, 7, LEAF],
   ],
   tree_door: [ // pivots on its hinge
     [0.5, 1.1, 0, 1, 2.2, 0.08, DOOR],
@@ -45,23 +45,23 @@ export const shapes = {
     [0.5, 0.35, -0.6, 0.7, 0.7, 0.5, LEAF],
     [-0.65, 0.75, -0.5, 0.16, 0.14, 0.16, ROSE],
     [-0.3, 0.8, -0.65, 0.16, 0.14, 0.16, ROSE],
-    [0.35, 0.78, -0.5, 0.16, 0.14, 0.16, ROSE],
+    [0.35, 0.75, -0.5, 0.16, 0.14, 0.16, ROSE],
     [0.7, 0.74, -0.7, 0.16, 0.14, 0.16, ROSE],
     [0.05, 0.72, -0.4, 0.14, 0.12, 0.14, ROSE],
   ],
-  long_table: [ // the tablecloth hangs to 0.3 m: only a small Fries gets under it
-    [0, 0.76, 0, 1.6, 0.04, 10, CLOTH],
-    [-0.79, 0.53, 0, 0.02, 0.46, 10, FRINGE],
-    [0.79, 0.53, 0, 0.02, 0.46, 10, FRINGE],
-    [0, 0.53, -4.99, 1.6, 0.46, 0.02, FRINGE],
-    [0, 0.53, 4.99, 1.6, 0.46, 0.02, FRINGE],
-    [-0.7, 0.37, -4.9, 0.08, 0.74, 0.08, WOOD],
-    [0.7, 0.37, -4.9, 0.08, 0.74, 0.08, WOOD],
-    [-0.7, 0.37, 4.9, 0.08, 0.74, 0.08, WOOD],
-    [0.7, 0.37, 4.9, 0.08, 0.74, 0.08, WOOD],
+  long_table: [ // top at 0.75 m; the tablecloth hangs to 0.3 m, so only a small Fries gets under it
+    [0, 0.73, 0, 1.6, 0.04, 10, CLOTH],
+    [-0.79, 0.505, 0, 0.02, 0.41, 10, FRINGE],
+    [0.79, 0.505, 0, 0.02, 0.41, 10, FRINGE],
+    [0, 0.505, -4.99, 1.6, 0.41, 0.02, FRINGE],
+    [0, 0.505, 4.99, 1.6, 0.41, 0.02, FRINGE],
+    [-0.7, 0.355, -4.9, 0.08, 0.71, 0.08, WOOD],
+    [0.7, 0.355, -4.9, 0.08, 0.71, 0.08, WOOD],
+    [-0.7, 0.355, 4.9, 0.08, 0.71, 0.08, WOOD],
+    [0.7, 0.355, 4.9, 0.08, 0.71, 0.08, WOOD],
   ],
-  armchair: [
-    [0, 0.22, 0, 0.75, 0.44, 0.7, CHAIR],
+  armchair: [ // seat at 0.45 m
+    [0, 0.225, 0, 0.75, 0.45, 0.7, CHAIR],
     [0, 0.85, -0.3, 0.75, 0.9, 0.12, CHAIR],
     [-0.33, 0.6, 0.02, 0.1, 0.3, 0.66, CHAIR],
     [0.33, 0.6, 0.02, 0.1, 0.3, 0.66, CHAIR],
@@ -127,7 +127,7 @@ export const shapes = {
     [0, 4.25, 0, 4, 0.5, 2.6, ROOF],
     [0, 4.7, 0, 2.6, 0.4, 1, ROOF],
     [1.8, 4.6, -1, 0.6, 1.8, 0.6, BRICK],
-    [0, 1.05, 2.52, 1, 2.1, 0.06, DOOR],
+    [0, 1, 2.52, 1, 2, 0.06, DOOR], // 2 m
     [-1.9, 1.7, 2.52, 0.9, 0.8, 0.06, GLASS],
     [1.9, 1.7, 2.52, 0.9, 0.8, 0.06, GLASS],
     [0, 0.2, 3.5, 6, 0.4, 2, PLANK], // porch, step and railings
@@ -231,12 +231,12 @@ export const placed = [
   { model: 'armchair', pos: [1.35, 0, -4.6], rot: -90 },
   { model: 'armchair', pos: [1.35, 0, -2], rot: -90 },
   { model: 'armchair', pos: [1.35, 0, 0.4], rot: -90 },
-  { model: 'plate', pos: [0.1, 0.78, -7.9], solid: false },
-  { model: 'dormouse', pos: [0.1, 0.79, -7.9], rot: -60, solid: false },
-  { model: 'tea_tray', pos: [-0.45, 0.78, -5], solid: false },
-  { model: 'cake_stand', pos: [0.2, 0.78, -3.4], solid: false },
-  { model: 'pocket_watch', pos: [-0.5, 0.78, -6.75], rot: 90, solid: false },
-  { model: 'book_page', pos: [-0.5, 0.78, -6.75], rot: 90, solid: false },
+  { model: 'plate', pos: [0.1, 0.75, -7.9], solid: false },
+  { model: 'dormouse', pos: [0.1, 0.76, -7.9], rot: -60, solid: false },
+  { model: 'tea_tray', pos: [-0.45, 0.75, -5], solid: false },
+  { model: 'cake_stand', pos: [0.2, 0.75, -3.4], solid: false },
+  { model: 'pocket_watch', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false },
+  { model: 'book_page', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false },
   { model: 'fountain', pos: [9, 0, -3] },
   { model: 'cottage', pos: [-11, 0, -2], rot: 90 },
   { model: 'hat_rack', pos: [-7.4, 0.4, -4.2] },
@@ -261,8 +261,8 @@ export const gears = [
 
 // Things that change Fries's size.
 export const drinks = [
-  { model: 'pink_teapot', pos: [-0.45, 0.8, -5.25], size: 'small', label: 'Drink the pink tea' },
-  { model: 'blue_teapot', pos: [-0.45, 0.8, -4.75], size: 'big', label: 'Drink the blue tea' },
+  { model: 'pink_teapot', pos: [-0.45, 0.77, -5.25], size: 'small', label: 'Drink the pink tea' },
+  { model: 'blue_teapot', pos: [-0.45, 0.77, -4.75], size: 'big', label: 'Drink the blue tea' },
   { model: 'cake', pos: [1.6, 0, 2.6], size: 'normal', label: 'Eat the cake' },
   { model: 'cake', pos: [6.8, 0, -0.4], size: 'normal', label: 'Eat the cake' },
   { model: 'cake', pos: [-5.6, 0, 1.2], size: 'normal', label: 'Eat the cake' },
@@ -270,9 +270,9 @@ export const drinks = [
 
 // Teacups standing on the long table. They pulse on every beat of the song.
 export const tableCups = [
-  [-0.55, 0.78, -7.6], [0.5, 0.78, -6.9], [-0.55, 0.78, -6.2], [0.5, 0.78, -5.9], [0.45, 0.78, -5],
-  [-0.55, 0.78, -4.2], [0.5, 0.78, -3.9], [-0.5, 0.78, -2.8], [0.45, 0.78, -2.2], [-0.5, 0.78, -1.5],
-  [0.5, 0.78, -0.9], [-0.45, 0.78, -0.1], [0.4, 0.78, 0.6], [-0.4, 0.78, 1.1],
+  [-0.55, 0.75, -7.6], [0.5, 0.75, -6.9], [-0.55, 0.75, -6.2], [0.5, 0.75, -5.9], [0.45, 0.75, -5],
+  [-0.55, 0.75, -4.2], [0.5, 0.75, -3.9], [-0.5, 0.75, -2.8], [0.45, 0.75, -2.2], [-0.5, 0.75, -1.5],
+  [0.5, 0.75, -0.9], [-0.45, 0.75, -0.1], [0.4, 0.75, 0.6], [-0.4, 0.75, 1.1],
 ]
 
 // Clocks stuck at six. They jump to 6:01 in the ending.
@@ -289,7 +289,7 @@ export const floating = {
     { center: [0, 2.6, -3.5], size: [5, 2.4, 11] },
     { center: [9, 3.4, -3], size: [5, 2.4, 5] },
     { center: [-9, 3.6, -2], size: [5, 2.4, 7] },
-    { center: [0, 5.2, -8], size: [10, 2.5, 6] },
+    { center: [4, 2.8, -10], size: [5, 1.6, 5] },
   ],
 }
 
@@ -304,9 +304,9 @@ export const zones = {
 
 // Where the world-waking effects sit.
 export const effects = {
-  teaStream: { from: [-0.55, 1.35, -6.2], to: [-0.55, 0.85, -6.2] }, // tea frozen mid-pour over a cup
+  teaStream: { from: [-0.55, 1.3, -6.2], to: [-0.55, 0.82, -6.2] }, // tea frozen mid-pour over a cup
   syrupStream: { from: [9.55, 3, -3], to: [9.55, 1.44, -3] }, // syrup frozen over the fountain's lip
-  petals: { center: [0, 3.5, -5], size: [16, 6, 16], count: 240 },
+  petals: { center: [0, 2.2, -4], size: [12, 3.4, 14], count: 240 },
   butterflies: { center: [9, 1.2, -3], radius: 4, count: 14 },
 }
 
@@ -314,5 +314,5 @@ export const effects = {
 export const song = {
   fries: { pos: [-1.15, 0, -4.2], rot: 90 },
   tapCup: 5, // index into tableCups
-  hatter: [-0.1, 0.8, -6.3],
+  hatter: [-0.1, 0.75, -6.3],
 }
