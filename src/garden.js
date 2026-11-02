@@ -36,7 +36,7 @@ const bushes = layout.bushes.map(([x, z]) => place({ model: 'bush', pos: [x, 0, 
 export const cups = layout.tableCups.map(pos => place({ model: 'teacup', pos, solid: false }))
 
 export const clocks = layout.clocks.map(c => {
-  const face = place({ ...c, model: 'wall_clock', solid: false })
+  const face = place({ ...c, solid: false })
   const minute = model('clock_hand'), hour = model('clock_hand')
   minute.position.z = hour.position.z = 0.045
   hour.scale.y = 0.65
@@ -44,6 +44,8 @@ export const clocks = layout.clocks.map(c => {
   face.add(minute, hour)
   return { minute, hour }
 })
+
+for (const pos of layout.lanterns) glow(place({ model: 'lantern', pos, solid: false }), 0xffb050, 3)
 
 export const gears = layout.gears.map(g => {
   const object = place({ model: 'gear', pos: g.pos, solid: false })

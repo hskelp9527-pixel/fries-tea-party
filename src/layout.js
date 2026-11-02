@@ -12,7 +12,15 @@ const STONE = 0xaaa59b, SYRUP = 0xc98a2b, WALL = 0xe8dcc4, ROOF = 0x8a4b3a, BRIC
 const CHINA = 0xf6f6f2, PINK = 0xf29bc0, BLUE = 0x7fb0f0, SILVER = 0xc8c8cc, PATH = 0xbdb4a2
 const SKIN = 0xf1c9a5, NOSE = 0xe0a080, COAT = 0x6a4a8c, TROUSERS = 0x4a5a3a, HAT = 0x3c4a3a, HATBAND = 0xc23b4a
 const FUR = 0xc8a27a, HARE_COAT = 0x3f6f8f, MOUSE = 0x8a6a52, SHIRT = 0xf2c230, JEANS = 0x35507a, HAIR = 0x5a3a20
-const ROSE = 0xd0182c, GLOW = 0xfff2e0, BLACK = 0x222222, TERRACE = 0xb7ab96, WALLSTONE = 0x9d9283
+const ROSE = 0xd0182c, GLOW = 0xfff2e0, BLACK = 0x222222, TERRACE = 0xb7ab96, WALLSTONE = 0x9d9283, LANTERN = 0xffc070
+
+// A box along a line from one point to another, `t` thick: one segment of a branch.
+const limb = ([x0, y0, z0], [x1, y1, z1], t, colour) => {
+  const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0, length = Math.hypot(dx, dy, dz)
+  return [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, t, t, length + t / 2, colour, -Math.asin(dy / length) * 180 / Math.PI, Math.atan2(dx, dz) * 180 / Math.PI, 0]
+}
+// A branch through several points, thinning from `t0` to `t1`.
+const branch = (points, t0, t1) => points.slice(1).map((p, i) => limb(points[i], p, t0 + (t1 - t0) * i / (points.length - 2), BARK))
 
 const teapot = colour => [
   [0, 0.09, 0, 0.2, 0.18, 0.18, colour],
@@ -37,9 +45,25 @@ export const shapes = {
     [-2.3, 0.3, 0.6, 1.2, 0.6, 1.6, BARK], // roots
     [2.3, 0.3, -0.4, 1.2, 0.6, 1.8, BARK],
     [-0.9, 0.25, -2.3, 1.4, 0.5, 1, BARK],
-    [0, 5.75, -1, 16, 3.5, 12, LEAF], // canopy from 4 m up, reaching over the whole long table
-    [0, 5.25, 8.5, 8, 2.5, 12, LEAF],
-    [-5, 6.5, -3, 7, 3, 7, LEAF],
+    // five huge branches arching over the whole long table (which runs from z 3.5 to 13.5 here)
+    ...branch([[-0.9, 4, 1], [-2.6, 5.9, 5.5], [-3.3, 5.6, 10.5], [-3, 5, 14.5]], 0.8, 0.45),
+    ...branch([[0.9, 4, 1], [2.7, 6.1, 5], [3.4, 5.8, 10], [3.1, 5.2, 14]], 0.8, 0.45),
+    ...branch([[0, 4.6, 1.2], [0.3, 7, 6.5], [-0.2, 6.6, 12]], 0.7, 0.45),
+    ...branch([[-1.2, 3.8, -0.2], [-4.8, 5.4, 1.2], [-7, 5.2, 3.8]], 0.7, 0.45),
+    ...branch([[1.2, 3.8, -0.2], [4.8, 5.6, 0.8], [6.6, 5, 4.2]], 0.7, 0.45),
+    // leaf clumps from about 4 m up, kept clear of the space over the terrace steps
+    [-3, 6.4, 8, 3.6, 1.8, 4, LEAF],
+    [3.2, 6.6, 7.5, 3.6, 1.8, 4, LEAF2],
+    [0, 7.6, 9, 3, 1.6, 4, LEAF],
+    [-2.4, 5, 12.5, 2.8, 1.6, 3.6, LEAF2],
+    [3.2, 5, 12, 3.2, 1.6, 3.6, LEAF],
+    [0, 7, 13.5, 3, 1.4, 3, LEAF2],
+    [0.4, 7.4, 4.5, 3.6, 1.8, 3.6, LEAF],
+    [0, 7.6, 0, 6, 2.6, 6, LEAF2],
+    [-5.2, 6.2, 1.8, 3.4, 1.6, 3.4, LEAF],
+    [5.2, 6.4, 1.4, 3.4, 1.6, 3.4, LEAF2],
+    [-7, 5.9, 3.8, 2.6, 1.4, 2.6, LEAF2],
+    [6.6, 5.7, 4.2, 2.6, 1.4, 2.6, LEAF],
   ],
   tree_door: [ // pivots on its hinge, at the threshold
     [0.5, 1, 0, 1, 2, 0.08, DOOR],
@@ -221,6 +245,16 @@ export const shapes = {
     [0, 0, 0, 0.62, 0.62, 0.05, WOOD],
     [0, 0, 0.03, 0.54, 0.54, 0.01, CHINA],
   ],
+  hanging_clock: [ // hangs from a branch on a 2 m string
+    [0, 0, 0, 0.62, 0.62, 0.05, WOOD],
+    [0, 0, 0.03, 0.54, 0.54, 0.01, CHINA],
+    [0, 1.31, 0, 0.012, 2, 0.012, BLACK],
+  ],
+  lantern: [ // hangs from a branch on a 3 m string
+    [0, 0.15, 0, 0.2, 0.3, 0.2, LANTERN],
+    [0, 0.33, 0, 0.26, 0.06, 0.26, LANTERN],
+    [0, 1.86, 0, 0.012, 3, 0.012, LANTERN],
+  ],
   clock_hand: [[0, 0.11, 0, 0.03, 0.22, 0.012, BLACK]], // pivots at the clock centre, points up
   bush: [
     [0, 0.45, 0, 1.2, 0.9, 1.2, LEAF2],
@@ -312,8 +346,18 @@ export const tableCups = [
 
 // Clocks stuck at six. They jump to 6:01 in the ending.
 export const clocks = [
-  { pos: [0, 3.1, -10.17] }, // over the door in the big tree
-  { pos: [-8.95, 3.65, -0.6], rot: 90 }, // on the front of the cottage
+  { model: 'wall_clock', pos: [0, 3.1, -10.17] }, // over the door in the big tree
+  { model: 'wall_clock', pos: [-8.95, 3.65, -0.6], rot: 90 }, // on the front of the cottage
+  { model: 'hanging_clock', pos: [-2.7, 3.3, -6], rot: 90 }, // hanging from the branches over the table
+  { model: 'hanging_clock', pos: [2.9, 3.4, -5], rot: -90 },
+  { model: 'hanging_clock', pos: [-2.6, 3.2, -0.5], rot: 90 },
+  { model: 'hanging_clock', pos: [3, 3.3, -1], rot: -90 },
+]
+
+// Lanterns hanging from the branches over the table.
+export const lanterns = [
+  [-1.7, 3.3, -7.2], [1.8, 3.2, -6.4], [-1.9, 3.4, -3.4], [1.9, 3.3, -2.8],
+  [-1.7, 3.2, 0.4], [1.7, 3.4, 1], [0.3, 3.6, -4.6], [-0.2, 3.5, -1.2],
 ]
 
 // Floating teacups and hats drift inside these boxes. Each gear found adds another `cups` and `hats`.
