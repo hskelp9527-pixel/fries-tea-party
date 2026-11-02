@@ -1,14 +1,11 @@
-import * as THREE from 'three/webgpu'
 import { renderer, scene, camera, webgpu } from './scene.js'
 import { world } from './physics.js'
+import './garden.js'
 
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color: 0x7fa66a }))
-ground.rotation.x = -Math.PI / 2
-ground.receiveShadow = true
-scene.add(ground)
-camera.position.set(0, 1.6, 6)
+camera.position.set(-6, 9, 12)
+camera.lookAt(0, 0, -4)
 
 let last = 0
 renderer.setAnimationLoop(now => {
