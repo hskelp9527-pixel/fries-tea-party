@@ -329,7 +329,8 @@ const path = ([x0, z0], [x1, z1], n) => Array.from({ length: n }, (_, i) => ({
   model: 'stone_path', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], rot: i * 37 % 40 - 20, solid: false,
 }))
 
-// Every fixed object. `solid: false` leaves it without colliders, `shadow: false` keeps it from casting a
+// Every fixed object. `onTable` props dance on the table in the final chorus. `solid: false` leaves it without
+// colliders, `shadow: false` keeps it from casting a
 // shadow (the backdrop cypresses would otherwise darken the whole garden under the low sun); `scale` is uniform.
 export const placed = [
   { model: 'big_tree', pos: [0, 0, -12] },
@@ -347,14 +348,14 @@ export const placed = [
   { model: 'armchair', pos: [1.35, 0, 0.4], rot: -90 },
   { model: 'plate', pos: [0.1, 0.75, -7.9], scale: 1.3, solid: false }, // the Dormouse's bed
   { model: 'dormouse', pos: [0.1, 0.76, -7.9], rot: -60, solid: false },
-  { model: 'tea_tray', pos: [-0.45, 0.75, -5], solid: false },
-  { model: 'pink_teapot', pos: [-0.45, 0.77, -5.25], rot: 180, solid: false }, // spouts toward the teacups
-  { model: 'blue_teapot', pos: [-0.45, 0.77, -4.75], rot: 180, solid: false },
-  { model: 'cake_stand', pos: [0.2, 0.75, -3.4], solid: false },
-  { model: 'teapot', pos: [0.3, 0.75, -2.6], solid: false },
-  { model: 'teapot', pos: [-0.2, 0.75, 0.2], rot: 180, solid: false },
-  { model: 'pocket_watch', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false },
-  { model: 'book_page', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false },
+  { model: 'tea_tray', pos: [-0.45, 0.75, -5], solid: false, onTable: true },
+  { model: 'pink_teapot', pos: [-0.45, 0.77, -5.25], rot: 180, solid: false, onTable: true }, // spouts toward the teacups
+  { model: 'blue_teapot', pos: [-0.45, 0.77, -4.75], rot: 180, solid: false, onTable: true },
+  { model: 'cake_stand', pos: [0.2, 0.75, -3.4], solid: false, onTable: true },
+  { model: 'teapot', pos: [0.3, 0.75, -2.6], solid: false, onTable: true },
+  { model: 'teapot', pos: [-0.2, 0.75, 0.2], rot: 180, solid: false, onTable: true },
+  { model: 'pocket_watch', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false, onTable: true },
+  { model: 'book_page', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false, onTable: true },
   { model: 'fountain', pos: [7, 0, -3] }, // about 6 m east of the table
   { model: 'terrace', pos: [-11, 0, -2] }, // west of the table
   { model: 'cottage', pos: [-11.5, 1.2, -2], rot: 90 }, // on the terrace, porch facing the table
@@ -430,11 +431,11 @@ export const gears = [
 // each flies the short way into his left hand, goes to his mouth and flies back to its place at the end.
 export const drinks = [
   {
-    model: 'pink_teacup', pos: [-0.62, 0.75, -5.6], becomes: 'small', label: 'Drink the pink tea',
+    model: 'pink_teacup', pos: [-0.62, 0.75, -5.6], becomes: 'small', label: 'Drink the pink tea', onTable: true,
     by: 'normal', clip: 'drink', stand: [-1.12, 0, -5.557], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'blue_teacup', pos: [-0.62, 0.75, -4.45], becomes: 'big', label: 'Drink the blue tea',
+    model: 'blue_teacup', pos: [-0.62, 0.75, -4.45], becomes: 'big', label: 'Drink the blue tea', onTable: true,
     by: 'normal', clip: 'drink', stand: [-1.12, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {

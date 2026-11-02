@@ -1,14 +1,14 @@
 import * as THREE from 'three/webgpu'
 import beatMap from '../audio/04t_little_bat_a.beats.json'
 import { camera, hemi, sun } from './scene.js'
-import { cups } from './garden.js'
+import { cups, tableProps } from './garden.js'
 import { glow } from './models.js'
 import { song as staging, cast as stage } from './layout.js'
 import { stand } from './cast.js'
 import { player, placePlayer, setSize, act } from './player.js'
 import { setMusic, say, playing, heard, musicLength, ting } from './audio.js'
 import { tween, wait } from './tweens.js'
-import { game } from './state.js'
+import { game, hop } from './state.js'
 
 const beats = beatMap.beats
 // The song is sung three times; each pass starts on this beat. Confirm by ear against the recording.
@@ -35,8 +35,9 @@ const SHOTS = [
 
 const hud = document.getElementById('hud')
 const prompt = document.getElementById('prompt')
-const tapCup = cups[staging.tapCup], cupY = tapCup.position.y
+const tapCup = cups[staging.tapCup]
 glow(tapCup, 0xffd070, 0)
+let cupJump = 0
 
 let active = false, start = 0, next = 0, cue = 0, hits = 0, done
 const scored = new Set()
@@ -53,7 +54,7 @@ function tap(at) {
     ting(1320)
     act('clap')
     tween(0.25, k => {
-      tapCup.position.y = cupY + Math.sin(k * Math.PI) * 0.08
+      cupJump = Math.sin(k * Math.PI) * 0.08
       tapCup.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 2 * (1 - k) })
     })
   }
@@ -121,10 +122,23 @@ export function updateSong() {
 
   for (const cup of cups) cup.scale.setScalar(1 + 0.35 * game.pulse)
 
+  // From the final chorus to the last note, every prop on the table hops on each beat.
+  game.hop = pass === 2 ? { beat: last, phase: Math.min(1, (t - beats[last]) / ((beats[last + 1] ?? beats[last] * 2 - beats[last - 1]) - beats[last])) } : null
   if (t > musicLength('song')) {
     active = false
     game.pulse = 0
     game.pass = -1
+    game.hop = null
     done()
   }
+  placeProps()
+}
+
+const offset = new THREE.Vector3()
+function placeProps() {
+  for (const p of tableProps) {
+    p.object.rotation.y = p.turn + hop(p.seed, p.size, offset, true)
+    p.object.position.copy(p.home).add(offset)
+  }
+  tapCup.position.y += cupJump
 }

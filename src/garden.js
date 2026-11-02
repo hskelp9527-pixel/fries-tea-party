@@ -26,10 +26,15 @@ function place({ model: name, pos, rot = 0, scale = 1, solid = true, shadow = tr
 
 // The first object placed for each model name: things.hatter, things.tree_door, ...
 export const things = {}
+const onTable = new Map()
 for (const entry of layout.placed) {
   const object = place(entry)
   things[entry.model] ??= object
+  if (entry.onTable) onTable.set(entry, object)
 }
+
+// The mean of an object's width, height and depth.
+export const meanSize = object => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).toArray().reduce((a, b) => a + b) / 3
 things.roses.visible = false
 glow(things.book_page, 0xfff0b0, 2)
 
@@ -58,6 +63,12 @@ export const drinks = layout.drinks.map(d => {
   const object = place({ ...d, solid: false })
   return { ...d, object, pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + 0.05), home: object.position.clone() }
 })
+
+// Everything standing on the table, which dances in the final chorus: { object, home, turn, seed, size }.
+const tableObjects = [...cups, ...layout.placed.filter(p => p.onTable).map(p => onTable.get(p)), ...drinks.filter(d => d.onTable).map(d => d.object)]
+export const tableProps = tableObjects.map(object => ({
+  object, home: object.position.clone(), turn: object.rotation.y, seed: Math.random() * 100, size: meanSize(object),
+}))
 
 // Layers of the world that each gear wakes: 'tea', 'syrup', 'flowers'.
 const awake = {}

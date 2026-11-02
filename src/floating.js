@@ -3,7 +3,8 @@ import { scene, webgpu } from './scene.js'
 import { model } from './models.js'
 import { floating } from './layout.js'
 import { player } from './player.js'
-import { game } from './state.js'
+import { game, hop } from './state.js'
+import { meanSize } from './garden.js'
 
 // Teacups, hats, spoons, plates and pocket watches drifting in the air on paths that never repeat. Teacups
 // glide out of Fries's way, hats turn to look at him, everything pulses on the beat of the song, and every
@@ -23,6 +24,8 @@ function add(kind, n) {
     phase: Math.random() * 100,
     wander: 0.3 + Math.random() * 0.5,
     spin: (Math.random() - 0.5) * 1.2,
+    seed: Math.random() * 100,
+    extent: meanSize(object),
     away: new THREE.Vector3(),
     grow: 0,
   })
@@ -38,7 +41,7 @@ setFloatingLevel(0)
 // Whether a teacup is dodging Fries right now.
 export const cupDodging = () => items.some(it => it.kind === 'teacup' && it.away.lengthSq() > 0.04 * player.p.scale ** 2)
 
-const chest = new THREE.Vector3(), push = new THREE.Vector3()
+const chest = new THREE.Vector3(), push = new THREE.Vector3(), offset = new THREE.Vector3()
 let clock = 0
 
 export function updateFloating(dt) {
@@ -63,7 +66,8 @@ export function updateFloating(dt) {
       const look = Math.atan2(-push.x, -push.z) - o.rotation.y
       o.rotation.y += Math.atan2(Math.sin(look), Math.cos(look)) * Math.min(1, dt * 3)
     } else o.rotation.y += it.spin * dt
-    o.rotation.z = Math.sin(t * 0.7) * 0.15
+    o.rotation.z = Math.sin(t * 0.7) * 0.15 + hop(it.seed, it.extent * it.size, offset)
+    o.position.add(offset)
     o.scale.setScalar(it.size * it.grow * (1 + 0.3 * game.pulse))
   }
 }
