@@ -1,0 +1,35 @@
+{
+  "pick_up": {
+    "hand": "right",
+    "bone": "mixamorig:RightHand",
+    "time": 2.33,
+    "duration": 9.58,
+    "palm": [
+      -0.019,
+      0.122,
+      0.25
+    ]
+  },
+  "reach": {
+    "hand": "right",
+    "bone": "mixamorig:RightHand",
+    "time": 4.0,
+    "duration": 4.0,
+    "palm": [
+      -0.067,
+      0.889,
+      0.409
+    ]
+  },
+  "drink": {
+    "hand": "left",
+    "bone": "mixamorig:LeftHand",
+    "time": 4.88,
+    "duration": 8.88,
+    "palm": [
+      0.078,
+      0.912,
+      0.056
+    ]
+  }
+}

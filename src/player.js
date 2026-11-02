@@ -7,19 +7,20 @@ import { burst, setVoicePitch, currentSpeaker } from './audio.js'
 import { Animator } from './animation.js'
 
 const DEG = Math.PI / 180
-const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, KNEE = 0.35, GRAVITY = 18, RUN = 2.2
+const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, KNEE = 0.35, GRAVITY = 18, RUN = 2.6
 
 // Everything that changes with Fries's size; at scale 1 he is 1.2 m tall. speed is walking speed (Shift runs
 // at RUN times that); reach is how far from his body he can take things; voice is the pitch at which he hears
 // the others.
 const SIZES = {
-  small: { scale: 0.18, fov: 82, speed: 0.6, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
-  normal: { scale: 1, fov: 70, speed: 1.8, jump: 0.7, reach: 0.9, stepPitch: 1, stepGain: 0.5, shake: 0, voice: 1 },
-  big: { scale: 2.6, fov: 58, speed: 4.7, jump: 1.2, reach: 2.2, stepPitch: 0.45, stepGain: 1, shake: 0.07, voice: 1.45 },
+  small: { scale: 0.18, fov: 82, speed: 0.22, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
+  normal: { scale: 1, fov: 70, speed: 1.2, jump: 0.7, reach: 0.9, stepPitch: 1, stepGain: 0.5, shake: 0, voice: 1 },
+  big: { scale: 2.6, fov: 58, speed: 3.0, jump: 1.2, reach: 2.2, stepPitch: 0.45, stepGain: 1, shake: 0.07, voice: 1.45 },
 }
 
 const collider = world.createCollider(RAPIER.ColliderDesc.capsule(HEIGHT / 2 - RADIUS, RADIUS))
 const controller = world.createCharacterController(0.01)
+controller.enableSnapToGround(0.1) // stay on the ground over small bumps instead of floating a frame
 
 export const player = {
   feet: new THREE.Vector3(),
@@ -95,7 +96,7 @@ function resize(dt) {
 }
 
 const move = new THREE.Vector3(), eye = new THREE.Vector3(), dir = new THREE.Vector3()
-let velY = 0, grounded = false, stride = 0, shake = 0
+let velY = 0, grounded = false, airTime = 0, gaitSpeed = 0, stride = 0, shake = 0
 
 export function updatePlayer(dt) {
   resize(dt)
@@ -109,7 +110,10 @@ export function updatePlayer(dt) {
     velY -= GRAVITY * dt
 
     collider.setTranslation({ x: player.feet.x, y: player.feet.y + HEIGHT / 2 * s, z: player.feet.z })
-    controller.computeColliderMovement(collider, { x: move.x * dt, y: velY * dt, z: move.z * dt })
+    // While on the ground, probe a little downward every frame: a near-zero fall reads as not grounded,
+    // which flicked the clips to jump and back
+    const down = grounded && velY <= 0 ? Math.min(velY * dt, -0.05 * s) : velY * dt
+    controller.computeColliderMovement(collider, { x: move.x * dt, y: down, z: move.z * dt })
     const m = controller.computedMovement()
     grounded = controller.computedGrounded()
     if (grounded && velY < 0) velY = 0
@@ -131,7 +135,11 @@ export function updatePlayer(dt) {
     }
   }
   jump = false
-  animate(dt, Math.hypot(player.feet.x - last.x, player.feet.z - last.z) / dt, player.control && !grounded)
+  // Per-frame travel is noisy (uneven frames, collision slides) and the grounded flag can drop for a frame:
+  // smooth the speed and only count real air time, or the clips stutter and flick to jump.
+  airTime = grounded ? 0 : airTime + dt
+  gaitSpeed += (Math.hypot(player.feet.x - last.x, player.feet.z - last.z) / dt - gaitSpeed) * Math.min(1, dt * 8)
+  animate(dt, gaitSpeed, player.control && (velY > 0 || airTime > 0.12))
   last.copy(player.feet)
   player.mesh.position.copy(player.feet)
   collider.setTranslation({ x: player.feet.x, y: player.feet.y + HEIGHT / 2 * s, z: player.feet.z })
@@ -192,7 +200,8 @@ function animate(dt, speed, airborne) {
   const s = player.p.scale
   const moving = speed > 0.1 * s
   still = moving || airborne ? 0 : still + dt
-  if (oneShot && !anim.playing(oneShot)) oneShot = null
+  // Moving cuts a one-shot short (the 6.5 s look_around kept playing while he walked, so he slid standing)
+  if (oneShot && (!anim.playing(oneShot) || (player.control && (moving || airborne)))) oneShot = null
   if (!oneShot) {
     if (airborne) anim.play('jump')
     else if (moving) {
@@ -225,4 +234,21 @@ export function reaches(point) {
   ray.origin = eye
   ray.dir = dir.divideScalar(length)
   return world.castRay(ray, length, true, undefined, undefined, collider) === null
+}
+
+// ?anims shows a row of buttons across the top to try each of Fries's clips by hand and judge the blends
+if (new URLSearchParams(location.search).has('anims')) {
+  const bar = document.createElement('div')
+  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10;display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#0009'
+  for (const name of Object.keys(anim.actions)) {
+    const button = document.createElement('button')
+    button.textContent = name
+    button.style.cssText = 'font:14px sans-serif;padding:6px 10px;cursor:pointer'
+    button.addEventListener('click', event => {
+      event.stopPropagation()
+      act(name)
+    })
+    bar.append(button)
+  }
+  document.body.append(bar)
 }
