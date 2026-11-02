@@ -1,9 +1,10 @@
 import * as THREE from 'three/webgpu'
 import beatMap from '../audio/04t_little_bat_a.beats.json'
 import { camera, hemi, sun } from './scene.js'
-import { things, cups } from './garden.js'
+import { cups } from './garden.js'
 import { glow } from './models.js'
-import { song as staging } from './layout.js'
+import { song as staging, cast as stage } from './layout.js'
+import { stand } from './cast.js'
 import { player, placePlayer, setSize, act } from './player.js'
 import { setMusic, say, playing, heard, musicLength, ting } from './audio.js'
 import { tween, wait } from './tweens.js'
@@ -36,8 +37,6 @@ const hud = document.getElementById('hud')
 const prompt = document.getElementById('prompt')
 const tapCup = cups[staging.tapCup], cupY = tapCup.position.y
 glow(tapCup, 0xffd070, 0)
-const dancers = [things.hare, things.dormouse]
-const rest = dancers.map(d => d.position.clone())
 
 let active = false, start = 0, next = 0, cue = 0, hits = 0, done
 const scored = new Set()
@@ -77,12 +76,7 @@ export async function playSong() {
   camera.updateProjectionMatrix()
   shoot(SHOTS[0], SHOTS[0], 0)
 
-  const hatter = things.hatter, from = hatter.position.clone(), to = new THREE.Vector3(...staging.hatter)
-  hatter.rotation.set(0, -Math.PI / 2, 0)
-  await Promise.all([say('SG-01'), tween(1.2, t => {
-    hatter.position.lerpVectors(from, to, t)
-    hatter.position.y += Math.sin(t * Math.PI) * 0.6
-  })])
+  await Promise.all([say('SG-01'), stand('hatter', stage.hatter.song, 1.2, 0.6)])
   await wait(0.3)
 
   setMusic({ song: 1 }, 0)
@@ -113,7 +107,10 @@ export function updateSong() {
     game.pass = pass
     const [h0, s0] = [hemi.intensity, sun.intensity], [h1, s1] = LIGHT[pass]
     tween(2, k => { hemi.intensity = h0 + (h1 - h0) * k; sun.intensity = s0 + (s1 - s0) * k })
-    if (pass === 1) score()
+    if (pass === 1) {
+      score()
+      stand('hare', stage.hare.song, 0.8)
+    }
   }
   while (cue < CUES.length && last >= CUES[cue].beat) say(CUES[cue++].id)
 
@@ -122,14 +119,6 @@ export function updateSong() {
   const k = from.glide ? Math.min(1, (t - beats[from.beat]) / (beats[to.beat] - beats[from.beat])) : 0
   shoot(from, from.glide ? to : from, k * k * (3 - 2 * k))
 
-  // Everyone moves on the beat: the Hatter from the start, the March Hare and the Dormouse from the second pass.
-  const side = last % 2 ? 1 : -1
-  things.hatter.position.y = staging.hatter[1] + 0.06 * game.pulse
-  things.hatter.rotation.z = side * 0.12 * game.pulse
-  dancers.forEach((d, i) => {
-    d.position.y = rest[i].y + (pass >= 1 ? 0.08 * game.pulse : 0)
-    d.rotation.z = pass >= 1 ? -side * 0.15 * game.pulse : 0
-  })
   for (const cup of cups) cup.scale.setScalar(1 + 0.35 * game.pulse)
 
   if (t > musicLength('song')) {

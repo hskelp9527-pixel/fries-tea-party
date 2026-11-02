@@ -11,6 +11,7 @@ import { tween, wait } from './tweens.js'
 import { startExplore } from './explore.js'
 import { setFloatingLevel } from './floating.js'
 import { playSong } from './song.js'
+import { stand } from './cast.js'
 import { game } from './state.js'
 
 const DEG = Math.PI / 180
@@ -143,9 +144,9 @@ async function ending() {
   await say('ED-01')
 
   // The March Hare grabs the Dormouse and stuffs him into the pink teapot.
-  const hare = things.hare, dormouse = things.dormouse, teapot = things.pink_teapot
-  await Promise.all([say('ED-02'), arc(hare, v(0.95, 0, -7.7), 0.2, 0.8)])
-  await Promise.all([say('ED-03'), arc(dormouse, teapot.position.clone().setY(teapot.position.y + 0.12), 0.5, 1.2)])
+  const teapot = things.pink_teapot.position
+  await Promise.all([say('ED-02'), stand('hare', { pos: [0.95, 0, -7.7], rot: -90 }, 0.8)])
+  await Promise.all([say('ED-03'), stand('dormouse', { pos: [teapot.x, teapot.y + 0.12, teapot.z], rot: 90 }, 1.2, 0.5)])
 
   // Fries reaches out and the page flies from the watch into his palm, arriving as his hand does; it stays in
   // his hand. The door at the foot of the big tree opens.

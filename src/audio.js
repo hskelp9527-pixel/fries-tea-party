@@ -99,6 +99,7 @@ export function say(id) {
 
 export const speaking = () => line !== null
 export const currentSpeaker = () => line && speakers[line.id]
+export const currentLine = () => line && line.id
 
 // Stand-in sounds until prop sounds exist: a noise burst for footsteps and the clock, a ting for tapped cups.
 const noise = ctx.createBuffer(1, 4410, 44100)

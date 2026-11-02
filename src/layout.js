@@ -345,7 +345,7 @@ export const placed = [
   { model: 'armchair', pos: [1.35, 0, -4.6], rot: -90 },
   { model: 'armchair', pos: [1.35, 0, -2], rot: -90 },
   { model: 'armchair', pos: [1.35, 0, 0.4], rot: -90 },
-  { model: 'plate', pos: [0.1, 0.75, -7.9], solid: false },
+  { model: 'plate', pos: [0.1, 0.75, -7.9], scale: 1.3, solid: false }, // the Dormouse's bed
   { model: 'dormouse', pos: [0.1, 0.76, -7.9], rot: -60, solid: false },
   { model: 'tea_tray', pos: [-0.45, 0.75, -5], solid: false },
   { model: 'pink_teapot', pos: [-0.45, 0.77, -5.25], rot: 180, solid: false }, // spouts toward the teacups
@@ -520,11 +520,20 @@ export const effects = {
   butterflies: { center: [7, 0.97, -3], perch: 1.4, radius: 3.5, count: 14 }, // perched round the basin rim
 }
 
-// Staging for the song: Fries faces the table with a teacup in front of him; the Hatter sings on the table.
+// Staging for the song: Fries faces the table with a teacup in front of him.
 export const song = {
   fries: { pos: [-1.15, 0, -4.2], rot: 90 },
   tapCup: 5, // index into tableCups
-  hatter: [-0.1, 0.75, -6.3],
+}
+
+// The cast sits where it is placed above (the Dormouse lies on its plate). `seat` is the height of the seat the
+// hips rest on; how high the hips ride above a model's feet is measured from its sit_idle clip. In the song
+// each stands at `song`: the Hatter on the table, the March Hare beside his chair, clear of the table; the
+// Dormouse dances on its plate.
+export const cast = {
+  hatter: { seat: 0.45, song: { pos: [-0.1, 0.75, -6.3], rot: -90 } },
+  hare: { seat: 0.45, song: { pos: [2.3, 0, -7.4], rot: -90 } },
+  dormouse: {},
 }
 
 // Grass and small flowers on the open lawn: inside `area` [x0, z0, x1, z1], off the `bare` rectangles (terrace,
