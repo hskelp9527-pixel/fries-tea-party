@@ -1,0 +1,14 @@
+# Media and asset tools stay local; this repo is public and holds docs and code only.
+art/
+tools/
+audio/*
+!audio/04t_little_bat_a.beats.json
+
+# Local-only: written in Chinese or owned by OhMyGame
+TEA_PARTY.md
+TEA_PARTY_SCRIPT.md
+canvas/
+
+node_modules/
+dist/
+__pycache__/
