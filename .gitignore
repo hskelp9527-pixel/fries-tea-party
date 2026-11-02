@@ -12,3 +12,7 @@ canvas/
 node_modules/
 dist/
 __pycache__/
+
+# Subtitle languages other than English are added locally
+src/lang/*.json
+!src/lang/en.json
