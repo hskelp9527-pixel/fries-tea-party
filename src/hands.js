@@ -35,7 +35,9 @@ export function hold(object, prop) {
 }
 
 export function holdCast(object, character, hand = 'RightHand', grip = [0, 0, 0]) {
-  castHeld.set(object, { bone: character.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${hand}`)), grip })
+  const bone = character.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${hand}`))
+  const rotation = bone.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(object.getWorldQuaternion(new THREE.Quaternion()))
+  castHeld.set(object, { bone, grip, rotation })
 }
 
 export function release(object) {
@@ -46,14 +48,16 @@ export function release(object) {
 // A cup held to the mouth stays clear of his face and glasses: outside a ball round the front of his head.
 const face = new THREE.Vector3(), ahead = new THREE.Vector3(), away = new THREE.Vector3()
 export function updateHands() {
-  for (const [object, { bone, grip }] of castHeld) {
+  for (const [object, { bone, grip, rotation }] of castHeld) {
     bone.getWorldPosition(object.position).add(offset.set(...grip).applyQuaternion(bone.getWorldQuaternion(turn)))
+    object.quaternion.copy(turn).multiply(rotation)
   }
   for (const [object, how] of held) {
     inHand(how, object.position)
     if (!how.clearOfFace || !bones.head) continue
     const s = player.p.scale
     bones.head.getWorldPosition(face).add(ahead.set(Math.sin(player.mesh.rotation.y), 0, Math.cos(player.mesh.rotation.y)).multiplyScalar(0.03 * s))
+    object.position.y = Math.min(object.position.y, face.y - 0.14 * s)
     away.subVectors(object.position, face)
     if (away.length() < 0.13 * s) object.position.copy(face).add(away.setY(Math.min(away.y, -0.02 * s)).setLength(0.13 * s))
   }

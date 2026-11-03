@@ -3,13 +3,19 @@ import { cast } from './cast.js'
 import { player } from './player.js'
 
 // Gaze: each character's head and neck turn to what it looks at, up to about 70 degrees to either side and 30 up or
-// down, easing there over about 0.3 s. Past that a standing character turns its body; a seated one turns its
-// chest a little. Targets are points that may move (Vector3s), or null to look ahead.
+// down from its current chest pose, settling over about 0.7 s. Past that a standing character turns its body;
+// a seated one turns its chest a little. Targets are points that may move (Vector3s), or null for the clip's gaze.
 const DEG = Math.PI / 180, YAW = 70 * DEG, PITCH = 30 * DEG, CHEST = 20 * DEG
+const OMEGA = 8, HEAD_SPEED = 120 * DEG, BODY_SPEED = 90 * DEG
 const bone = (object, name) => object.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${name}`))
-const lookers = Object.fromEntries([...Object.values(cast).map(m => [m.name, m.object]), ['fries', player.mesh]].map(([name, object]) => [name, {
-  object, head: bone(object, 'Head'), neck: bone(object, 'Neck'), chest: bone(object, 'Spine2'), yaw: 0, pitch: 0, target: null,
-}]))
+const lookers = Object.fromEntries([...Object.values(cast).map(m => [m.name, m.object]), ['fries', player.mesh]].map(([name, object]) => {
+  const head = bone(object, 'Head'), neck = bone(object, 'Neck'), chest = bone(object, 'Spine2')
+  // Joint axes are not anatomical axes. Calibrate them to the model's +Z front in the bind pose.
+  object.updateMatrixWorld(true)
+  const root = object.getWorldQuaternion(new THREE.Quaternion())
+  const frames = new Map([chest, neck, head].map(b => [b, b.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(root)]))
+  return [name, { object, head, neck, chest, frames, angles: new THREE.Vector2(), velocity: new THREE.Vector2(), chestYaw: 0, bodySpeed: 0, target: null }]
+}))
 
 // Where a character's head is now, for others to look at.
 export const headOf = (name, target = new THREE.Vector3()) => lookers[name].head.getWorldPosition(target)
@@ -18,40 +24,79 @@ export function lookAt(name, target) {
   lookers[name].target = target
 }
 
-const q = new THREE.Quaternion(), turn = new THREE.Quaternion(), parent = new THREE.Quaternion(), local = new THREE.Vector3()
-const up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3()
+const poses = new Map()
+const q = new THREE.Quaternion(), frame = new THREE.Quaternion(), parent = new THREE.Quaternion(), orientation = new THREE.Quaternion(), local = new THREE.Vector3()
+const rotation = new THREE.Euler(0, 0, 0, 'YXZ'), desired = new THREE.Vector2(), error = new THREE.Vector2(), impulse = new THREE.Vector2(), next = new THREE.Vector2()
 
-// Turns a bone by `yaw` about the world's up and `pitch` about the character's sideways axis, on top of its clip.
-function twist(b, yaw, pitch, facing) {
-  side.set(Math.cos(facing), 0, -Math.sin(facing))
-  turn.setFromAxisAngle(up, yaw).multiply(q.setFromAxisAngle(side, -pitch))
-  b.getWorldQuaternion(q).premultiply(turn)
+// Set an anatomical world orientation, converting back into the joint's local axes.
+function orient(b, axes, world) {
   b.parent.getWorldQuaternion(parent).invert()
-  b.quaternion.copy(parent.multiply(q))
+  b.quaternion.copy(parent.multiply(world).multiply(q.copy(axes).invert()))
   b.updateMatrixWorld(true)
+}
+
+// Exact critically damped response: k = 64, damping = 16, unit mass. Bound both travel and velocity.
+function follow(l, dt) {
+  const decay = Math.exp(-OMEGA * dt)
+  error.subVectors(l.angles, desired)
+  impulse.copy(error).multiplyScalar(OMEGA).add(l.velocity)
+  next.copy(error).addScaledVector(impulse, dt).multiplyScalar(decay).add(desired).sub(l.angles).clampLength(0, HEAD_SPEED * dt)
+  l.angles.add(next)
+  l.velocity.addScaledVector(impulse, -OMEGA * dt).multiplyScalar(decay).clampLength(0, HEAD_SPEED)
+  for (const [axis, limit] of [['x', YAW], ['y', PITCH]]) {
+    const bounded = THREE.MathUtils.clamp(l.angles[axis], -limit, limit)
+    if (bounded !== l.angles[axis]) l.velocity[axis] = 0
+    l.angles[axis] = bounded
+  }
 }
 
 // After the clips have posed everyone: ease each head towards its target and turn the bones. `seated(name)` and
 // `free(name)` (standing still, not in a clip of its own: free to turn its body) say how each one may turn.
 export function updateGaze(dt, seated, free) {
-  const ease = 1 - Math.exp(-dt * 10) // about 95% of the way in 0.3 s
   for (const [name, l] of Object.entries(lookers)) {
-    if (!l.head) continue
+    for (const b of [l.chest, l.neck, l.head]) {
+      const pose = poses.get(b)
+      if (pose && b.quaternion.angleTo(pose.result) < 0.00001) b.quaternion.copy(pose.base)
+    }
     l.object.updateMatrixWorld(true)
-    let yaw = 0, pitch = 0
-    const facing = l.object.rotation.y
+    for (const b of [l.chest, l.neck, l.head]) poses.set(b, { base: b.quaternion.clone() })
+    frame.copy(l.chest.getWorldQuaternion(q)).multiply(l.frames.get(l.chest))
+    let yaw = 0
     if (l.target) {
-      local.subVectors(l.target, l.head.getWorldPosition(local)).applyAxisAngle(up, -facing)
+      local.subVectors(l.target, l.head.getWorldPosition(local)).applyQuaternion(q.copy(frame).invert())
       yaw = Math.atan2(local.x, local.z)
-      pitch = Math.atan2(local.y, Math.hypot(local.x, local.z))
     }
     // Past the neck's reach: a standing character turns towards the target, a seated one turns its chest.
     const beyond = Math.sign(yaw) * Math.max(0, Math.abs(yaw) - YAW)
-    if (beyond && free(name)) l.object.rotation.y += beyond * ease * 0.5
-    l.yaw += (Math.max(-YAW, Math.min(YAW, yaw)) - l.yaw) * ease
-    l.pitch += (Math.max(-PITCH, Math.min(PITCH, pitch)) - l.pitch) * ease
-    if (seated(name) && l.chest) twist(l.chest, Math.sign(beyond) * Math.min(CHEST, Math.abs(beyond)) * 0.8, 0, facing)
-    if (l.neck) twist(l.neck, l.yaw * 0.4, l.pitch * 0.4, facing)
-    twist(l.head, l.yaw * 0.6, l.pitch * 0.6, facing)
+    if (!seated(name) && free(name)) {
+      l.bodySpeed = THREE.MathUtils.damp(l.bodySpeed, THREE.MathUtils.clamp(beyond * 4, -BODY_SPEED, BODY_SPEED), 8, dt)
+      l.object.rotation.y += l.bodySpeed * dt
+      l.object.updateMatrixWorld(true)
+    } else l.bodySpeed = 0
+    frame.copy(l.chest.getWorldQuaternion(q)).multiply(l.frames.get(l.chest))
+    l.chestYaw = THREE.MathUtils.damp(l.chestYaw, seated(name) ? THREE.MathUtils.clamp(beyond, -CHEST, CHEST) * 0.8 : 0, 6, dt)
+    frame.multiply(q.setFromEuler(rotation.set(0, l.chestYaw, 0)))
+    orient(l.chest, l.frames.get(l.chest), frame)
+
+    // Read the clip's head in the chest frame. Replace its yaw/pitch, rather than adding another 70 degrees.
+    q.copy(frame).invert().multiply(l.head.getWorldQuaternion(parent)).multiply(l.frames.get(l.head))
+    rotation.setFromQuaternion(q, 'YXZ')
+    const roll = rotation.z
+    desired.set(rotation.y, -rotation.x)
+    if (l.target) {
+      local.subVectors(l.target, l.head.getWorldPosition(local)).applyQuaternion(q.copy(frame).invert())
+      desired.set(Math.atan2(local.x, local.z), Math.atan2(local.y, Math.hypot(local.x, local.z)))
+    }
+    desired.x = THREE.MathUtils.clamp(desired.x, -YAW, YAW)
+    desired.y = THREE.MathUtils.clamp(desired.y, -PITCH, PITCH)
+    follow(l, dt)
+    q.copy(frame).invert().multiply(l.neck.getWorldQuaternion(parent)).multiply(l.frames.get(l.neck))
+    rotation.setFromQuaternion(q, 'YXZ')
+    const neckRoll = rotation.z
+    orientation.copy(frame).multiply(q.setFromEuler(rotation.set(-l.angles.y * 0.4, l.angles.x * 0.4, neckRoll)))
+    orient(l.neck, l.frames.get(l.neck), orientation)
+    orientation.copy(frame).multiply(q.setFromEuler(rotation.set(-l.angles.y, l.angles.x, roll)))
+    orient(l.head, l.frames.get(l.head), orientation)
+    for (const b of [l.chest, l.neck, l.head]) poses.get(b).result = b.quaternion.clone()
   }
 }

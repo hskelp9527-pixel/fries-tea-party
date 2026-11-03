@@ -19,6 +19,13 @@ import { updateTasks } from './tasks.js'
 import { updateHands } from './hands.js'
 
 const params = new URLSearchParams(location.search)
+const perf = document.getElementById('perf')
+perf.hidden = !params.has('perf')
+addEventListener('keydown', event => {
+  if (event.code === 'KeyP' && !event.repeat) perf.hidden = !perf.hidden
+})
+// Keep the scene, shadow and fullscreen draws in one frame's totals.
+renderer.info.autoReset = false
 // ?liquid owns its camera and animation loop instead of starting the story.
 if (params.has('liquid')) {
   await import('./liquidLab.js')
@@ -48,9 +55,12 @@ renderer.domElement.addEventListener('click', () => {
   if (player.control) renderer.domElement.requestPointerLock()
 })
 
-let last = 0, time = 0
+let last = performance.now(), time = 0, frameMs = 1000 / 60
+let sampleTime = last, sampleFrames = 0, sampleCalls = 0, sampleTriangles = 0, sampleShadows = 0
 renderer.setAnimationLoop(now => {
-  const dt = Math.min((now - last) / 1000, 0.05)
+  const elapsed = now - last
+  const dt = Math.min(elapsed / 1000, 0.05)
+  frameMs += (elapsed - frameMs) * (1 - Math.exp(-elapsed / 500))
   last = now
   time += dt
   updateTweens(dt)
@@ -69,6 +79,17 @@ renderer.setAnimationLoop(now => {
   world.step()
   updateHands()
   updateSun()
+  renderer.info.reset()
   render()
+  sampleFrames++
+  sampleCalls += renderer.info.render.drawCalls
+  sampleTriangles += renderer.info.render.triangles
+  if (now - sampleTime >= 500) {
+    const shadowRenders = renderer.info.shadowMapRenders
+    perf.textContent = `FPS          ${(1000 / frameMs).toFixed(1)}\nFrame        ${frameMs.toFixed(1)} ms\nDraw calls   ${(sampleCalls / sampleFrames).toFixed(0)}\nTriangles    ${Math.round(sampleTriangles / sampleFrames).toLocaleString('en-US')}\nShadow maps  ${((shadowRenders - sampleShadows) * 1000 / (now - sampleTime)).toFixed(1)}/s`
+    sampleTime = now
+    sampleShadows = shadowRenders
+    sampleFrames = sampleCalls = sampleTriangles = 0
+  }
 })
 }

@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu'
 import {
   pass, mrt, normalView, normalWorldGeometry, uniform, vec3, vec4, float, Fn, mix, dot, pow, exp, smoothstep, screenUV,
   positionWorld, cameraPosition, cameraViewMatrix, positionViewDirection, materialEmissive, texture3D, renderOutput,
-  builtinAOContext, fog,
+  output, context, fog,
 } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
 import { ao } from 'three/addons/tsl/display/GTAONode.js'
@@ -77,6 +77,8 @@ scene.environmentIntensity = 0.7
 export const sun = new THREE.DirectionalLight(0xffc27a, 3.4)
 sun.castShadow = true
 const SHADOW = { size: 56, map: webgpu ? 4096 : 2048 }
+sun.shadow.autoUpdate = false
+sun.shadow.needsUpdate = true
 sun.shadow.mapSize.setScalar(SHADOW.map)
 Object.assign(sun.shadow.camera, { left: -SHADOW.size / 2, right: SHADOW.size / 2, top: SHADOW.size / 2, bottom: -SHADOW.size / 2, near: 1, far: 160 })
 sun.shadow.bias = -0.0003
@@ -84,6 +86,11 @@ sun.shadow.normalBias = 1.5 * SHADOW.size / SHADOW.map
 sun.shadow.radius = 4
 sun.shadow.camera.layers.enable(1) // Fries's layer: he casts a shadow even when first person hides him
 scene.add(sun, sun.target)
+// renderer.info has no native shadow-pass counter; record completed renders, including diagnostic views.
+renderer.info.shadowMapRenders = 0
+scene.onAfterRender = (activeRenderer, activeScene, activeCamera) => {
+  if (activeCamera === sun.shadow.camera) activeRenderer.info.shadowMapRenders++
+}
 
 // A soft warm bounce from the lawn in front of the faces, so shadow sides stay readable against the low sun.
 export const bounce = new THREE.DirectionalLight(0xffd2a8, 0.45)
@@ -93,11 +100,19 @@ scene.add(bounce)
 const texel = SHADOW.size / SHADOW.map
 const right = new THREE.Vector3().crossVectors(THREE.Object3D.DEFAULT_UP, SUN).normalize(), upward = new THREE.Vector3().crossVectors(SUN, right)
 const focus = new THREE.Vector3(), forward = new THREE.Vector3()
+let shadowX, shadowY, shadowAge = 2
 export function updateSun() {
   focus.copy(camera.getWorldDirection(forward)).multiplyScalar(14).add(camera.position).setY(0)
   const x = Math.round(focus.dot(right) / texel) * texel, y = Math.round(focus.dot(upward) / texel) * texel, z = focus.dot(SUN)
-  sun.target.position.copy(right).multiplyScalar(x).addScaledVector(upward, y).addScaledVector(SUN, z)
-  sun.position.copy(sun.target.position).addScaledVector(SUN, 80)
+  // Commit the light transform only with its map. Refresh moving casters at least every second frame.
+  if (x !== shadowX || y !== shadowY || ++shadowAge >= 2) {
+    sun.target.position.copy(right).multiplyScalar(x).addScaledVector(upward, y).addScaledVector(SUN, z)
+    sun.position.copy(sun.target.position).addScaledVector(SUN, 80)
+    sun.shadow.needsUpdate = true
+    shadowX = x
+    shadowY = y
+    shadowAge = 0
+  }
   bounce.target.position.copy(sun.target.position)
 }
 
@@ -148,18 +163,30 @@ const sixOhOne = lut(c => {
 })
 export const pink = uniform(0)
 
-// The picture: a depth and normal pre-pass feeds ground-truth AO, which dims only the sky's light on things (not
-// the sun's); HDR bloom on what is brighter than white (the sun, the lanterns, glowing gears); then one tone map,
-// then the grades.
-const prePass = pass(scene, camera)
-prePass.setMRT(mrt({ output: normalView }))
-const aoPass = ao(prePass.getTextureNode('depth'), prePass.getTextureNode(), camera)
+// Render colour, normals and indirect light together. Capture the lighting context through a zero GI input;
+// the MRT reads the finished indirect terms. This keeps sun, emission and haze out of the AO composite.
+const scenePass = pass(scene, camera)
+const indirectLighting = new WeakMap()
+scenePass.contextNode = context({
+  getGI: (inputNode, { material }) => material.transparent ? inputNode : Fn(([], builder) => {
+    indirectLighting.set(builder, builder.context.reflectedLight)
+    return vec3(0)
+  })(),
+})
+const indirect = Fn(([], builder) => {
+  const light = indirectLighting.get(builder)
+  if (!light || VIEW === 'haze') return vec4(0, 0, 0, output.a)
+  const transmission = builder.material.fog ? float(1).sub(haze) : float(1)
+  return vec4(light.indirectDiffuse.add(light.indirectSpecular).mul(transmission), output.a)
+})()
+scenePass.setMRT(mrt({ output, normal: normalView, indirect })
+  .setBlendMode('indirect', new THREE.BlendMode(THREE.MaterialBlending))
+  .setClearColor('indirect', 0, 0))
+const aoPass = ao(scenePass.getTextureNode('depth'), scenePass.getTextureNode('normal'), camera)
 aoPass.resolutionScale = 0.5
 aoPass.radius.value = 0.6
 const occlusion = float(1).sub(float(1).sub(aoPass.getTextureNode().sample(screenUV).r).mul(0.6)) // 60% strength: dense grass and leaves over-occlude
-const scenePass = pass(scene, camera)
-scenePass.contextNode = builtinAOContext(occlusion)
-const hdr = scenePass.getTextureNode('output')
+const hdr = scenePass.getTextureNode('output').sub(scenePass.getTextureNode('indirect').mul(float(1).sub(occlusion))).max(0)
 const glow = bloom(hdr, 0.4, 0.45, 1.1)
 const toned = renderOutput(hdr.add(glow), THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
 const graded = lut3D(lut3D(toned, evening, 32, 1), sixOhOne, 32, pink)
