@@ -70,7 +70,13 @@ export const cast = Object.fromEntries(['hatter', 'hare', 'dormouse'].map(name =
   const object = things[name], anim = new Animator(object, name)
   const member = { name, object, anim, blink: new Blink(object), armature: object.getObjectByName('Armature'), seated: 'seat' in stage[name], rests: {} }
   if (member.seated && anim.has('sit_idle')) member.rests.sitting = rest(name, 'sit_idle', true)
-  if (name === 'dormouse') for (const clip in anim.actions) member.rests[clip] = rest(name, clip, false, 12)
+  if (name === 'dormouse') {
+    for (const clip in anim.actions) member.rests[clip] = rest(name, clip, false, 12)
+    const bubble = object.children.find(o => o.geometry?.type === 'SphereGeometry'), head = object.getObjectByName('mixamorigHead')
+    head.attach(bubble)
+    bubble.position.set(0, 0, 0.05).applyQuaternion(object.getWorldQuaternion(new THREE.Quaternion())).add(head.getWorldPosition(new THREE.Vector3()))
+    head.worldToLocal(bubble.position)
+  }
   return [name, member]
 }))
 
@@ -242,11 +248,6 @@ export function updateCast(dt) {
     if (m.name === 'dormouse') {
       m.armature.position.copy(lift)
       m.object.updateMatrixWorld(true)
-      const bubble = m.object.children.find(o => o.geometry?.type === 'SphereGeometry')
-      const head = m.object.getObjectByName('mixamorigHead')
-      head.getWorldPosition(bubble.position)
-      m.object.worldToLocal(bubble.position)
-      bubble.position.z += 0.05
     } else m.armature.position.lerp(lift, Math.min(1, dt * 10))
   }
 }
