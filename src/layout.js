@@ -249,7 +249,6 @@ export const shapes = {
     [0.9, 1.3, 0, 0.12, 2.6, 0.12, ARCH],
     [0, 2.5, 0, 1.9, 0.14, 0.14, ROSE],
   ],
-  ivy_strand: [[0, 0.65, 0, 0.3, 1.3, 0.03, LEAF]],
   far_tree: [[0, 3, 0, 0.9, 6, 0.9, BARK], [0, 8, 0, 6, 4, 6, LEAF], [0, 10.8, 0, 3.6, 2.4, 3.6, LEAF2]], // 12 m tall, on the hills beyond the garden
   candle: [[0, 0.1, 0, 0.05, 0.2, 0.05, CHINA], [0, 0.22, 0, 0.015, 0.04, 0.015, LANTERN]],
   candelabra: [[0, 0.2, 0, 0.26, 0.4, 0.06, BRASS]],
@@ -290,14 +289,14 @@ const wall = (from, to, y, courses = 1) => [
 ]
 
 // Flagstones along a path's centre line, about `spacing` apart, the four shapes in turn, set a little to either
-// side.
+// side. They are 6 cm thick and sunk 5 cm into the flat ground, so their tops stand 1 cm proud.
 const stones = (line, spacing) => line.slice(1).flatMap(([x1, z1], i) => {
   const [x0, z0] = line[i], n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / spacing))
   const across = [(z0 - z1) / Math.hypot(x1 - x0, z1 - z0), (x1 - x0) / Math.hypot(x1 - x0, z1 - z0)]
   return Array.from({ length: n }, (_, k) => {
     const j = i * 7 + k, side = ((j * 53 % 7) / 7 - 0.5) * 0.25
     return {
-      model: `flagstone_${'abcd'[j % 4]}`, pos: [x0 + (x1 - x0) * k / n + across[0] * side, 0, z0 + (z1 - z0) * k / n + across[1] * side],
+      model: `flagstone_${'abcd'[j % 4]}`, pos: [x0 + (x1 - x0) * k / n + across[0] * side, -0.05, z0 + (z1 - z0) * k / n + across[1] * side],
       rot: j * 37 % 90, solid: false,
     }
   })
@@ -376,15 +375,11 @@ export const placed = [
   { model: 'rose_arch', pos: [9, 0, 2.6], rot: 112 },
   { model: 'rose_arch', pos: [14.5, 0, 3.1], rot: 27 },
   { model: 'rose_arch', pos: [12.8, 0, -11.7], rot: -127 },
-  { model: 'rose_arch', pos: [24, 0, -5.9], rot: 111 },
+  { model: 'rose_arch', pos: [24, 0.06, -5.9], rot: 111 },
   { model: 'rose_arch', pos: [-8, 0, 0.4], rot: -92 },
   { model: 'rose_arch', pos: [-18.6, 0, -9], rot: -160 },
   { model: 'rose_arch', pos: [-12, 0, 15.5], rot: -68 },
   ...wall([-34, 27], [-12, 27], 0), ...wall([12, 27], [34, 27], 0), ...wall([-35, 26], [-35, 6], 0),
-  { model: 'ivy_strand', pos: [-6.8, 0, -10.9], rot: -30, solid: false },
-  { model: 'ivy_strand', pos: [-3.9, 0, -9.9], rot: -40, solid: false },
-  { model: 'ivy_strand', pos: [6.2, 0, -15.4], solid: false },
-  { model: 'ivy_strand', pos: [16.5, 1.8, -18.2], solid: false },
   ...paths.flatMap(line => stones(line, 0.6)),
 ]
 

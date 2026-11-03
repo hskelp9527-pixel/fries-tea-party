@@ -148,7 +148,7 @@ const [rx0, rz0] = rosePath.from, [rx1, rz1] = rosePath.to, length = Math.hypot(
 const along = new THREE.Vector2(rx1 - rx0, rz1 - rz0).normalize(), across = new THREE.Vector2(-along.y, along.x)
 for (let d = 0; d < length; d += 0.55) {
   const stone = model(`flagstone_${'abcd'[Math.floor(rand() * 4)]}`)
-  stone.position.set(rx0 + along.x * d, ground(rx0, rz0), rz0 + along.y * d)
+  stone.position.set(rx0 + along.x * d, ground(rx0 + along.x * d, rz0 + along.y * d) - 0.05, rz0 + along.y * d)
   stone.rotation.y = rand() * 3
   roses.add(stone)
   for (const side of [-1, 1]) {

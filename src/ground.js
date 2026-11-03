@@ -44,11 +44,18 @@ const groundMaterial = new THREE.MeshStandardNodeMaterial({ roughness: 1 })
 groundMaterial.colorNode = FIELDS ? vec3(field.g.mul(0.5), field.r, field.b) : mix(soil, valley.mul(speckle.mul(0.1).add(1)), smoothstep(55, 95, here.sub(vec2(0, -4)).length()))
 groundMaterial.roughnessNode = float(1).sub(field.a.mul(0.3))
 
-// The land, out to the far hills.
-const land = new THREE.PlaneGeometry(420, 420, 210, 210)
-land.rotateX(-Math.PI / 2)
+// The land, out to the far hills. Its cells are 0.5 m over the garden, as fine as the walkable height field, so the
+// plants rooted on the true height lie on the mesh (the overlook's slope is only a few metres across); beyond 40 m
+// they widen by 8% a step.
+const edges = [0]
+for (let step = 0.5; edges.at(-1) < 210; edges.push(edges.at(-1) + step)) if (edges.at(-1) >= 40) step *= 1.08
+const coords = [...edges.slice(1).reverse().map(e => -e), ...edges], count = coords.length
+const land = new THREE.PlaneGeometry(1, 1, count - 1, count - 1).rotateX(-Math.PI / 2)
 const position = land.attributes.position
-for (let i = 0; i < position.count; i++) position.setY(i, ground(position.getX(i), position.getZ(i)))
+for (let i = 0; i < position.count; i++) {
+  const x = coords[i % count], z = coords[Math.floor(i / count)]
+  position.setXYZ(i, x, ground(x, z), z)
+}
 land.computeVertexNormals()
 const lawn = new THREE.Mesh(land, groundMaterial)
 lawn.receiveShadow = true
