@@ -1,7 +1,9 @@
 import * as THREE from 'three/webgpu'
+import { color, texture, vec3, dot, max, min, mix, smoothstep } from 'three/tsl'
 import { scene, webgpu } from './scene.js'
 import { model } from './models.js'
 import { floating } from './layout.js'
+import { level } from './fields.js'
 import { player } from './player.js'
 import { camera } from './scene.js'
 import { game, hop } from './state.js'
@@ -12,18 +14,27 @@ import { meanSize, keepOut } from './garden.js'
 // gear found adds another batch.
 const items = []
 const density = webgpu ? 1 : 0.5
+// The mean linear brightness of the hat texture's olive cloth, so a tint keeps its own brightness on average.
+const CLOTH_LUMA = 0.07
+// Every floating thing stays this far above the ground under it, and a further BOB_ROOM so its bob and beat hops
+// (together under 0.3 m) never dip it below the minimum.
+const MIN_HEIGHT = 2.2, BOB_ROOM = 0.4
 
 function add(kind, cloud, size = 0.9 + Math.random() * 0.4) {
   const object = model(kind)
   if (kind === 'hat') {
-    // The hat has one textured material (olive cloth with the ribbon painted on) that a colour alone cannot change, so each hat
-    // gets its own plain-coloured copy that keeps the normal and roughness maps.
-    const tint = floating.hatTints[items.filter(it => it.kind === 'hat').length % floating.hatTints.length]
+    // The hat has one textured material: olive cloth with a red ribbon and a few bright trims painted on. Each hat gets its own copy
+    // whose cloth takes the tint (the texture's brightness times the tint, so the weave and folds stay) while every bright, saturated
+    // texel (ribbon, trims) keeps its painted colour.
+    const tint = color(floating.hatTints[items.filter(it => it.kind === 'hat').length % floating.hatTints.length])
     object.traverse(o => {
       if (!o.isMesh) return
-      o.material = o.material.clone()
-      o.material.map = null
-      o.material.color.set(tint)
+      const map = texture(o.material.map), rgb = map.rgb, seen = rgb.pow(1 / 2.2)
+      o.material = new THREE.MeshStandardNodeMaterial().copy(o.material)
+      const cloth = tint.mul(dot(rgb, vec3(0.2126, 0.7152, 0.0722)).div(CLOTH_LUMA).min(2))
+      // Cloth is dull (chroma under about 0.24 in display colour), the ribbon and trims are vivid (over about 0.34).
+      const isCloth = smoothstep(0.34, 0.24, max(seen.r, seen.g, seen.b).sub(min(seen.r, seen.g, seen.b)))
+      o.material.colorNode = mix(rgb, cloth, isCloth)
     })
   }
   scene.add(object)
@@ -73,6 +84,8 @@ export function updateFloating(dt) {
     o.position.x += Math.sin(t * 0.31) * it.wander
     o.position.y += Math.sin(t * 0.53) * it.wander * 0.4
     o.position.z += Math.cos(t * 0.27) * it.wander
+    if (!(e >= 0 && giant > 0)) o.position.y = Math.max(o.position.y, level(o.position.x, o.position.z) + MIN_HEIGHT + BOB_ROOM)
+    o.position.y += Math.sin(t * 0.9 + it.seed) * 0.12 // a slow bob of its own, so nothing ever looks parked
     push.subVectors(o.position, chest)
     const d = push.length(), clear = 0.6 + 0.8 * s
     if (it.kind === 'teacup') {
@@ -84,6 +97,7 @@ export function updateFloating(dt) {
       const look = Math.atan2(-push.x, -push.z) - o.rotation.y
       o.rotation.y += Math.atan2(Math.sin(look), Math.cos(look)) * Math.min(1, dt * 3)
     } else o.rotation.y += it.spin * dt
+    o.rotation.x = Math.sin(t * 0.6 + it.seed) * 0.12
     o.rotation.z = Math.sin(t * 0.7) * 0.15 + hop(it.seed, it.extent * it.size, offset)
     o.position.add(offset)
     keepOut(o.position, it.extent * it.size / 2)

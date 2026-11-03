@@ -3,7 +3,7 @@ import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_n
 import { scene, camera, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { meadow, terraces, plaza, overlook } from './layout.js'
-import { LEAVES, cardMaterial, cards, flowerClump, flowerMesh, walkers, stir } from './plants.js'
+import { LEAVES, cardMaterial, cards, flowerClump, flowerMaterial, flowerMesh, shareAt, drawCount, walkers, stir } from './plants.js'
 import { player } from './player.js'
 import { cast } from './cast.js'
 import { lush, bloom, species, bare, pathDistance, ground, level, random } from './fields.js'
@@ -88,19 +88,22 @@ scene.add(paving)
 // Grass and flowers grow in square cells; each cell is one InstancedMesh per material (one for the grass, one per
 // flower kind and detail), culled by the camera frustum through its bounding sphere. A cell's cards and clumps are
 // shuffled, so drawing the first few of them thins it evenly. Bigger cells mean fewer draw calls but a coarser
-// frustum cull and coarser steps (a whole cell changes tier at once, so the change can pop); smaller ones do the
-// opposite. Grass is cheap per card, so its cells are big; flowers are heavy, so theirs are small and follow the
+// frustum cull and more hidden instances still sent to the GPU (a cell's draw count follows its nearest edge; the
+// shader sizes each plant by its own distance); smaller ones do the opposite. Grass is cheap per card, so its cells are big; flowers are heavy, so theirs are small and follow the
 // camera's distance closely.
 const GRASS_CELL = 16, FLOWER_CELL = 8
-// [from, to, share]: the share of a cell drawn while its nearest edge is between `from` and `to` metres from the
-// camera. Past the last `to` nothing is drawn (the ground texture carries the colour): longer or fuller tiers cost
-// triangles, thinner mid tiers show the lawn through the grass sooner.
-const GRASS_TIERS = [[0, 14, 1], [14, 30, 0.5], [30, 50, 0.2]]
-// Flowers are two meshes per cell and kind. The modelled clump (1000 to 2500 triangles) is drawn only close up; out to
-// 40 m a vertex-merged copy (100 to 350 triangles) stands in, thinning as it goes. A shorter near tier saves the
-// most triangles, a longer one keeps the petals crisp further out.
-const NEAR_FLOWERS = [[0, 6, 1]]
-const FAR_FLOWERS = [[6, 25, 0.5], [25, 40, 0.15]]
+// Share curves, [metres, share]: the share of a cell's plants drawn at that distance from the camera, linear between
+// points. Each plant grows from its root as the share passes its rank, so density changes swell and shrink plants
+// instead of popping them, and past the last point nothing is drawn (the ground texture carries the colour). Longer or
+// fuller curves cost triangles; thinner mid curves show the lawn through the grass sooner.
+// Grass (2 triangles a card): full to 20 m, half by 40, a fifth by 60, none past 80.
+const GRASS_FADE = [[20, 1], [40, 0.5], [60, 0.2], [80, 0]]
+// Flowers are two meshes per cell and kind. The modelled clump (1000 to 2500 triangles) is drawn only close up, thinning from
+// every clump at 5 m to none at 15 m; a vertex-merged copy (100 to 350 triangles) takes over as it thins (the far mesh draws
+// the clumps the near one does not, so near and far together are about one clump in every spot at 5 to 15 m) and carries on out to 60
+// m, thinning as it goes. A shorter near curve saves the most triangles; a longer one keeps the petals crisp further out.
+const NEAR_FLOWERS = [[5, 1], [15, 0]]
+const FAR_FLOWERS = [[5, 0], [15, 0.85], [35, 0.45], [60, 0]]
 const rand = random(11)
 const grassCells = new Map(), flowerCells = new Map()
 function cell(cells, size, x, z, make) {
@@ -154,7 +157,8 @@ for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (
   ).clone())
 }
 
-const grassMaterial = cardMaterial(LEAVES, { translucency: 1.1, flutter: 0.01 })
+const grassMaterial = cardMaterial(LEAVES, { translucency: 1.1, flutter: 0.01, thin: GRASS_FADE })
+const nearFlowerMaterial = flowerMaterial(NEAR_FLOWERS), farFlowerMaterial = flowerMaterial(FAR_FLOWERS)
 const shuffle = list => {
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -166,15 +170,15 @@ const drawn = []
 for (const c of grassCells.values()) {
   const mesh = cards(grassMaterial, LEAVES, shuffle(c.list))
   scene.add(mesh)
-  drawn.push({ mesh, full: c.list.length, box: c.box, tiers: GRASS_TIERS })
+  drawn.push({ mesh, full: c.list.length, box: c.box, fade: GRASS_FADE })
 }
 for (const c of flowerCells.values()) {
   for (const [name, list] of Object.entries(c.kinds)) {
-    const matrices = shuffle(list)
-    for (const [clump, tiers] of [[clumps[name], NEAR_FLOWERS], [{ ...clumps[name], geometry: clumps[name].simple }, FAR_FLOWERS]]) {
-      const mesh = flowerMesh(clump, matrices)
+    const matrices = shuffle(list), { geometry, simple } = clumps[name]
+    for (const [clump, fade, order] of [[{ geometry, material: nearFlowerMaterial }, NEAR_FLOWERS, matrices], [{ geometry: simple, material: farFlowerMaterial }, FAR_FLOWERS, [...matrices].reverse()]]) {
+      const mesh = flowerMesh(clump, order)
       scene.add(mesh)
-      drawn.push({ mesh, full: list.length, box: c.box, tiers })
+      drawn.push({ mesh, full: list.length, box: c.box, fade })
     }
   }
 }
@@ -206,8 +210,7 @@ export function updateGround() {
   for (const d of drawn) {
     const [bx0, bz0, bx1, bz1] = d.box
     const distance = Math.hypot(Math.max(bx0 - camera.position.x, 0, camera.position.x - bx1), Math.max(bz0 - camera.position.z, 0, camera.position.z - bz1))
-    const keep = d.tiers.find(([from, to]) => distance >= from && distance < to)?.[2] ?? 0
-    d.mesh.count = Math.ceil(d.full * keep)
-    d.mesh.visible = keep > 0
+    d.mesh.count = drawCount(d.full, shareAt(d.fade, distance))
+    d.mesh.visible = d.mesh.count > 0
   }
 }
