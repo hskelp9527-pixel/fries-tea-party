@@ -8,7 +8,7 @@ import { cast, standUp, sitDown, laySpoon } from './cast.js'
 import { say, burst, ting, playing, heard } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { underTable, grotto, hall, overlook, song as songSpot } from './layout.js'
-import { stream, surface, TEA } from './liquids.js'
+import { stream, surface, CUP_PROFILE, TEA } from './liquids.js'
 import { toHand, release } from './hands.js'
 import { random } from './fields.js'
 import { game } from './state.js'
@@ -221,7 +221,7 @@ async function serve() {
   await wait(3.4)
   anim.hold('reach')
   release(servedCup)
-  cupTea = surface(servedCup, new THREE.Vector3(0, 0.02, 0), 0.034, 0.06, { fill: 0 })
+  cupTea = surface(servedCup, new THREE.Vector3(0, 0.012, 0), 0.044, 0.065, { fill: 0, profile: CUP_PROFILE })
   const chair = cast.hatter.chair
   await standUp('hatter')
   cast.hatter.doing = 'conduct'
@@ -245,7 +245,7 @@ async function serve() {
     await untilBeat(beat - 1)
     await tween(BEAT, t => { pot.rotation.x = 0.8 * t })
     const target = landing(k), spout = pot.localToWorld(spouts[k].clone())
-    const pour = stream(spout, target, { height: 0.02, radius: 0.007, colour: TEA })
+    const pour = stream(spout, k === lane ? cupTea.disc.getWorldPosition(target) : target, { height: 0, radius: 0.0045, colour: TEA })
     await untilBeat(beat + 1)
     pour.remove()
     if (servedCup.position.distanceTo(target) < 0.13) {
@@ -254,7 +254,7 @@ async function serve() {
       cupTea.set(caught / POURS)
     } else {
       burst(5, 0.6)
-      const miss = stream(target, target.clone().setY(0.78), { height: 0, radius: 0.007, colour: TEA })
+      const miss = stream(target, target.clone().setY(0.78), { height: 0, radius: 0.0045, colour: TEA })
       await wait(BEAT)
       miss.remove()
     }

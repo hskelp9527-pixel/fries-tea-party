@@ -27,6 +27,10 @@ addEventListener('keydown', event => {
 })
 // Keep the scene, shadow and fullscreen draws in one frame's totals.
 renderer.info.autoReset = false
+// ?liquid owns its camera and animation loop instead of starting the story.
+if (params.has('liquid')) {
+  await import('./liquidLab.js')
+} else {
 // ?anims: buttons to try every character's clips by hand.
 if (params.has('anims')) import('./anims.js')
 
@@ -107,3 +111,4 @@ renderer.setAnimationLoop(now => {
     sampleFrames = sampleCalls = sampleTriangles = 0
   }
 })
+}

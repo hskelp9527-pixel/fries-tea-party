@@ -4,7 +4,7 @@ import { camera, lens } from './scene.js'
 import { lookAt, headOf } from './gaze.js'
 import { cast, chairs, rest, standUp, walk, sitDown, moveChair, PULL } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
-import { stream, surface } from './liquids.js'
+import { stream, surface, CUP_PROFILE } from './liquids.js'
 import { use, release, fly, toHand } from './hands.js'
 import contacts from '../docs/fries_hand_contacts.json'
 import { things, drinks, gears, doors, wake } from './garden.js'
@@ -158,7 +158,7 @@ async function pour(d) {
   act('drink')
   await toHand(d.object, d)
   anim.hold('drink')
-  const tea = surface(d.object, new THREE.Vector3(0, 0.025, 0), 0.032, 0.055, { colour: new THREE.Color(d.tea), fill: 0 })
+  const tea = surface(d.object, new THREE.Vector3(0, 0.012, 0), 0.044, 0.065, { colour: new THREE.Color(d.tea), fill: 0, profile: CUP_PROFILE })
 
   cast.hatter.doing = 'sit_beckon'
   const cup = d.object.getWorldPosition(new THREE.Vector3())
@@ -184,8 +184,8 @@ async function pour(d) {
   await tween(0.5, tilt)
   const stage = pot.position.clone()
   await fly(pot, end => end.copy(over), 0.65, 0)
-  const spout = pot.localToWorld(SPOUT.clone()), pouring = stream(spout, cup.clone().setY(cup.y + 0.045), { height: 0.02, radius: 0.007, colour: new THREE.Color(d.tea) })
-  await tween(2.2, t => tea.set(t))
+  const spout = pot.localToWorld(SPOUT.clone()), pouring = stream(spout, tea.disc.getWorldPosition(cup.clone()), { height: 0, radius: 0.0045, colour: new THREE.Color(d.tea) })
+  await tween(2.2, t => { tea.set(t); tea.disc.getWorldPosition(pouring.to) })
   pouring.remove()
   cast.hatter.doing = null
   await fly(pot, end => end.copy(stage), 0.65, 0)
