@@ -43,6 +43,7 @@ export async function begin(from) {
   }
   if (from === 'song') return finale()
   if (from !== 'explore') await opening()
+  else placePlayer(start.pos, start.rot) // where the opening leaves him; the default origin is under the table
   startExplore(finale)
 }
 
