@@ -177,7 +177,7 @@ function updateCamera(dt) {
     ball.radius = 0.1 * s
     const far = 3.2 * s
     const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, collider)
-    const distance = hit ? Math.max(0, hit.time_of_impact - 0.02 * s) : far
+    const distance = hit ? Math.max(0, hit.timeOfImpact - 0.02 * s) : far
     camera.position.copy(eye).addScaledVector(dir, distance)
   }
   camera.position.x += (Math.random() - 0.5) * shake
