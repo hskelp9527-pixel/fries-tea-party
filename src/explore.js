@@ -176,8 +176,8 @@ async function pour(d) {
   await tween(0.5, tilt)
   const stage = pot.position.clone()
   await fly(pot, end => end.copy(over), 0.65, 0)
-  const spout = pot.localToWorld(SPOUT.clone()), pouring = stream(spout, cup.clone().setY(cup.y + 0.045), { height: 0.02, radius: 0.007, colour: new THREE.Color(d.tea) })
-  await tween(2.2, t => tea.set(t))
+  const spout = pot.localToWorld(SPOUT.clone()), pouring = stream(spout, tea.disc.getWorldPosition(cup.clone()), { height: 0, radius: 0.0045, colour: new THREE.Color(d.tea) })
+  await tween(2.2, t => { tea.set(t); tea.disc.getWorldPosition(pouring.to) })
   pouring.remove()
   cast.hatter.doing = null
   await fly(pot, end => end.copy(stage), 0.65, 0)

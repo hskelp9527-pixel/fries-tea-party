@@ -228,7 +228,7 @@ async function serve() {
     await untilBeat(beat - 1)
     await tween(BEAT, t => { pot.rotation.x = 0.8 * t })
     const target = landing(k), spout = pot.localToWorld(spouts[k].clone())
-    const pour = stream(spout, target, { height: 0.02, radius: 0.007, colour: TEA })
+    const pour = stream(spout, k === lane ? cupTea.disc.getWorldPosition(target) : target, { height: 0, radius: 0.0045, colour: TEA })
     await untilBeat(beat + 1)
     pour.remove()
     if (servedCup.position.distanceTo(target) < 0.13) {
@@ -237,7 +237,7 @@ async function serve() {
       cupTea.set(caught / POURS)
     } else {
       burst(5, 0.6)
-      const miss = stream(target, target.clone().setY(0.78), { height: 0, radius: 0.007, colour: TEA })
+      const miss = stream(target, target.clone().setY(0.78), { height: 0, radius: 0.0045, colour: TEA })
       await wait(BEAT)
       miss.remove()
     }

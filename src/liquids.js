@@ -219,7 +219,7 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
 
 // One lit mesh owns the rolled lip, ballistic curtain, impact foam and expanding rings.
 // A second pooled draw owns detached ropes, splash droplets and fine spray.
-export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'live', parent = scene, frozen = false, spread = radius * 0.42 } = {}) {
+export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'live', parent = scene, frozen = false, spread = radius * 0.42, drift = new THREE.Vector2(), rippleReach = radius * 0.24 } = {}) {
   const run = uniform(0), amount = uniform(1), kind = attribute('liquidPart', 'float')
   const a = uv().x.mul(TAU), t = uv().y
   const warp = sin(a.mul(5).add(t.mul(8)).sub(run.mul(2))).mul(0.45)
@@ -284,7 +284,7 @@ export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'li
           const r = radius * (0.96 + 0.09 * Math.sin(roll)) + spread * flight + wobble * (0.65 + flight)
           const height = top + radius * 0.025 * Math.cos(roll) - fall * flight * flight
             + radius * 0.022 * Math.sin(angle * 17 + flight * 24 - clock * 9) * (0.2 + flight)
-          p.setXYZ(curtainStart + y * (segments + 1) + x, Math.cos(angle) * r, height, Math.sin(angle) * r)
+          p.setXYZ(curtainStart + y * (segments + 1) + x, Math.cos(angle) * r + drift.x * flight, height, Math.sin(angle) * r + drift.y * flight)
         }
       }
       function ring(start, rowCount, inner, width, lift, opacity) {
@@ -292,33 +292,34 @@ export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'li
           const angle = x / segments * TAU, v = y / rowCount, k = start + y * (segments + 1) + x
           const churn = Math.sin(angle * 31 - clock * 11) * Math.sin(angle * 19 + clock * 7)
           const r = inner + v * width + radius * 0.006 * churn
-          p.setXYZ(k, Math.cos(angle) * r, bottom + radius * 0.002 + Math.sin(v * Math.PI) * lift * (1 + churn * 0.35), Math.sin(angle) * r)
+          p.setXYZ(k, Math.cos(angle) * r + drift.x, bottom + radius * 0.008 + Math.sin(v * Math.PI) * lift * (1 + churn * 0.35), Math.sin(angle) * r + drift.y)
           fade.setX(k, Math.sin(v * Math.PI) * opacity * (0.75 + churn * 0.25))
         }
       }
       ring(impactStart, 6, landing - radius * 0.055, radius * 0.12, radius * 0.055, 0.88)
       rippleStarts.forEach((start, i) => {
         const age = fract1(clock * 0.9 + i / 3)
-        ring(start, 2, landing + age * radius * 0.24, radius * 0.014, radius * 0.005, (1 - age) ** 2 * 0.45)
+        ring(start, 2, landing + age * rippleReach, radius * 0.014, radius * 0.005, (1 - age) ** 2 * 0.45)
       })
       p.needsUpdate = fade.needsUpdate = true; g.computeVertexNormals()
       for (let i = 0; i < drops.count; i++) {
         const age = fract1(clock * (i < 48 ? 1.4 : 2.3) + i * 0.618034), angle = i * 2.39996
-        let r, height, scale
+        let r, height, scale, travel = 1
         if (i < 48) {
           // Detached lower ropes continue the curtain's outward ballistic trajectory.
           const flight = 0.64 + age * 0.36
+          travel = flight
           r = radius * 1.05 + spread * flight; height = top - fall * flight * flight
           scale = radius * 0.009 * Math.sin(age * Math.PI)
           size.set(scale, scale * 3.5, scale)
         } else {
           const fine = i >= 112, velocity = fine ? 0.26 : 0.18
-          r = landing + radius * velocity * age
+          r = landing + Math.min(radius * velocity, rippleReach) * age
           height = bottom + radius * (fine ? 0.48 : 0.32) * age * (1 - age)
           scale = radius * (fine ? 0.0028 : 0.009) * (1 - age) ** 0.6
           size.set(scale, scale * (fine ? 1 : 1.8), scale)
         }
-        point.set(centre.x + Math.cos(angle) * r, centre.y + height, centre.z + Math.sin(angle) * r)
+        point.set(centre.x + Math.cos(angle) * r + drift.x * travel, centre.y + height, centre.z + Math.sin(angle) * r + drift.y * travel)
         drops.setMatrixAt(i, matrix.compose(point, rotation, size.multiplyScalar(amount.value)))
       }
       drops.instanceMatrix.needsUpdate = true
@@ -346,7 +347,7 @@ const fountainBowls = [
 ]
 
 // Story effects use exactly the same local-frame pieces as the lab and live pours.
-let pools = [], hanging, drips, D
+let hanging, drips, D
 const dripMatrix = new THREE.Matrix4(), dripRotation = new THREE.Quaternion(), dripSize = new THREE.Vector3(0.022, 0.03, 0.022)
 function placeDrips() {
   drips.forEach((p, i) => hanging.setMatrixAt(i, dripMatrix.compose(p, dripRotation, dripSize)))
@@ -355,20 +356,25 @@ function placeDrips() {
 if (!new URLSearchParams(location.search).has('liquid')) {
   for (const a of effects.teaArcs) stream(new THREE.Vector3(...a.from), new THREE.Vector3(...a.to), { height: a.height, radius: 0.011, layer: 'tea' })
   const fountain = things.fountain
-  const at = ([r, y, a]) => new THREE.Vector3(Math.sin(a * Math.PI / 180) * r, y, Math.cos(a * Math.PI / 180) * r)
-  for (const s of syrup.streams) stream(at(s.from), at(s.to), { height: s.height, radius: 0.02, colour: SYRUP, layer: 'syrup', parent: fountain })
-  for (const [radius, top, bottom] of syrup.sheets) sheet(new THREE.Vector3(), radius, top, bottom, { parent: fountain, layer: 'syrup' })
-  pools = fountainBowls.map(b => surface(fountain, new THREE.Vector3(b.x, b.profile[0][0], b.z), b.radius, b.top, { colour: SYRUP, fill: 0.1, layer: 'syrup', profile: b.profile }))
+  // Mouth centres picked on the actual GLB, rather than the old polar placeholders.
+  const spouts = [
+    { from: [0.005, 2.56, 0.055], to: [0.05, 2.052, 0.12] },
+    { from: [0.62, 1.22, 0.14], to: [0.72, 0.975, 0.28] },
+  ]
+  for (const s of spouts) stream(new THREE.Vector3(...s.from), new THREE.Vector3(...s.to), { height: 0, radius: 0.014, colour: SYRUP, layer: 'syrup', parent: fountain })
+  for (let i = 1; i < fountainBowls.length; i++) {
+    const b = fountainBowls[i], below = fountainBowls[i - 1], spread = [0, 0.1, 0.14, 0.09][i]
+    sheet(new THREE.Vector3(b.x, 0, b.z), b.radius, b.lip, below.top, { parent: fountain, layer: 'syrup', spread,
+      drift: new THREE.Vector2(below.x - b.x, below.z - b.z), rippleReach: [0, 0.025, 0.13, 0.025][i] })
+  }
+  fountainBowls.forEach(b => surface(fountain, new THREE.Vector3(b.x, b.profile[0][0], b.z), b.radius, b.top, { colour: SYRUP, fill: 1, layer: 'syrup', profile: b.profile }))
   D = syrup.drops
   hanging = new THREE.InstancedMesh(dropGeometry, material(SYRUP), D.count)
   drips = Array.from({ length: D.count }, (_, i) => new THREE.Vector3(...D.center.map((c, axis) => c + (fract1(Math.sin(i * 71.7 + axis * 39.1) * 43758.5453) - 0.5) * D.size[axis])))
   placeDrips(); scene.add(hanging)
 }
-let syrupTime = 0
 export function updateLiquids(dt) {
   if (awake.syrup && hanging) {
-    syrupTime += dt
-    for (const p of pools) p.set(Math.min(1, 0.1 + syrupTime / 8))
     for (const p of drips) {
       p.y -= dt * 0.6
       if (p.y < D.center[1] - D.size[1] / 2) p.y += D.size[1]
