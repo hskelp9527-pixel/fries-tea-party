@@ -35,7 +35,9 @@ export function hold(object, prop) {
 }
 
 export function holdCast(object, character, hand = 'RightHand', grip = [0, 0, 0]) {
-  castHeld.set(object, { bone: character.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${hand}`)), grip })
+  const bone = character.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${hand}`))
+  const rotation = bone.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(object.getWorldQuaternion(new THREE.Quaternion()))
+  castHeld.set(object, { bone, grip, rotation })
 }
 
 export function release(object) {
@@ -46,8 +48,9 @@ export function release(object) {
 // A cup held to the mouth stays clear of his face and glasses: outside a ball round the front of his head.
 const face = new THREE.Vector3(), ahead = new THREE.Vector3(), away = new THREE.Vector3()
 export function updateHands() {
-  for (const [object, { bone, grip }] of castHeld) {
+  for (const [object, { bone, grip, rotation }] of castHeld) {
     bone.getWorldPosition(object.position).add(offset.set(...grip).applyQuaternion(bone.getWorldQuaternion(turn)))
+    object.quaternion.copy(turn).multiply(rotation)
   }
   for (const [object, how] of held) {
     inHand(how, object.position)
