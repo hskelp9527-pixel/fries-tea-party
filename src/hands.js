@@ -8,6 +8,7 @@ const bones = { right: bone('mixamorig:RightHand'), left: bone('mixamorig:LeftHa
 
 // Props in Fries's hands: object -> { hand, grip, clip }.
 const held = new Map()
+const castHeld = new Map()
 const offset = new THREE.Vector3(), turn = new THREE.Quaternion()
 
 // Where a prop held this way sits now: on the hand bone, moved by `grip` (metres at scale 1, in the hand's frame)
@@ -33,13 +34,21 @@ export function hold(object, prop) {
   held.set(object, { hand: contacts[prop.clip].hand, grip: prop.grip, clip: prop.clip, clearOfFace: prop.clip === 'drink' })
 }
 
+export function holdCast(object, character, hand = 'RightHand', grip = [0, 0, 0]) {
+  castHeld.set(object, { bone: character.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${hand}`)), grip })
+}
+
 export function release(object) {
+  castHeld.delete(object)
   held.delete(object)
 }
 
 // A cup held to the mouth stays clear of his face and glasses: outside a ball round the front of his head.
 const face = new THREE.Vector3(), ahead = new THREE.Vector3(), away = new THREE.Vector3()
 export function updateHands() {
+  for (const [object, { bone, grip }] of castHeld) {
+    bone.getWorldPosition(object.position).add(offset.set(...grip).applyQuaternion(bone.getWorldQuaternion(turn)))
+  }
   for (const [object, how] of held) {
     inHand(how, object.position)
     if (!how.clearOfFace || !bones.head) continue

@@ -5,14 +5,14 @@ import { roses } from './foliage.js'
 import { model } from './models.js'
 import { start, song, page as pageStand } from './layout.js'
 import contacts from '../docs/fries_hand_contacts.json'
-import { player, placePlayer, act, walkTo } from './player.js'
-import { hold, fly, palmAt } from './hands.js'
+import { player, placePlayer, act, walkTo, anim } from './player.js'
+import { hold, holdCast, release, fly, palmAt } from './hands.js'
 import { setMusic, say, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { startExplore } from './explore.js'
 import { setFloatingLevel } from './floating.js'
 import { playSong } from './song.js'
-import { stand } from './cast.js'
+import { cast, stand } from './cast.js'
 import { game } from './state.js'
 
 const DEG = Math.PI / 180
@@ -47,6 +47,14 @@ export async function begin(from) {
 }
 
 async function finale() {
+  const hatter = cast.hatter, watch = things.pocket_watch
+  await walkTo([hatter.object.position.x + 0.8, 0, hatter.object.position.z + 0.7], 220)
+  hatter.doing = 'mend'
+  act('mend')
+  holdCast(watch, hatter.object, 'RightHand', [0, 0.025, 0])
+  await wait(Math.max(hatter.anim.actions.mend.getClip().duration, anim.actions.mend.getClip().duration))
+  release(watch)
+  hatter.doing = null
   await playSong()
   await wait(1.5)
   await ending()
@@ -104,28 +112,42 @@ async function opening() {
   // Shot 2: Fries reaches for the glowing page in the Hatter's watch; it snaps shut.
   placePlayer([-1.5, 0, -5.9], 143)
   await shot(v(-2.15, 1.5, -4.55), home)
+  cast.hatter.doing = 'show_watch'
+  holdCast(watch, things.hatter, 'RightHand', [0, 0.025, 0])
   act('reach')
   await tween(0.8, t => { player.mesh.rotation.x = 0.25 * t })
   await say('OP-04')
   page.visible = false
+  cast.hatter.anim.play('show_watch', true, true)
   await say('OP-05')
   await tween(0.5, t => { player.mesh.rotation.x = 0.25 * (1 - t) })
   await say('OP-06')
 
   // Shot 3: the watch goes to the March Hare, gets buttered, and bursts; the gears scatter to their hiding places.
   await shot(v(-0.2, 1.9, -3.6), v(0.2, 0.9, -7.2))
+  cast.hatter.doing = null
+  release(watch)
   await Promise.all([say('OP-07'), arc(watch, v(0.45, 0.75, -7.3), 0.3, 0.8)])
+  cast.hare.doing = 'butter'
   const butter = model('butter')
   butter.position.copy(watch.position).setY(watch.position.y + 0.04)
   scene.add(butter)
+  holdCast(butter, things.hare, 'RightHand', [0, 0.03, 0])
   await say('OP-08')
+  release(butter)
   butter.removeFromParent()
+  cast.hare.doing = 'dunk_watch'
+  holdCast(watch, things.hare, 'RightHand', [0, 0.025, 0])
+  await wait(cast.hare.anim.actions.dunk_watch.getClip().duration)
+  release(watch)
+  for (const m of Object.values(cast)) m.doing = 'sit_scared'
   for (const g of gears) {
     g.object.position.copy(watch.position)
     g.object.visible = true
   }
   await Promise.all([say('OP-09'), ...gears.map(g => arc(g.object, g.pos, 2.5, 1.6))])
   await Promise.all([say('OP-10'), arc(watch, home, 0.3, 0.8)])
+  for (const m of Object.values(cast)) m.doing = null
 
   player.mesh.rotation.x = 0
   placePlayer([-1.5, 0, -5.9], 200)
@@ -151,7 +173,12 @@ async function ending() {
   // The March Hare grabs the Dormouse and stuffs him into the pink teapot.
   const teapot = things.pink_teapot.position
   await Promise.all([say('ED-02'), stand('hare', { pos: [0.6, 0, -8.4], rot: -60 }, 0.8)])
+  cast.hatter.doing = 'stuff'
+  cast.hare.doing = 'stuff'
   await Promise.all([say('ED-03'), stand('dormouse', { pos: [teapot.x, teapot.y + 0.12, teapot.z], rot: 90 }, 1.2, 0.5)])
+
+  cast.hatter.doing = null
+  cast.hare.doing = null
 
   // Fries reaches out and the page flies from the watch into his palm, arriving as his hand does; it stays in
   // his hand. The door at the mouth of the tunnel through the big tree's roots swings open.

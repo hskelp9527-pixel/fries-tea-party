@@ -7,6 +7,9 @@ import speakers from './speakers.json'
 import { cast as stage } from './layout.js'
 import { tween } from './tweens.js'
 import { game } from './state.js'
+import { scene } from './scene.js'
+import { holdCast, release } from './hands.js'
+import { wait } from './tweens.js'
 
 const DEG = Math.PI / 180
 
@@ -80,7 +83,7 @@ export const chairs = placedAll.armchair.map(object => {
 })
 for (const m of Object.values(cast)) if (m.seated) (m.chair = chairs.find(c => c.home.distanceTo(m.object.position) < 0.1)).by = m.name
 
-const ONCE = new Set(['sit_down', 'stand_up', 'sit_scared', 'conduct', 'serve'])
+const ONCE = new Set(['sit_down', 'stand_up', 'sit_scared', 'conduct', 'serve', 'show_watch', 'lean_over', 'mend', 'butter', 'dunk_watch', 'lay_spoon', 'stuff'])
 const chairBack = (c, d) => c.object.position.copy(c.home).addScaledVector(new THREE.Vector3(Math.sin(c.rot), 0, Math.cos(c.rot)), -d)
 
 // Walks a character along [x, z] points at walking speed, facing where it goes.
@@ -156,6 +159,9 @@ function play(m, line) {
   if (m.doing) {
     if (m.anim.current !== m.anim.actions[m.doing]) m.anim.play(m.doing, ONCE.has(m.doing))
   }
+  else if (m.name === 'hatter' && line === 'SZ-01') {
+    if (m.anim.current !== m.anim.actions.lean_over) m.anim.play('lean_over', true)
+  }
   else if (m.moving) m.anim.play('walk')
   else if (game.pass >= 1) m.anim.play(game.pass === 1 ? 'dance_swing' : 'dance_silly')
   else if (game.pass === 0 && m.name === 'hatter') m.anim.play('sing')
@@ -184,9 +190,24 @@ export function updateCast(dt) {
     if (clip.name === 'sit_down' || clip.name === 'stand_up') {
       const k = Math.min(1, action.time / clip.duration * 1.25)
       lift.set(0, onSeat * (clip.name === 'sit_down' ? k : 1 - k), 0)
-    } else if (m.seated && clip.name.startsWith('sit_')) lift.set(0, onSeat, 0)
+    } else if (m.seated && (clip.name.startsWith('sit_') || ['show_watch', 'mend', 'butter', 'dunk_watch', 'stuff', 'lean_over'].includes(clip.name))) lift.set(0, onSeat, 0)
     else if (r) lift.set(-r.middle.x, -r.lows[Math.floor(action.time / clip.duration * r.lows.length) % r.lows.length], -r.middle.z)
     else lift.set(0, 0, 0)
     m.armature.position.lerp(lift, Math.min(1, dt * 10))
   }
+}
+
+// The under-table task chooses the bridge point and calls this when the Hare is needed.
+export async function laySpoon(point) {
+  const m = cast.hare
+  if (m.seated) await standUp('hare')
+  await walk('hare', [[point.x, point.z]])
+  const spoon = model('spoon')
+  scene.add(spoon)
+  holdCast(spoon, m.object, 'RightHand', [0, 0.03, 0])
+  m.doing = 'lay_spoon'
+  await wait(m.anim.actions.lay_spoon.getClip().duration)
+  release(spoon)
+  spoon.position.copy(point)
+  m.doing = null
 }

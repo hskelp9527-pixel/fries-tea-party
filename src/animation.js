@@ -18,7 +18,7 @@ export class Animator {
   }
 
   // Crossfades to a clip that loops, or with `once` plays a single time and holds its last frame.
-  play(name, once = false) {
+  play(name, once = false, reverse = false) {
     const next = this.actions[name]
     if (!next || (next === this.current && !once)) return
     if (next === this.current) next.reset()
@@ -28,7 +28,8 @@ export class Animator {
     }
     next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity)
     next.clampWhenFinished = once
-    next.timeScale = 1
+    next.timeScale = reverse ? -1 : 1
+    if (reverse) next.time = next.getClip().duration
     next.play()
     this.current = next
   }
