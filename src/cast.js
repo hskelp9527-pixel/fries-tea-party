@@ -205,7 +205,15 @@ export function updateCast(dt) {
     } else if (m.seated && (clip.name.startsWith('sit_') || ['show_watch', 'mend', 'butter', 'dunk_watch', 'stuff', 'lean_over'].includes(clip.name))) lift.set(0, onSeat, 0)
     else if (r) lift.set(-r.middle.x, -r.lows[Math.floor(action.time / clip.duration * r.lows.length) % r.lows.length], -r.middle.z)
     else lift.set(0, 0, 0)
-    m.armature.position.lerp(lift, Math.min(1, dt * 10))
+    if (m.name === 'dormouse') {
+      m.armature.position.copy(lift)
+      m.object.updateMatrixWorld(true)
+      const bubble = m.object.children.find(o => o.geometry?.type === 'SphereGeometry')
+      const head = m.object.getObjectByName('mixamorigHead')
+      head.getWorldPosition(bubble.position)
+      m.object.worldToLocal(bubble.position)
+      bubble.position.z += 0.05
+    } else m.armature.position.lerp(lift, Math.min(1, dt * 10))
   }
 }
 
