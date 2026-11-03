@@ -506,6 +506,11 @@ export const lanterns = [
 // `perGear` of each kind.
 export const floating = {
   perGear: { teacup: 14, hat: 5, spoon: 8, plate: 6, pocket_watch: 3 },
+  // Cakes and treats drift over the table from the start, 12 in all, high enough to clear the heads and the hanging clocks.
+  treats: { cupcake: 3, fruit_tart: 2, macarons: 2, cake: 3, whole_cake: 2 },
+  treatCloud: { center: [0, 2.7, -2.5], size: [4, 0.8, 6] },
+  // Each hat takes the next of these tints: plum, teal, mustard, rose, moss green, deep blue.
+  hatTints: [0x7a3b6e, 0x2f7f86, 0xd0a030, 0xc9667a, 0x5f8a3c, 0x2c4a8a],
   clouds: [
     { center: [0, 2.4, -3.5], size: [4.6, 2, 10] },
     { center: [18.5, 2.4, -5], size: [6, 2, 6] },
