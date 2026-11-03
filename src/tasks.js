@@ -14,7 +14,7 @@ import { random } from './fields.js'
 import { game } from './state.js'
 
 // The tasks at each place. Each place first shows what Fries cannot do yet: a glint on every missing gear (the one
-// under the table between the legs, the one on the hat rack's top hat high on the porch), a light and ticking
+// high on the big tree's trunk, the one in the cottage hall), a light and ticking
 // behind the grotto's tiny arch; Fries plays `found` when he first spots one.
 const rand = random(31)
 const DEG = Math.PI / 180
@@ -32,7 +32,7 @@ const visible = point => {
   ray.dir = to
   return world.castRay(ray, Math.max(0, length - 0.35 * player.p.scale - 0.05), true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS) === null
 }
-const baseGlint = glints[0].material
+const treeGlint = glints[0].material, baseGlint = glints[1].material
 const overlookGlint = baseGlint.clone()
 overlookGlint.depthTest = false
 overlookGlint.colorNode = baseGlint.colorNode.mul(1.8)
@@ -45,8 +45,8 @@ function updateGlints() {
     s.visible = !g.found
     if (g.found) return
     const d = camera.position.distanceTo(g.pos)
-    s.scale.setScalar(Math.min(0.32, Math.max(0.06, 0.006 * d)) * (onOverlook ? 2.5 : 1))
-    s.material = onOverlook ? overlookGlint : baseGlint
+    s.scale.setScalar((i === 0 ? Math.min(0.6, Math.max(0.12, 0.012 * d)) : Math.min(0.32, Math.max(0.06, 0.006 * d))) * (onOverlook ? 2.5 : 1))
+    s.material = onOverlook ? overlookGlint : i === 0 ? treeGlint : baseGlint
     // Spotting it: in front of him, near enough for his size, nothing between.
     if (player.control && !spotted.has(g) && (onOverlook || d < 12) && to.subVectors(g.pos, camera.position).normalize().dot(view) > 0.85 && (onOverlook || visible(g.pos))) {
       spotted.add(g)

@@ -435,12 +435,11 @@ export const bushes = [
 // docs/fries_hand_contacts.json: stand = prop - palm offset in the clip, turned to `rot` and scaled to his size
 // (small 0.18, big 5). `grip` (metres at scale 1, in the hand bone's frame) sets the prop in the palm.
 
-// Each gear rests at the pickup palm above the floor of its small route.
-// Gear 3 meets the giant reach from the top terrace.
+// `in` puts a gear's position in a model's frame; stands are world points unless `standIn` names their frame.
 export const gears = [
-  { // under the long table
-    pos: [0.1, 0.022, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
-    by: 'small', clip: 'pick_up', stand: [0.055, 0, -2.203], rot: 90, grip: [-0.004, -0.03, 0.072],
+  { // above the door, on the trunk's table-facing surface; refine against the modelled knot-hollow
+    in: 'big_tree', pos: [0, 4.3, 2.12], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
+    by: 'big', clip: 'reach', stand: [-7.1, 0, -7.85], rot: 150, grip: [0, 0.05, 0.007],
   },
   { // in the grotto under the fountain's basin
     pos: [18.2, 0.022, -5], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
@@ -612,7 +611,7 @@ export const meadow = {
 // Small routes use the existing table and fountain openings; their low ceilings exclude larger bodies.
 export const underTable = {
   crumbs: [-0.6, -2.8, 0.7, -1.3],
-  cup: [gears[0].pos[0], gears[0].pos[2] + 0.55],
+  cup: [0.1, -1.65],
   spoon: [[0.1, 0.09, -1.65], [0.1, 0.008, -2.12]],
   hare: [1.45, 0, -1.65],
 }
