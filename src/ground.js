@@ -6,14 +6,14 @@ import { meadow, terraces, plaza, overlook } from './layout.js'
 import { LEAVES, cardMaterial, cards, flowerClump, flowerMaterial, flowerMesh, shareAt, drawCount, walkers, stir } from './plants.js'
 import { player } from './player.js'
 import { cast } from './cast.js'
-import { lush, bloom, species, bare, pathDistance, ground, level, random } from './fields.js'
+import { lush, bloom, species, bare, moss, bed, pathDistance, ground, level, random } from './fields.js'
 
 // ?view=fields colours the land by its fields instead: green how lush, magenta where flowers bloom, grey the paths.
 const FIELDS = new URLSearchParams(location.search).get('view') === 'fields'
 
 // The shared fields over the garden in one small texture, 0.25 m a texel: red the lushness, green how worn the
-// ground is (paths, under the table, tree and cottage), blue the flower bloom, alpha the damp round the fountain's
-// plaza. The ground's material reads it.
+// ground is (paths and the cottage), blue the flower bloom, alpha the moss (under the table, between the tree's
+// roots) and the damp round the fountain's plaza. The ground's material reads it.
 const FIELD = { x0: -40, z0: -42, width: 80, depth: 75, texel: 0.25 }
 const fw = FIELD.width / FIELD.texel, fh = FIELD.depth / FIELD.texel, fieldData = new Uint8Array(fw * fh * 4)
 for (let j = 0; j < fh; j++) {
@@ -21,7 +21,7 @@ for (let j = 0; j < fh; j++) {
     const x = FIELD.x0 + (i + 0.5) * FIELD.texel, z = FIELD.z0 + (j + 0.5) * FIELD.texel
     const worn = bare(x, z) ? 1 : Math.max(0, 1 - pathDistance(x, z) / (meadow.pathWidth * 0.7))
     const damp = Math.exp(-(((Math.hypot(x - plaza[0], z - plaza[1]) - plaza[2] - 1) / 1.3) ** 2))
-    fieldData.set([lush(x, z), worn, bloom(x, z), damp].map(v => Math.round(v * 255)), (j * fw + i) * 4)
+    fieldData.set([lush(x, z), worn, bloom(x, z), Math.max(damp, moss(x, z))].map(v => Math.round(v * 255)), (j * fw + i) * 4)
   }
 }
 const fieldMap = new THREE.DataTexture(fieldData, fw, fh)
@@ -38,7 +38,10 @@ grass = mix(grass, color(0x7b9c46), smoothstep(0.05, 0.55, broad).mul(0.55))
 grass = mix(grass, color(0x365a2c), smoothstep(0.05, 0.5, broad.negate()).mul(0.5))
 grass = mix(grass, color(0x9a9a58), smoothstep(0.3, 0.6, patch.add(float(1).sub(field.r).mul(0.5))).mul(0.6))
 let soil = mix(grass, color(0x8a7556).mul(speckle.mul(0.15).add(1)), smoothstep(0.25, 0.75, field.g.add(patch.mul(0.35)).add(speckle.mul(0.15))).mul(0.92))
-soil = soil.mul(float(1).sub(field.a.mul(0.4))).mul(speckle.mul(0.1).add(1))
+// Moss and damp: a soft deep green that mottles with the patch noise, kept off the worn paths.
+const mossy = smoothstep(0.15, 0.6, field.a.add(patch.mul(0.2))).mul(float(1).sub(field.g))
+soil = mix(soil, mix(color(0x4f8a3a), color(0x7aa848), smoothstep(-0.2, 0.5, patch)).mul(speckle.mul(0.12).add(1)), mossy.mul(0.9))
+soil = soil.mul(speckle.mul(0.1).add(1))
 const valley = mix(mix(color(0x6d8c3e), color(0xb8a24f), smoothstep(-0.1, 0.4, mx_noise_float(here.mul(0.018).add(41)))), color(0x4a6a3a), smoothstep(0.2, 0.6, mx_noise_float(here.mul(0.03).add(9))))
 const groundMaterial = new THREE.MeshStandardNodeMaterial({ roughness: 1 })
 groundMaterial.colorNode = FIELDS ? vec3(field.g.mul(0.5), field.r, field.b) : mix(soil, valley.mul(speckle.mul(0.1).add(1)), smoothstep(55, 95, here.sub(vec2(0, -4)).length()))
@@ -129,7 +132,17 @@ for (let gx = x0; gx < x1; gx += spacing) {
   for (let gz = z0; gz < z1; gz += spacing) {
     const x = gx + rand() * spacing, z = gz + rand() * spacing
     if (!open(x, z) || rand() > grassShare(x, z)) continue
-    const l = lush(x, z), height = 0.14 + 0.2 * l * (0.6 + rand() * 0.8), yaw = rand() * Math.PI, y = level(x, z)
+    const l = lush(x, z), m = moss(x, z) > 0.3, yaw = rand() * Math.PI, y = level(x, z)
+    // Mossy places grow a short soft pile (4 to 9 cm) so the daisies and clover show and Fries can walk through.
+    const height = m ? 0.04 + 0.05 * rand() : 0.14 + 0.2 * l * (0.6 + rand() * 0.8)
+    if (m && rand() < 0.6) {
+      // Clover: a flat round leaf lying on the moss; one card each, so little geometry for a lot of green.
+      const s = 0.1 + 0.1 * rand()
+      cell(grassCells, GRASS_CELL, x, z, () => ({ list: [] })).list.push({
+        position: new THREE.Vector3(x, y + 0.02, z), quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, rand() * Math.PI * 2, 0, 'YXZ')),
+        scale: new THREE.Vector3(s, s, 1), cell: LEAVES.round, base: [x, y, z, 0], tint: new THREE.Color(0.7 + 0.2 * rand(), 1, 0.55).multiplyScalar(0.9 + 0.3 * rand()),
+      })
+    }
     for (const turn of [0, Math.PI / 2]) {
       cell(grassCells, GRASS_CELL, x, z, () => ({ list: [] })).list.push({
         position: new THREE.Vector3(x, y, z), quaternion: upright(yaw + turn), scale: new THREE.Vector3(height * 1.7, height, 1),
@@ -144,16 +157,21 @@ for (let gx = x0; gx < x1; gx += spacing) {
 // from it. The white blossom has no model and is gone.
 const LOW = ['flower_daisy', 'flower_forget_me_not', 'flower_violets', 'flower_daisy']
 const TALL = ['flower_foxglove', 'flower_mallow', 'flower_pink_rose', 'flower_red_rose', 'flower_foxglove']
+const BED = ['flower_daisy', 'flower_forget_me_not', 'flower_violets', 'flower_foxglove', 'flower_mallow', 'flower_pink_rose', 'flower_red_rose']
 const clumps = {}
 const clump = new THREE.Matrix4()
 for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (webgpu ? 1 : 0.5)); n > 0; n--) {
   const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
   if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.6) continue
-  const kinds = rand() < 0.65 ? LOW : TALL, name = kinds[Math.floor(species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3) * kinds.length)]
+  const kinds = rand() < 0.65 ? LOW : TALL, m = moss(x, z) > 0.3, ring = bed(x, z) > 0.4
+  // Under the table and between the roots: small daisies and forget-me-nots. Round the plaza: every kind at random, a
+  // mixed bed. Elsewhere the drift's species with its neighbours in the palette mixed in.
+  const name = m ? (rand() < 0.8 ? 'flower_daisy' : 'flower_forget_me_not') : ring ? BED[Math.floor(rand() * BED.length)]
+    : kinds[Math.min(kinds.length - 1, Math.max(0, Math.floor(species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3) * kinds.length)))]
   clumps[name] ??= flowerClump(name)
   ;(cell(flowerCells, FLOWER_CELL, x, z, () => ({ kinds: {} })).kinds[name] ??= []).push(clump.compose(
     new THREE.Vector3(x, level(x, z), z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
-    new THREE.Vector3().setScalar(1.15 + rand() * 0.65),
+    new THREE.Vector3().setScalar(m ? 0.55 + rand() * 0.3 : ring ? 1 + rand() * 0.5 : 1.15 + rand() * 0.65),
   ).clone())
 }
 
