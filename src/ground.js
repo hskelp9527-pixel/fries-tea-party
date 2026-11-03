@@ -103,13 +103,15 @@ const GRASS_CELL = 16, FLOWER_CELL = 8
 // instead of popping them, and past the last point nothing is drawn (the ground texture carries the colour). Longer or
 // fuller curves cost triangles; thinner mid curves show the lawn through the grass sooner.
 // Grass (2 triangles a card): full to 20 m, half by 40, a fifth by 60, none past 80.
-const GRASS_FADE = [[20, 1], [40, 0.5], [60, 0.2], [80, 0]]
+const GRASS_FADE = [[40, 1], [60, 0.5], [80, 0]]
 // Flowers are two meshes per cell and kind. The modelled clump (1000 to 2500 triangles) is drawn only close up, thinning from
 // every clump at 5 m to none at 15 m; a vertex-merged copy (100 to 350 triangles) takes over as it thins (the far mesh draws
 // the clumps the near one does not, so near and far together are about one clump in every spot at 5 to 15 m) and carries on out to 60
 // m, thinning as it goes. A shorter near curve saves the most triangles; a longer one keeps the petals crisp further out.
-const NEAR_FLOWERS = [[5, 1], [15, 0]]
-const FAR_FLOWERS = [[5, 0], [15, 0.85], [35, 0.45], [60, 0]]
+// Plants change only far from the player (beyond 28 m for flowers, 40 m for grass): nearer changes read as flowers
+// growing and shrinking round him as he walks.
+const NEAR_FLOWERS = [[28, 1], [34, 0]]
+const FAR_FLOWERS = [[28, 0], [34, 0.8], [50, 0.4], [70, 0]]
 const rand = random(11)
 const grassCells = new Map(), flowerCells = new Map()
 function cell(cells, size, x, z, make) {

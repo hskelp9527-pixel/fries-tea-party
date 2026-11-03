@@ -28,7 +28,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
 renderer.setSize(innerWidth, innerHeight)
 // The single exposure and tone map of the picture (the pipeline applies them once, before the grade).
 renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.toneMappingExposure = 1.1
+renderer.toneMappingExposure = 1.15
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 document.body.prepend(renderer.domElement)
@@ -42,7 +42,7 @@ scene.backgroundNode = VIEW === 'sky-off' ? skyRadiance(normalWorldGeometry) : p
 
 // Haze: clear near, warm far, thicker low down. Its colour is the sky's along the line of sight, just above the
 // horizon, so distant hills melt into the sky behind them, golden towards the sun.
-const HAZE = { start: 22, density: 0.011, height: 24 }
+const HAZE = { start: 35, density: 0.0065, height: 24 } // thin enough that the garden keeps its colour and contrast
 const sightline = positionWorld.sub(cameraPosition)
 const distance = sightline.length()
 const along = sightline.div(distance)
@@ -73,13 +73,13 @@ const skyOnly = new THREE.Scene()
 skyOnly.backgroundNode = skyRadiance(normalWorldGeometry)
 scene.environment = pmrem.fromScene(skyOnly, 0.04).texture
 scene.environmentIntensity = 0.85
-const skyFill = new THREE.HemisphereLight(0xcbdfff, 0xb8b697, 0.55)
+const skyFill = new THREE.HemisphereLight(0xd6c2e2, 0x9c8a5c, 0.45) // lavender evening sky above, warm lawn below
 const eveningFill = skyFill.color.clone(), rosyFill = new THREE.Color(0xffdce9)
 scene.add(skyFill)
 
 // The sun: warm, low, with soft shadows. The shadow map covers 56 m round the point the camera looks at and moves
 // in whole texels, so shadows never crawl as the camera moves.
-export const sun = new THREE.DirectionalLight(0xffdfac, 3)
+export const sun = new THREE.DirectionalLight(0xffb672, 3.2) // a low golden sun at six o'clock
 sun.castShadow = true
 const SHADOW = { size: 56, map: webgpu ? 4096 : 2048 }
 sun.shadow.autoUpdate = false
@@ -123,8 +123,8 @@ export function updateSun() {
   bounce.target.position.copy(sun.target.position)
   // The ending brightens the shaded garden as well as the sky. Reuse the diffuse fill, without rebuilding PMREM.
   skyFill.color.lerpColors(eveningFill, rosyFill, pink.value)
-  skyFill.intensity = 0.55 + 0.3 * pink.value
-  renderer.toneMappingExposure = 1.1 + 0.08 * pink.value
+  skyFill.intensity = 0.45 + 0.3 * pink.value
+  renderer.toneMappingExposure = 1.15 + 0.08 * pink.value
   const facing = forward.dot(SUN)
   shaftVisibility.value = 0
   if (facing > 0) {
@@ -144,7 +144,7 @@ const sunInView = cameraViewMatrix.mul(vec4(sunDirection, 0)).xyz
 const edge = pow(float(1).sub(dot(normalView, positionViewDirection).saturate()), 3)
 const behind = dot(positionViewDirection.negate(), sunInView).saturate().mul(0.8).add(0.2)
 const sunSide = dot(normalView, sunInView).mul(0.5).add(0.5)
-const RIM = vec3(1, 0.78, 0.45).mul(0.95)
+const RIM = vec3(1, 0.66, 0.34).mul(1.2)
 export function rimLit(material) {
   const lit = new THREE.MeshStandardNodeMaterial().copy(material)
   lit.emissiveNode = materialEmissive.add(RIM.mul(edge).mul(behind).mul(sunSide))
@@ -171,11 +171,12 @@ function lut(grade) {
 const luma = c => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
 const evening = lut(c => {
   const y = luma(c), shadow = (1 - y) ** 2, light = y ** 2
-  c.r += 0.004 * shadow + 0.012 * light
-  c.g += 0.009 * shadow + 0.009 * light
-  c.b += 0.018 * shadow
-  c.lerp({ r: y, g: y, b: y }, -0.035)
-  c.r = Math.min(1, Math.max(0, c.r)), c.g = Math.min(1, Math.max(0, c.g)), c.b = Math.min(1, Math.max(0, c.b))
+  // Evening: golden highlights, faintly violet shadows.
+  c.r += 0.02 * shadow + 0.03 * light
+  c.g += 0.004 * shadow + 0.012 * light
+  c.b += 0.04 * shadow - 0.03 * light
+  c.lerp({ r: y, g: y, b: y }, -0.2) // richer colour, like the storyboard's painted light
+  for (const k of ['r', 'g', 'b']) c[k] = Math.min(1, Math.max(0, 0.46 + (c[k] - 0.46) * 1.14)) // more contrast round the midtones
 })
 const sixOhOne = lut(c => {
   // Add a little rose light to shadows and midtones, preserving warm whites and the original colour separation.

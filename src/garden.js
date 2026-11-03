@@ -304,13 +304,8 @@ const candleHalos = new THREE.Mesh(haloGeometry, haloMaterial)
 candleHalos.frustumCulled = false
 scene.add(candleHalos)
 
-// Shared pools of candlelight; no individual candle casts a light or a shadow.
-const candleLights = [-6.6, -3.9, -0.6].map(z => {
-  const light = new THREE.PointLight(0xffb75c, 0.55, 3.2, 2)
-  light.position.set(0.15, 1.28, z)
-  scene.add(light)
-  return light
-})
+// The candles light nothing but themselves: their flames and halos glow, with no real lights, as every point light
+// is paid for by every lit pixel of the garden, and the grass is many layers deep.
 
 export const gears = layout.gears.map(g => {
   const pos = new THREE.Vector3(...g.pos), stand = new THREE.Vector3(...g.stand)
@@ -421,7 +416,6 @@ export function updateGarden(dt, time) {
   const breath = (time / 3) % 1
   bubble.scale.setScalar(breath < 0.9 ? 0.02 + breath * 0.1 : 0.001)
 
-  candleLights.forEach((light, i) => { light.intensity = 0.55 + 0.025 * Math.sin(time * 4 + i * 2) })
 
   wind.bushes.value = awake.flowers ? 2.5 : 0.4
   wind.pulse.value = game.pass >= 1 ? game.pulse : 0

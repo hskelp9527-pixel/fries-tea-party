@@ -5,8 +5,8 @@ import { Fn, uniform, vec2, vec3, float, mix, dot, pow, exp, smoothstep, atan, a
 export const SUN = new THREE.Vector3(-0.42, 0.18, -0.89).normalize()
 const sunDirection = uniform(SUN)
 export const air = {
-  horizon: uniform(new THREE.Color(0.72, 0.43, 0.28)),
-  zenith: uniform(new THREE.Color(0.13, 0.3, 0.6)),
+  horizon: uniform(new THREE.Color(0.86, 0.5, 0.31)), // six in the evening: peach and amber low down
+  zenith: uniform(new THREE.Color(0.3, 0.25, 0.47)), // and soft lavender overhead, not a daytime blue
   glow: uniform(new THREE.Color(1.0, 0.56, 0.24)),
 }
 const SUN_RADIUS = 0.4 * Math.PI / 180
