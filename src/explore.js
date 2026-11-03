@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { player, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
 import { camera } from './scene.js'
-import { cast, chairs, rest, standUp, walk, sitDown } from './cast.js'
+import { cast, chairs, rest, standUp, walk, sitDown, moveChair, PULL } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
 import { stream, surface } from './liquids.js'
 import { use, release, fly, toHand } from './hands.js'
@@ -30,7 +30,8 @@ for (const gear of gears) uses.push({
 uses.push(teaService, hallNote)
 let target, toldAboutTea = false, drank = false
 
-// Any empty armchair at the table: Fries walks to its front, turns and sits down; E or a step gets him up again.
+// Any empty armchair at the table: Fries walks to its side, the chair slides out, he steps in, sits down and the
+// chair carries him back in to the table; E or a step gets him up again, the same way in reverse.
 // Seated, the camera frames the table and the banter turns to him; the first time, the hosts shout "No room!".
 const SITTING = rest('fries', 'sit_down', true, 1, true).lows[0]
 let seat = null, sits = 0
@@ -44,10 +45,13 @@ async function sit(chair) {
   player.control = false
   chair.by = 'fries'
   await walkTo([chair.front.x, 0, chair.front.z], chair.rot / DEG)
+  await moveChair(chair, PULL)
+  await walkTo([chair.step.x, 0, chair.step.z], chair.rot / DEG)
   act('sit_down')
-  const from = player.feet.clone(), to = chair.seat.clone().setY(chair.seat.y - SITTING)
+  const from = player.feet.clone(), to = chair.seat.clone().addScaledVector(chair.forward, -PULL).setY(chair.seat.y - SITTING)
   await tween(anim.actions.sit_down.getClip().duration, t => player.feet.lerpVectors(from, to, Math.min(1, t * 1.25)))
   anim.hold('sit_down')
+  await moveChair(chair, 0, player.feet)
   seat = chair
   banter.seated = true
   player.cinematic = true
@@ -59,10 +63,13 @@ async function sit(chair) {
 async function rise() {
   const chair = seat
   seat = null
+  await moveChair(chair, PULL, player.feet)
   anim.hold('sit_down', false)
   act('stand_up')
-  const from = player.feet.clone(), to = chair.front.clone().setY(0)
+  const from = player.feet.clone(), to = chair.step.clone().setY(0)
   await tween(anim.actions.stand_up.getClip().duration, t => player.feet.lerpVectors(from, to, Math.max(0, t * 1.6 - 0.6)))
+  await walkTo([chair.front.x, 0, chair.front.z], chair.rot / DEG)
+  await moveChair(chair, 0)
   chair.by = null
   banter.seated = false
   player.cinematic = false
