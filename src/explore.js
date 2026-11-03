@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { player, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
+import { player, placePlayer, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
 import { camera } from './scene.js'
 import { cast, chairs, rest, standUp, walk, sitDown, moveChair, PULL } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
@@ -13,6 +13,7 @@ import { tween, wait } from './tweens.js'
 import { game } from './state.js'
 import { teaService, hallNote, insideHall } from './tasks.js'
 import { setFloatingLevel } from './floating.js'
+import { underTable } from './layout.js'
 
 const FIRST_HINT = 45 // seconds without finding a gear before the Dormouse sleep-talks a hint
 const NEXT_HINT = 35
@@ -209,8 +210,8 @@ async function pickUp(gear) {
   gear.object.visible = false
 }
 
-// The first shrink: the Hatter gets up, comes over and bends down over small Fries, his huge face filling the sky;
-// then he goes back to his chair.
+// The first shrink: the Hatter comes over, his huge face filling the sky;
+// then he returns to his chair and Fries lands on the upturned cup under the table.
 async function firstShrink() {
   player.control = false
   const hatter = cast.hatter, chair = hatter.chair, p = player.feet
@@ -227,6 +228,7 @@ async function firstShrink() {
   await look
   hatter.doing = null
   await sitDown('hatter', chair)
+  placePlayer(underTable.landing, 180)
   player.control = true
 }
 

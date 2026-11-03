@@ -465,8 +465,8 @@ export const drinks = [
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [-2.8, 0, 2.2], becomes: 'normal', label: 'Eat the cake',
-    by: 'small', clip: 'drink', stand: [-2.8, 0, 2.08], rot: 0, grip: [-0.008, 0.045, 0.003],
+    model: 'cake', pos: [0.1, 0, -2.2], becomes: 'normal', grow: [-1.45, 0, -2.2], label: 'Eat the cake',
+    by: 'small', clip: 'drink', stand: [0.103, 0, -2.155], rot: 180, grip: [-0.008, 0.045, 0.003],
   },
   {
     model: 'cake', pos: [3.4, 0, -1.2], becomes: 'normal', label: 'Eat the cake',
@@ -609,6 +609,7 @@ export const meadow = {
 
 // Small routes use the existing table and fountain openings; their low ceilings exclude larger bodies.
 export const underTable = {
+  landing: [0.1, 0.09, -1.65],
   crumbs: [-0.6, -2.8, 0.7, -1.3],
   cup: [0.1, -1.65],
   spoon: [[0.1, 0.09, -1.65], [0.1, 0.008, -2.12]],

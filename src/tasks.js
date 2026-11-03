@@ -56,7 +56,7 @@ function updateGlints() {
 }
 
 // Under the long table: cross the hanging fringe and crumbs to an upturned cup.
-// The Hare bridges the gap from its saucer down to gear 1 between the legs.
+// The Hare bridges the gap from its saucer down to the "eat me" cake between the legs.
 const crumbs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xc8955a, roughness: 0.9 }), 260)
 const [cx0, cz0, cx1, cz1] = underTable.crumbs, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler()
 for (let i = 0; i < crumbs.count; i++) {
