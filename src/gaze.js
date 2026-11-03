@@ -31,8 +31,9 @@ function twist(b, yaw, pitch, facing) {
   b.updateMatrixWorld(true)
 }
 
-// After the clips have posed everyone: ease each head towards its target and turn the bones.
-export function updateGaze(dt, seated) {
+// After the clips have posed everyone: ease each head towards its target and turn the bones. `seated(name)` and
+// `free(name)` (standing still, not in a clip of its own: free to turn its body) say how each one may turn.
+export function updateGaze(dt, seated, free) {
   const ease = 1 - Math.exp(-dt * 10) // about 95% of the way in 0.3 s
   for (const [name, l] of Object.entries(lookers)) {
     if (!l.head) continue
@@ -46,7 +47,7 @@ export function updateGaze(dt, seated) {
     }
     // Past the neck's reach: a standing character turns towards the target, a seated one turns its chest.
     const beyond = Math.sign(yaw) * Math.max(0, Math.abs(yaw) - YAW)
-    if (beyond && !seated(name)) l.object.rotation.y += beyond * ease * 0.5
+    if (beyond && free(name)) l.object.rotation.y += beyond * ease * 0.5
     l.yaw += (Math.max(-YAW, Math.min(YAW, yaw)) - l.yaw) * ease
     l.pitch += (Math.max(-PITCH, Math.min(PITCH, pitch)) - l.pitch) * ease
     if (seated(name) && l.chest) twist(l.chest, Math.sign(beyond) * Math.min(CHEST, Math.abs(beyond)) * 0.8, 0, facing)

@@ -59,7 +59,7 @@ renderer.setAnimationLoop(now => {
   updateSong()
   updateCast(dt)
   updateLooks()
-  updateGaze(dt, name => name === 'fries' ? banter.seated : cast[name].seated)
+  updateGaze(dt, name => name === 'fries' ? banter.seated : cast[name].seated, name => name !== 'fries' && !cast[name].seated && !cast[name].doing && !cast[name].moving)
   world.step()
   updateHands()
   updateSun()

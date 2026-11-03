@@ -72,11 +72,11 @@ export const cast = Object.fromEntries(['hatter', 'hare', 'dormouse'].map(name =
 }))
 
 // The armchairs at the table: `object`, the point the hips settle over (`seat`, at the seat's height), `front`
-// (where a sitter stands before sitting, its back to the chair), the way a sitter faces (`rot`, radians) and who
-// sits in it (`by`). The hosts start in theirs.
+// (where a sitter stands before sitting: beside the chair, in the aisle, since the chairs are pulled in under the
+// table), the way a sitter faces (`rot`, radians) and who sits in it (`by`). The hosts start in theirs.
 export const chairs = placedAll.armchair.map(object => {
-  const f = new THREE.Vector3(Math.sin(object.rotation.y), 0, Math.cos(object.rotation.y))
-  return { object, seat: object.position.clone().addScaledVector(f, 0.05).setY(0.48), front: object.position.clone().addScaledVector(f, 0.72), rot: object.rotation.y, home: object.position.clone(), by: null }
+  const f = new THREE.Vector3(Math.sin(object.rotation.y), 0, Math.cos(object.rotation.y)), side = new THREE.Vector3(f.z, 0, -f.x)
+  return { object, seat: object.position.clone().addScaledVector(f, 0.05).setY(0.48), front: object.position.clone().addScaledVector(side, 0.8), rot: object.rotation.y, home: object.position.clone(), by: null }
 })
 for (const m of Object.values(cast)) if (m.seated) (m.chair = chairs.find(c => c.home.distanceTo(m.object.position) < 0.1)).by = m.name
 
