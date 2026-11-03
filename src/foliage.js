@@ -3,7 +3,7 @@ import { scene, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { things } from './garden.js'
 import { model } from './models.js'
-import { bushes, hedges, rosePath } from './layout.js'
+import { bushes, hedges, rosePath, doors } from './layout.js'
 import { LEAVES, cardMaterial, cards, flowerClump, flowerMesh } from './plants.js'
 import { noise, random, ground } from './fields.js'
 
@@ -77,13 +77,19 @@ for (const { sum, n } of cellsOfWood.values()) {
 // the nearest bark point above; leaves lie flat on the bark, facing out along its normal.
 const ivyLeaves = []
 const bark = []
+// The trunk's doorway, the door's rectangle plus a margin, in the tree's frame: no ivy or leaf card goes in it.
+const { hinge, scale } = doors.tree, MARGIN = 0.4, local = new THREE.Vector3()
+const inDoorway = point => {
+  tree.worldToLocal(local.copy(point))
+  return local.z > 0 && local.x > hinge[0] - MARGIN && local.x < hinge[0] + 1.306 * scale[0] + MARGIN && local.y < hinge[1] + 2 * scale[1] + MARGIN
+}
 tree.traverse(o => {
   if (!o.isMesh) return
   const position = o.geometry.attributes.position, normal = o.geometry.attributes.normal
   const turn = new THREE.Matrix3().getNormalMatrix(o.matrixWorld)
   for (let i = 0; i < position.count; i++) {
     const p = new THREE.Vector3().fromBufferAttribute(position, i).applyMatrix4(o.matrixWorld)
-    if (p.y > 0.2 && p.y < 4.2 && Math.hypot(p.x - treeBase.x, p.z - treeBase.z) < 3.2) {
+    if (p.y > 0.2 && p.y < 4.2 && !inDoorway(p) && Math.hypot(p.x - treeBase.x, p.z - treeBase.z) < 3.2) {
       bark.push({ p, n: new THREE.Vector3().fromBufferAttribute(normal, i).applyMatrix3(turn).normalize() })
     }
   }
@@ -170,4 +176,4 @@ arch.rotation.y = Math.atan2(along.x, along.y)
 roses.add(arch, cards(cardMaterial(LEAVES, { crown: true, sway: 0.01 }), LEAVES, roseLeaves), roseHeadMesh)
 
 const leafMaterial = cardMaterial(LEAVES, { crown: true, sway: 0.012 })
-scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves]))
+scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves].filter(leaf => !inDoorway(leaf.position))))

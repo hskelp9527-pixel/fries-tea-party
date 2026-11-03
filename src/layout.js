@@ -386,7 +386,10 @@ export const placed = [
 // frame, scaled to fill the opening. Positive angles swing them inwards.
 export const doors = {
   cottage: { in: 'house', hinge: 'door_hinge', scale: [1.25, 0.97, 1] }, // fills the 1.62 x 1.92 m arch, so the lining behind it does not show round the edges
-  tree: { in: 'big_tree', hinge: [-1.2, 0, 1.6], scale: [1.45, 1.45, 1] },
+  // The trunk's arch, measured on the mesh (tree frame): 1.7 m wide (x -1.12 to 0.58) from the ground (y 0.6) to a rounded top at
+  // y 3.4, the same width from z 0.9 back to z -1.2. The door model is 1.306 x 2.0 m, so 1.34 x 1.4 fills it, set into the mouth
+  // at z 1.15. `recess` is the black backing behind it, past the open door's sweep: x range, y range, z.
+  tree: { in: 'big_tree', hinge: [-1.14, 0.55, 1.15], scale: [1.34, 1.4, 1], recess: [[-1.6, 1], [0.5, 3.6], -1] },
 }
 
 // Behind the big tree, out through the tunnel in its roots: a path of red roses ending in a heart-shaped arch,
