@@ -13,7 +13,8 @@ export { SUN, air } from './sky.js'
 const params = new URLSearchParams(location.search)
 // ?post=off draws the scene straight to the screen with the renderer's own tone mapping: the no-post baseline.
 // ?view=ao|bloom|haze shows one of the picture's controlling signals instead of the picture.
-// ?view=grade-off skips the LUT; ?view=look-off skips grading, bloom and authored lens effects.
+// ?view=grade-off skips the LUT; ?view=look-off skips grading, bloom, shafts and authored lens effects.
+// ?view=dof shows near/focus/far as red/green/blue; ?view=shafts|shaft-mask isolates sun shafts.
 // ?view=clouds shows cloud coverage on the sky; ?view=sky-off isolates the clear-air gradient.
 const POST = params.get('post') !== 'off', VIEW = params.get('view')
 
@@ -102,6 +103,8 @@ scene.add(bounce)
 const texel = SHADOW.size / SHADOW.map
 const right = new THREE.Vector3().crossVectors(THREE.Object3D.DEFAULT_UP, SUN).normalize(), upward = new THREE.Vector3().crossVectors(SUN, right)
 const focus = new THREE.Vector3(), forward = new THREE.Vector3()
+const projectedSun = new THREE.Vector3()
+const shaftSun = uniform(new THREE.Vector2()), shaftVisibility = uniform(0), shaftMetric = uniform(new THREE.Vector2())
 let shadowX, shadowY, shadowAge = 2
 export function updateSun() {
   focus.copy(camera.getWorldDirection(forward)).multiplyScalar(14).add(camera.position).setY(0)
@@ -116,6 +119,17 @@ export function updateSun() {
     shadowAge = 0
   }
   bounce.target.position.copy(sun.target.position)
+  const facing = forward.dot(SUN)
+  shaftVisibility.value = 0
+  if (facing > 0) {
+    projectedSun.copy(camera.position).addScaledVector(SUN, 300).project(camera)
+    shaftSun.value.set(projectedSun.x * 0.5 + 0.5, 0.5 - projectedSun.y * 0.5)
+    shaftVisibility.value = THREE.MathUtils.smoothstep(facing, 0.15, 0.55)
+      * (1 - THREE.MathUtils.smoothstep(Math.max(Math.abs(projectedSun.x), Math.abs(projectedSun.y)), 0.9, 1.5))
+  }
+  const tangent = Math.tan(camera.fov * Math.PI / 360)
+  shaftMetric.value.set(camera.aspect * tangent, tangent)
+  shaftMask.autoUpdate = shafts.autoUpdate = shaftVisibility.value > 0
 }
 
 // A thin gold rim where the low sun catches hair and shoulders from behind: strongest on edges seen against the
@@ -207,12 +221,31 @@ const hdr = scenePass.getTextureNode('output').sub(scenePass.getTextureNode('ind
 // Geometry highlights and emission bloom in HDR; the sky and small sun already own their soft halo.
 // Reuse scene depth rather than render the garden again for selective bloom.
 const sceneDepth = scenePass.getTextureNode('depth')
+const viewDistance = scenePass.getViewZNode().negate()
+
+// A depth-cut solar light source and a short radial integration, both at quarter resolution and capped
+// at 480 x 270. Alpha-tested canopy gaps are already present in the shared scene depth; no extra scene draw.
+const sourceFalloff = exp(screenUV.sub(shaftSun).mul(shaftMetric).lengthSq().div(-0.008))
+const shaftMask = rtt(vec4(vec3(sceneDepth.greaterThanEqual(1).mul(sourceFalloff)), 1), null, null, { depthBuffer: false })
+const shafts = rtt(Fn(() => {
+  const sum = float(0).toVar()
+  let normalization = 0
+  for (let i = 0; i < 24; i++) {
+    const weight = 0.96 ** i
+    const at = mix(screenUV, shaftSun, (i + 0.5) * 0.9 / 24)
+    sum.addAssign(shaftMask.sample(at).r.mul(weight))
+    normalization += weight
+  }
+  return vec4(vec3(sum.div(normalization)), 1)
+})(), null, null, { depthBuffer: false })
+const shaftLight = shafts.rgb.mul(vec3(1, 0.8, 0.52)).mul(shaftVisibility).mul(0.18)
+  .mul(smoothstep(1, 14, viewDistance)) // foreground wood and faces stay solid at full-resolution depth edges
+const atmosphericHdr = hdr.add(shaftLight)
 
 // Signed circle of confusion in alpha, linear HDR in RGB. Both lens buffers are half resolution,
 // capped at 960 x 540. Depth-similar taps keep soft background bokeh off the sharp subject's silhouette.
-const viewDistance = scenePass.getViewZNode().negate()
 const coc = viewDistance.sub(lens.distance).div(viewDistance.max(0.01)).mul(lens.distance.div(lens.range)).clamp(-1, 1)
-const lensSource = rtt(vec4(hdr.rgb, coc), null, null, { depthBuffer: false })
+const lensSource = rtt(vec4(atmosphericHdr.rgb, coc), null, null, { depthBuffer: false })
 const bokeh = rtt(Fn(() => {
   const centre = lensSource.sample(screenUV).toVar()
   const sum = centre.rgb.toVar(), weight = float(1).toVar()
@@ -230,18 +263,22 @@ function resizeLens() {
   const scale = Math.min(0.5, 960 / (innerWidth * renderer.getPixelRatio()), 540 / (innerHeight * renderer.getPixelRatio()))
   lensSource.setResolutionScale(scale)
   bokeh.setResolutionScale(scale)
+  shaftMask.setResolutionScale(scale * 0.5)
+  shafts.setResolutionScale(scale * 0.5)
 }
 resizeLens()
-const lensHdr = vec4(mix(hdr.rgb, bokeh.rgb, smoothstep(0.03, 0.35, coc.abs())), 1)
+const lensHdr = vec4(mix(atmosphericHdr.rgb, bokeh.rgb, smoothstep(0.03, 0.35, coc.abs())), 1)
 const glow = bloom(hdr.mul(sceneDepth.lessThan(1)), 0.32, 0.5, 1.05)
 glow.smoothWidth.value = 0.25
 glow.setResolutionScale(0.35)
-const toned = renderOutput(hdr.add(glow), THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
+const toned = renderOutput(atmosphericHdr.add(glow), THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
 const graded = lut3D(lut3D(toned, evening, 32, 1), sixOhOne, 32, pink)
 export const pipeline = new THREE.RenderPipeline(renderer)
 pipeline.outputColorTransform = false
 pipeline.outputNode = VIEW === 'ao' ? vec4(vec3(occlusion), 1)
   : VIEW === 'bloom' ? renderOutput(glow, THREE.NoToneMapping, THREE.SRGBColorSpace)
+  : VIEW === 'shaft-mask' ? shaftMask
+  : VIEW === 'shafts' ? renderOutput(vec4(shaftLight, 1), THREE.NoToneMapping, THREE.SRGBColorSpace)
   : VIEW === 'grade-off' ? toned
   : VIEW === 'look-off' ? renderOutput(hdr, THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
   : graded
