@@ -33,15 +33,17 @@ fieldMap.needsUpdate = true
 const field = texture(fieldMap, positionWorld.xz.sub(vec2(FIELD.x0, FIELD.z0)).div(vec2(FIELD.width, FIELD.depth)))
 const here = positionWorld.xz
 const broad = mx_noise_float(here.mul(0.11)), patch = mx_noise_float(here.mul(0.45).add(17)), speckle = mx_noise_float(here.mul(2.6).add(5))
-let grass = mix(color(0x9a9a58), color(0x4f7a3a), field.r)
-grass = mix(grass, color(0x7b9c46), smoothstep(0.05, 0.55, broad).mul(0.55))
-grass = mix(grass, color(0x365a2c), smoothstep(0.05, 0.5, broad.negate()).mul(0.5))
-grass = mix(grass, color(0x9a9a58), smoothstep(0.3, 0.6, patch.add(float(1).sub(field.r).mul(0.5))).mul(0.6))
+// Lively greens: yellow-green where dry, a deep fresh green where lush, with sunlit and shaded drifts and warm golden
+// patches (each mix weight trades vividness against how tidy the lawn looks; the sun's warm light multiplies all of it).
+let grass = mix(color(0xa9b84e), color(0x58a63a), field.r)
+grass = mix(grass, color(0x9ccb4c), smoothstep(0.05, 0.55, broad).mul(0.6))
+grass = mix(grass, color(0x3f8a36), smoothstep(0.05, 0.5, broad.negate()).mul(0.4))
+grass = mix(grass, color(0xd2c85a), smoothstep(0.3, 0.6, patch.add(float(1).sub(field.r).mul(0.5))).mul(0.45))
 // Worn ground is sun-baked sand, warmer and lighter in patches with a fine grain: paths read as pale ribbons across the green.
 let soil = mix(grass, mix(color(0xcfae78), color(0xe6cc98), smoothstep(-0.3, 0.4, patch)).mul(speckle.mul(0.12).add(1)), smoothstep(0.25, 0.75, field.g.add(patch.mul(0.35)).add(speckle.mul(0.15))).mul(0.92))
 // Moss and damp: a soft deep green that mottles with the patch noise, kept off the worn paths.
 const mossy = smoothstep(0.15, 0.6, field.a.add(patch.mul(0.2))).mul(float(1).sub(field.g))
-soil = mix(soil, mix(color(0x4f8a3a), color(0x7aa848), smoothstep(-0.2, 0.5, patch)).mul(speckle.mul(0.12).add(1)), mossy.mul(0.9))
+soil = mix(soil, mix(color(0x5a9a3e), color(0x8ac04e), smoothstep(-0.2, 0.5, patch)).mul(speckle.mul(0.12).add(1)), mossy.mul(0.9))
 soil = soil.mul(speckle.mul(0.1).add(1))
 const valley = mix(mix(color(0x6d8c3e), color(0xb8a24f), smoothstep(-0.1, 0.4, mx_noise_float(here.mul(0.018).add(41)))), color(0x4a6a3a), smoothstep(0.2, 0.6, mx_noise_float(here.mul(0.03).add(9))))
 const groundMaterial = new THREE.MeshStandardNodeMaterial({ roughness: 1 })
