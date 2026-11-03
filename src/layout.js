@@ -306,7 +306,7 @@ const stones = (line, spacing) => line.slice(1).flatMap(([x1, z1], i) => {
 // plaza to the cottage's first flight of steps; a loop through the western garden; spurs to the south-west and
 // south-east. Flowers grow in bands either side of them.
 export const paths = [
-  [[1, 27], [0.6, 20], [0, 14], [-0.5, 9], [-1.4, 5.6], [-2.7, 2.6], [-3.1, -1], [-3.2, -4.5], [-3.7, -7.6], [-4.9, -9.3], [-5.9, -9.8]],
+  [[1, 27], [0.6, 20], [0, 14], [-0.5, 9], [-1.4, 5.6], [-2.7, 2.6], [-3.1, -1], [-3.2, -4.5], [-5.48, -9.49], [-6.68, -11.19], [-7.68, -11.69]],
   [[-2.7, 2.6], [0.4, 2.9], [4.5, 3.6], [9, 2.6], [13, 0.2], [15.4, -2.2]],
   [[0, 14], [3.5, 11.4], [7, 8.2], [9.4, 4.8], [9, 2.6]],
   [[16.2, -8.6], [14, -10.8], [11.6, -12.6], [10.05, -13.5]],
@@ -322,7 +322,7 @@ export const trails = [[[22.6, -5.5], [26.5, -7], [30, -8.2]]]
 // (the step modules: their flower planters would block the steps), `hidden` keeps it out of the scene (only its
 // colliders and its place in `things` count); `scale` is uniform.
 export const placed = [
-  { model: 'big_tree', pos: [-4.2, -0.9, -12.2], rot: -30, scale: 1.5 }, // 1.5x, about 15 m to the crown, with gear 1's hollow 5 m up; sunk 0.9 m so its roots (lowest points 0.0-0.9 m above its foot) meet the soil; its long branches reach south-east over the head of the table; the tunnel through its roots runs north-north-east from the door
+  { model: 'big_tree', pos: [-5.98, -0.9, -14.09], rot: -30, scale: 1.5 }, // 1.5x, about 15 m to the crown, with gear 1's hollow 5 m up; sunk 0.9 m so its roots (lowest points 0.0-0.9 m above its foot) meet the soil; its long branches reach south-east over the head of the table; the tunnel through its roots runs north-north-east from the door
   { model: 'long_table_dressed', pos: [0, 0, -3.5], rot: 90, solid: false },
   { model: 'long_table', pos: [0, 0, -3.5], rot: 90, hidden: true }, // the dressed table collides as the plain one, so its crockery cannot make the top unwalkable
   { model: 'armchair', pos: [-1.55, 0, -6.8], rot: 90 },
@@ -369,7 +369,7 @@ export const placed = [
   ...row('fence_picket', [-14, 17.2], [-17, 18.8], 1.5),
   ...wall([8, -6.5], [11.5, -7.6], 0), ...wall([21, 14], [24, 17.5], 0),
   { model: 'rose_arch', pos: [-2.7, 0, 2.6], rot: -50 },
-  { model: 'rose_arch', pos: [-3.7, 0, -7.6], rot: 15 },
+  { model: 'rose_arch', pos: [-5.48, 0, -9.49], rot: 15 },
   { model: 'rose_arch', pos: [7, 0, 8.2], rot: 138 },
   { model: 'rose_arch', pos: [9, 0, 2.6], rot: 112 },
   { model: 'rose_arch', pos: [14.5, 0, 3.1], rot: 27 },
@@ -397,7 +397,7 @@ export const doors = {
 
 // Behind the big tree, out through the tunnel in its roots: a path of red roses ending in a heart-shaped arch,
 // hidden until the ending. [x, z] from the tunnel's far end to the arch.
-export const rosePath = { from: [-3.4, -14.3], to: [2.6, -24.7], arch: [2.8, -25.1] }
+export const rosePath = { from: [-5.18, -16.19], to: [0.82, -26.59], arch: [1.02, -26.99] }
 
 // The terraces the cottage stands on, each [x0, z0, x1, z1, height]: lawn on top, retaining walls on the edges.
 export const terraces = [
@@ -440,7 +440,7 @@ export const gears = [
   { // on the floor of the knot-hollow in the big tree's trunk (the model's `hollow` empty), 4.7 m up, facing the
     // table; big Fries reaches in from the lawn 2 m in front of it
     in: 'big_tree', pos: [1.026, 3.745, 0.793], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
-    by: 'big', clip: 'reach', stand: [-2.7, 0, -8.55], rot: -158, grip: [0, 0.05, 0.007],
+    by: 'big', clip: 'reach', stand: [-4.48, 0, -10.44], rot: -158, grip: [0, 0.05, 0.007],
   },
   { // in the grotto under the fountain's basin
     pos: [18.2, 0.022, -5], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
@@ -528,23 +528,23 @@ export const clocks = [
   { pos: [-5.2, 2.4, -10], rot: -30 }, // over the tree door
   { pos: [-1.6, 2.5, -8.8], rot: 60 },
   { pos: [1, 2.6, -8.2], rot: -40 },
-  { pos: [-7.5, 2.6, -8.8], rot: 10 },
+  { pos: [-9.28, 2.6, -10.69], rot: 10 },
   { pos: [-3.8, 3.35, -10.8], rot: 25 },
   { pos: [-2.3, 3.8, -9.6], rot: -15 },
   { pos: [0.3, 3.1, -7.3], rot: -55 },
   { pos: [1.8, 3.6, -6.1], rot: -30 },
-  { pos: [-1.8, 2.8, -5.3], rot: 45 },
-  { pos: [0.1, 3.9, -4.2], rot: 10 },
+  { pos: [-3.58, 2.8, -7.19], rot: 45 },
+  { pos: [-1.68, 3.9, -6.09], rot: 10 },
   { pos: [-5.7, 3.6, -7.1], rot: 65 },
   { pos: [-7.2, 3.4, -10.6], rot: -10 },
 ]
 
 // Lanterns hanging from the big tree's branches on chains: [x, y, z] of each lantern's foot.
 export const lanterns = [
-  [-1.6, 2.2, -7.6], [1.4, 2.3, -7.2], [0, 2.5, -8.4], [-2.8, 2.4, -6.4], [2.4, 2.4, -8.8], [-3.6, 2.5, -9.6],
+  [-1.6, 2.2, -7.6], [1.4, 2.3, -7.2], [0, 2.5, -8.4], [-4.58, 2.4, -8.29], [2.4, 2.4, -8.8], [-3.6, 2.5, -9.6],
   [-6.6, 2.6, -8.4], [-0.6, 2.6, -10.4],
-  [-4.3, 3.1, -10.5], [-2.2, 3.4, -8.1], [0.5, 2.65, -6.3], [2, 3.2, -5.4],
-  [-1.4, 3.3, -4.6], [-3.7, 3.5, -6.8], [-6.2, 3.2, -10.8], [0.6, 3.8, -9.2],
+  [-4.3, 3.1, -10.5], [-2.2, 3.4, -8.1], [0.5, 2.65, -6.3], [0.22, 3.2, -7.29],
+  [-3.18, 3.3, -6.49], [-3.7, 3.5, -6.8], [-6.2, 3.2, -10.8], [0.6, 3.8, -9.2],
 ]
 
 // Butterflies resting in the beds; the fountain's rim is their other perch.
@@ -563,7 +563,7 @@ export const floating = {
     { center: [0, 2.4, -3.5], size: [4.6, 2, 10] },
     { center: [18.5, 2.4, -5], size: [6, 2, 6] },
     { center: [26, 5, -22], size: [10, 2, 6] },
-    { center: [-3, 3, -10], size: [5, 1.6, 4] },
+    { center: [-4.78, 3, -11.89], size: [5, 1.6, 4] },
     { center: [0, 2.2, 5.2], size: [6, 1.4, 4] },
   ],
 }
@@ -642,14 +642,14 @@ export const meadow = {
   bare: [[12.3, -35, 30, -19.6], [26.6, -25, 31, -21.2]],
   // Mossy places [x0, z0, x1, z1]: under and round the long table, and between the big tree's roots. Only low soft
   // growth (short grass, clover, small daisies) lives here, so Fries can still pass.
-  moss: [[-2.4, -8.6, 2.4, 1.4], [-9, -16.5, -0.2, -8.4]],
+  moss: [[-2.4, -8.6, 2.4, 1.4], [-10.78, -18.39, -1.98, -10.29]],
   pathWidth: 1.2,
   drifts: [
     [-4, 4.2, 2.2], [3.6, 5, 2], [-8, 8, 2.5], [6, 12.6, 2.4], [-3.4, 12, 2.2], [12, 8, 2.5], [-12, 4, 2.2], [16, 2, 2.4],
-    [-14, -6, 2], [24, 10, 2.5], [-20, 8, 3], [-20, -8, 3], [26, -1, 2.5], [-9, -12, 2.2], [9, -8.6, 1.8], [-6, 18, 2.6],
+    [-14, -6, 2], [24, 10, 2.5], [-20, 8, 3], [-20, -8, 3], [26, -1, 2.5], [-10.78, -13.89, 2.2], [9, -8.6, 1.8], [-6, 18, 2.6],
     [10, 18, 2.6], [-16, 18, 2.8], [20, 18, 2.6], [18, -10.5, 2], [25, -18, 2.4], [13, -21, 2], [-26, -20, 3], [0, -18, 2.6],
     [6, 0.4, 2.2], [11, -3.4, 2.4], [11, 5.8, 2], [13.5, -8.4, 2.2], [20, -12.6, 2.4], [24, -12, 2.2], [-9, -4, 2.2],
-    [-14, -11, 2.4], [-8, -17, 2.4], [-28, -4, 3], [-28, 10, 3], [-18, -24, 2.8], [-6, -28, 3], [8, -26, 2.6], [0, 22, 3],
+    [-14, -11, 2.4], [-9.78, -18.89, 2.4], [-28, -4, 3], [-28, 10, 3], [-18, -24, 2.8], [-6, -28, 3], [8, -26, 2.6], [0, 22, 3],
     [-10, 23, 2.8], [16, 24, 2.4], [27, 21, 2.6], [-26, 22, 2.6], [30, 6, 2.6], [-17, 6, 2.2], [-22, 0, 2.4], [4, 8.6, 1.8],
     [14, 14, 2.4], [-4, -22, 2.4],
   ],
