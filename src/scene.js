@@ -86,6 +86,11 @@ sun.shadow.normalBias = 1.5 * SHADOW.size / SHADOW.map
 sun.shadow.radius = 4
 sun.shadow.camera.layers.enable(1) // Fries's layer: he casts a shadow even when first person hides him
 scene.add(sun, sun.target)
+// renderer.info has no native shadow-pass counter; record completed renders, including diagnostic views.
+renderer.info.shadowMapRenders = 0
+scene.onAfterRender = (activeRenderer, activeScene, activeCamera) => {
+  if (activeCamera === sun.shadow.camera) activeRenderer.info.shadowMapRenders++
+}
 
 // A soft warm bounce from the lawn in front of the faces, so shadow sides stay readable against the low sun.
 export const bounce = new THREE.DirectionalLight(0xffd2a8, 0.45)
