@@ -73,7 +73,9 @@ const skyOnly = new THREE.Scene()
 skyOnly.backgroundNode = skyRadiance(normalWorldGeometry)
 scene.environment = pmrem.fromScene(skyOnly, 0.04).texture
 scene.environmentIntensity = 0.85
-scene.add(new THREE.HemisphereLight(0xcbdfff, 0xb8b697, 0.55))
+const skyFill = new THREE.HemisphereLight(0xcbdfff, 0xb8b697, 0.55)
+const eveningFill = skyFill.color.clone(), rosyFill = new THREE.Color(0xffdce9)
+scene.add(skyFill)
 
 // The sun: warm, low, with soft shadows. The shadow map covers 56 m round the point the camera looks at and moves
 // in whole texels, so shadows never crawl as the camera moves.
@@ -119,6 +121,10 @@ export function updateSun() {
     shadowAge = 0
   }
   bounce.target.position.copy(sun.target.position)
+  // The ending brightens the shaded garden as well as the sky. Reuse the diffuse fill, without rebuilding PMREM.
+  skyFill.color.lerpColors(eveningFill, rosyFill, pink.value)
+  skyFill.intensity = 0.55 + 0.3 * pink.value
+  renderer.toneMappingExposure = 1.1 + 0.08 * pink.value
   const facing = forward.dot(SUN)
   shaftVisibility.value = 0
   if (facing > 0) {
@@ -172,10 +178,11 @@ const evening = lut(c => {
   c.r = Math.min(1, Math.max(0, c.r)), c.g = Math.min(1, Math.max(0, c.g)), c.b = Math.min(1, Math.max(0, c.b))
 })
 const sixOhOne = lut(c => {
-  const y = luma(c)
-  c.r = Math.min(1, c.r * 0.6 + y * 0.48 + 0.06)
-  c.g = Math.min(1, c.g * 0.6 + y * 0.28 + 0.02)
-  c.b = Math.min(1, c.b * 0.6 + y * 0.36 + 0.05)
+  // Add a little rose light to shadows and midtones, preserving warm whites and the original colour separation.
+  const y = luma(c), shadow = (1 - y) ** 2, middle = 4 * y * (1 - y)
+  c.r = Math.min(1, c.r + 0.018 * shadow + 0.045 * middle)
+  c.g = Math.min(1, c.g + 0.012 * shadow + 0.018 * middle)
+  c.b = Math.min(1, c.b + 0.024 * shadow + 0.035 * middle)
 })
 export const pink = uniform(0)
 

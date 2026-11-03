@@ -17,7 +17,7 @@ import { game } from './state.js'
 
 const DEG = Math.PI / 180
 const v = (...a) => new THREE.Vector3(...a)
-const PINK_SKY = { horizon: new THREE.Color(1.1, 0.55, 0.62), zenith: new THREE.Color(0.85, 0.5, 0.72), glow: new THREE.Color(1.7, 0.75, 0.75) }
+const PINK_SKY = { horizon: new THREE.Color(1.12, 0.62, 0.72), zenith: new THREE.Color(0.52, 0.43, 0.82), glow: new THREE.Color(1.35, 0.78, 0.6) }
 const EVENING = Object.fromEntries(Object.keys(PINK_SKY).map(k => [k, air[k].value.clone()]))
 
 // 6:01: the sky and the whole picture turn pink, `t` from 0 to 1.
