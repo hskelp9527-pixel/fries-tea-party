@@ -1,4 +1,4 @@
-import { paths, meadow, terraces, overlook } from './layout.js'
+import { paths, trails, meadow, terraces, overlook } from './layout.js'
 
 // The shared fields of the garden. The ground's colour, where grass grows and how lush it is, where flowers bloom
 // and which, and the height of the land beyond the garden all come from these, so they agree with one another.
@@ -28,7 +28,7 @@ export function random(seed) {
 }
 
 // Distance on the ground to the nearest path's centre line.
-const segments = paths.flatMap(line => line.slice(1).map((p, i) => [line[i], p]))
+const segments = [...paths, ...trails].flatMap(line => line.slice(1).map((p, i) => [line[i], p]))
 export function pathDistance(x, z) {
   let best = Infinity
   for (const [[ax, az], [bx, bz]] of segments) {
