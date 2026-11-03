@@ -22,6 +22,10 @@ const head = (character, height) => character.localToWorld(new THREE.Vector3(0, 
 
 // What E can do: { pos, label, can(), use() }. The nearest one Fries can use is offered.
 const uses = drinks.map(d => ({ ...d, can: () => nearProp(d, d.pos), use: () => drink(d) }))
+for (const gear of gears) uses.push({
+  pos: gear.pos, label: 'Pick up the gear',
+  can: () => !gear.found && nearProp(gear, gear.pos), use: () => pickUp(gear),
+})
 let target, toldAboutTea = false, drank = false
 
 // Any empty armchair at the table: Fries walks to its front, turns and sits down; E or a step gets him up again.
@@ -66,7 +70,11 @@ async function rise() {
 
 addEventListener('keydown', e => {
   if (seat && ['KeyE', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) rise()
-  else if (e.code === 'KeyE' && target) target.use()
+  else if (e.code === 'KeyE' && !e.repeat && player.control && target) {
+    const useTarget = target
+    target = undefined
+    useTarget.use()
+  }
 })
 
 let exploring = false, onMended
@@ -90,6 +98,12 @@ async function drink(d) {
   await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
   if (d.grow) await walkTo(d.grow, 90)
   setSize(d.becomes)
+  if ((d.becomes === 'small' && player.shrinks === 1) || (d.becomes === 'big' && player.grows === 1)) {
+    const hint = document.getElementById('size-hint')
+    hint.textContent = 'Eat a cake to change back'
+    hint.getAnimations().forEach(animation => animation.cancel())
+    hint.animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: 6000 })
+  }
   if (d.becomes === 'small' && player.shrinks === 1) await firstShrink()
   else if (d.becomes === 'big' && player.grows === 1) await firstGrow()
   else {
@@ -263,7 +277,6 @@ export function updateExplore(dt) {
   }
   if (target) prompt.textContent = `E  ${target.label}`
 
-  for (const g of gears) if (!g.found && nearProp(g, g.pos)) pickUp(g)
   clock += dt
   tryDoors()
   happenings()

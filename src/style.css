@@ -20,3 +20,5 @@ canvas { display: block; }
 #subtitle.hatter { color: #d9b8ff; }
 #subtitle.hare { color: #ffc9a3; }
 #subtitle.dormouse { color: #b8e0ff; }
+
+#size-hint { position: fixed; left: 0; right: 0; top: 18%; text-align: center; font-size: 22px; text-shadow: 0 1px 3px #000; opacity: 0; pointer-events: none; }
