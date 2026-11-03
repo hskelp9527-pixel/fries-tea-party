@@ -13,6 +13,7 @@ export { SUN, air } from './sky.js'
 const params = new URLSearchParams(location.search)
 // ?post=off draws the scene straight to the screen with the renderer's own tone mapping: the no-post baseline.
 // ?view=ao|bloom|haze shows one of the picture's controlling signals instead of the picture.
+// ?view=grade-off skips the LUT; ?view=look-off skips grading, bloom and authored lens effects.
 // ?view=clouds shows cloud coverage on the sky; ?view=sky-off isolates the clear-air gradient.
 const POST = params.get('post') !== 'off', VIEW = params.get('view')
 
@@ -26,7 +27,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
 renderer.setSize(innerWidth, innerHeight)
 // The single exposure and tone map of the picture (the pipeline applies them once, before the grade).
 renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.toneMappingExposure = 1.25
+renderer.toneMappingExposure = 1.1
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 document.body.prepend(renderer.domElement)
@@ -70,11 +71,12 @@ const pmrem = new THREE.PMREMGenerator(renderer)
 const skyOnly = new THREE.Scene()
 skyOnly.backgroundNode = skyRadiance(normalWorldGeometry)
 scene.environment = pmrem.fromScene(skyOnly, 0.04).texture
-scene.environmentIntensity = 0.7
+scene.environmentIntensity = 0.85
+scene.add(new THREE.HemisphereLight(0xcbdfff, 0xb8b697, 0.55))
 
 // The sun: warm, low, with soft shadows. The shadow map covers 56 m round the point the camera looks at and moves
 // in whole texels, so shadows never crawl as the camera moves.
-export const sun = new THREE.DirectionalLight(0xffc27a, 3.4)
+export const sun = new THREE.DirectionalLight(0xffdfac, 3)
 sun.castShadow = true
 const SHADOW = { size: 56, map: webgpu ? 4096 : 2048 }
 sun.shadow.autoUpdate = false
@@ -93,7 +95,7 @@ scene.onAfterRender = (activeRenderer, activeScene, activeCamera) => {
 }
 
 // A soft warm bounce from the lawn in front of the faces, so shadow sides stay readable against the low sun.
-export const bounce = new THREE.DirectionalLight(0xffd2a8, 0.45)
+export const bounce = new THREE.DirectionalLight(0xffead4, 0.5)
 bounce.position.set(0.3, 0.25, 1)
 scene.add(bounce)
 
@@ -122,19 +124,19 @@ const sunInView = cameraViewMatrix.mul(vec4(sunDirection, 0)).xyz
 const edge = pow(float(1).sub(dot(normalView, positionViewDirection).saturate()), 3)
 const behind = dot(positionViewDirection.negate(), sunInView).saturate().mul(0.8).add(0.2)
 const sunSide = dot(normalView, sunInView).mul(0.5).add(0.5)
-const RIM = vec3(1, 0.62, 0.3).mul(1.4)
+const RIM = vec3(1, 0.78, 0.45).mul(0.95)
 export function rimLit(material) {
   const lit = new THREE.MeshStandardNodeMaterial().copy(material)
   lit.emissiveNode = materialEmissive.add(RIM.mul(edge).mul(behind).mul(sunSide))
   return lit
 }
 
-// Display grades as 32-cube LUTs over the tone-mapped picture: a warm evening grade (lifted violet shadows, golden
-// highlights, a little more colour), and the pink of 6:01, mixed in by `pink`.
+// Display grades as 32-cube LUTs over tone-mapped, encoded sRGB. Both table coordinates and stored bytes
+// are in that same display domain: decoding the coordinates here would crush the entire picture twice.
 function lut(grade) {
   const N = 32, data = new Uint8Array(N * N * N * 4), c = new THREE.Color()
   for (let b = 0; b < N; b++) for (let g = 0; g < N; g++) for (let r = 0; r < N; r++) {
-    grade(c.setRGB(r / (N - 1), g / (N - 1), b / (N - 1), THREE.SRGBColorSpace))
+    grade(c.setRGB(r / (N - 1), g / (N - 1), b / (N - 1)))
     const i = 4 * (r + N * (g + N * b))
     data[i] = c.r * 255
     data[i + 1] = c.g * 255
@@ -149,10 +151,10 @@ function lut(grade) {
 const luma = c => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
 const evening = lut(c => {
   const y = luma(c), shadow = (1 - y) ** 2, light = y ** 2
-  c.r += 0.035 * shadow + 0.04 * light
-  c.g += 0.0 * shadow + 0.015 * light
-  c.b += 0.06 * shadow - 0.04 * light
-  c.lerp({ r: y, g: y, b: y }, -0.1)
+  c.r += 0.004 * shadow + 0.012 * light
+  c.g += 0.009 * shadow + 0.009 * light
+  c.b += 0.018 * shadow
+  c.lerp({ r: y, g: y, b: y }, -0.035)
   c.r = Math.min(1, Math.max(0, c.r)), c.g = Math.min(1, Math.max(0, c.g)), c.b = Math.min(1, Math.max(0, c.b))
 })
 const sixOhOne = lut(c => {
@@ -187,12 +189,21 @@ aoPass.resolutionScale = 0.5
 aoPass.radius.value = 0.6
 const occlusion = float(1).sub(float(1).sub(aoPass.getTextureNode().sample(screenUV).r).mul(0.6)) // 60% strength: dense grass and leaves over-occlude
 const hdr = scenePass.getTextureNode('output').sub(scenePass.getTextureNode('indirect').mul(float(1).sub(occlusion))).max(0)
-const glow = bloom(hdr, 0.4, 0.45, 1.1)
+// Geometry highlights and emission bloom in HDR; the sky and small sun already own their soft halo.
+// Reuse scene depth rather than render the garden again for selective bloom.
+const sceneDepth = scenePass.getTextureNode('depth')
+const glow = bloom(hdr.mul(sceneDepth.lessThan(1)), 0.32, 0.5, 1.05)
+glow.smoothWidth.value = 0.25
+glow.setResolutionScale(0.35)
 const toned = renderOutput(hdr.add(glow), THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
 const graded = lut3D(lut3D(toned, evening, 32, 1), sixOhOne, 32, pink)
 export const pipeline = new THREE.RenderPipeline(renderer)
 pipeline.outputColorTransform = false
-pipeline.outputNode = VIEW === 'ao' ? vec4(vec3(occlusion), 1) : VIEW === 'bloom' ? renderOutput(glow, THREE.NoToneMapping, THREE.SRGBColorSpace) : graded
+pipeline.outputNode = VIEW === 'ao' ? vec4(vec3(occlusion), 1)
+  : VIEW === 'bloom' ? renderOutput(glow, THREE.NoToneMapping, THREE.SRGBColorSpace)
+  : VIEW === 'grade-off' ? toned
+  : VIEW === 'look-off' ? renderOutput(hdr, THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
+  : graded
 
 export const render = POST ? () => pipeline.render() : () => renderer.render(scene, camera)
 
