@@ -386,7 +386,10 @@ export const placed = [
 // frame, scaled to fill the opening. Positive angles swing them inwards.
 export const doors = {
   cottage: { in: 'house', hinge: 'door_hinge', scale: [1.25, 0.97, 1] }, // fills the 1.62 x 1.92 m arch, so the lining behind it does not show round the edges
-  tree: { in: 'big_tree', hinge: [-1.2, 0, 1.6], scale: [1.45, 1.45, 1] },
+  // The trunk's arch, measured on the mesh (tree frame): 1.7 m wide (x -1.12 to 0.58) from the ground (y 0.6) to a rounded top at
+  // y 3.4, the same width from z 0.9 back to z -1.2. The door model is 1.306 x 2.0 m, so 1.34 x 1.4 fills it, set into the mouth
+  // at z 1.15. `recess` is the black backing behind it, past the open door's sweep: x range, y range, z.
+  tree: { in: 'big_tree', hinge: [-1.14, 0.55, 1.15], scale: [1.34, 1.4, 1], recess: [[-1.6, 1], [0.5, 3.6], -1] },
 }
 
 // Behind the big tree, out through the tunnel in its roots: a path of red roses ending in a heart-shaped arch,
@@ -503,6 +506,11 @@ export const lanterns = [
 // `perGear` of each kind.
 export const floating = {
   perGear: { teacup: 14, hat: 5, spoon: 8, plate: 6, pocket_watch: 3 },
+  // Cakes and treats drift over the table from the start, 12 in all, high enough to clear the heads and the hanging clocks.
+  treats: { cupcake: 3, fruit_tart: 2, macarons: 2, cake: 3, whole_cake: 2 },
+  treatCloud: { center: [0, 2.7, -2.5], size: [4, 0.8, 6] },
+  // Each hat takes the next of these tints: plum, teal, mustard, rose, moss green, deep blue.
+  hatTints: [0x7a3b6e, 0x2f7f86, 0xd0a030, 0xc9667a, 0x5f8a3c, 0x2c4a8a],
   clouds: [
     { center: [0, 2.4, -3.5], size: [4.6, 2, 10] },
     { center: [18.5, 2.4, -5], size: [6, 2, 6] },

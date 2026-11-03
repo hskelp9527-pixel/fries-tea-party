@@ -66,7 +66,7 @@ glow(things.book_page, 0xfff0b0, 2)
 
 // Doors on their hinges: `pivot` turns about the hinge, positive inwards; `colliders` keep a closed door solid.
 // `front` is a point a step in front of the closed door.
-export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name, { in: host, hinge, scale }]) => {
+export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name, { in: host, hinge, scale, recess }]) => {
   const pivot = new THREE.Group(), door = model('tree_door')
   if (typeof hinge === 'string') things[host].getObjectByName(hinge).add(pivot)
   else things[host].add(pivot.translateX(hinge[0]).translateY(hinge[1]).translateZ(hinge[2]))
@@ -74,8 +74,18 @@ export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name,
   door.position.x = 0.655 * scale[0]
   pivot.add(door)
   things[host].updateMatrixWorld(true)
+  // Behind a door that opens onto a dark passage: a black wall past the open door's sweep, its edges buried in the bark,
+  // seen from the door side only, and hidden when the roses beyond the tunnel appear. It stands in the scene, not in the host, so the host's bark and wood scans leave it out.
+  let wall
+  if (recess) {
+    const [[x0, x1], [y0, y1], z] = recess
+    wall = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshBasicMaterial({ color: 0x0b0705 }))
+    wall.position.copy(things[host].localToWorld(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, z)))
+    wall.rotation.y = things[host].rotation.y
+    scene.add(wall)
+  }
   const front = door.localToWorld(new THREE.Vector3(0, 0, 0.9))
-  return [name, { pivot, door, colliders: addColliders('tree_door', door), front }]
+  return [name, { pivot, door, colliders: addColliders('tree_door', door), front, wall }]
 }))
 
 // Hands at six o'clock on a face: the minute hand up, the hour hand down. `centre` is the pivot in the face's
