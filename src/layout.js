@@ -437,9 +437,10 @@ export const bushes = [
 
 // `in` puts a gear's position in a model's frame; stands are world points unless `standIn` names their frame.
 export const gears = [
-  { // above the door, on the trunk's table-facing surface; refine against the modelled knot-hollow
-    in: 'big_tree', pos: [0, 4.3, 2.12], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
-    by: 'big', clip: 'reach', stand: [-7.1, 0, -7.85], rot: 150, grip: [0, 0.05, 0.007],
+  { // on the floor of the knot-hollow in the big tree's trunk (the model's `hollow` empty), 4.7 m up, facing the
+    // table; big Fries reaches in from the lawn 2 m in front of it
+    in: 'big_tree', pos: [1.026, 3.745, 0.793], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
+    by: 'big', clip: 'reach', stand: [-2.7, 0, -8.55], rot: -158, grip: [0, 0.05, 0.007],
   },
   { // in the grotto under the fountain's basin
     pos: [18.2, 0.022, -5], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
