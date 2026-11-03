@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu'
 import { scene, webgpu } from './scene.js'
 import { model } from './models.js'
 import { floating } from './layout.js'
+import { level } from './fields.js'
 import { player } from './player.js'
 import { camera } from './scene.js'
 import { game, hop } from './state.js'
@@ -12,6 +13,9 @@ import { meanSize, keepOut } from './garden.js'
 // gear found adds another batch.
 const items = []
 const density = webgpu ? 1 : 0.5
+// Every floating thing stays this far above the ground under it, and a further BOB_ROOM so its bob and beat hops
+// (together under 0.3 m) never dip it below the minimum.
+const MIN_HEIGHT = 2.2, BOB_ROOM = 0.4
 
 function add(kind, cloud, size = 0.9 + Math.random() * 0.4) {
   const object = model(kind)
@@ -73,6 +77,8 @@ export function updateFloating(dt) {
     o.position.x += Math.sin(t * 0.31) * it.wander
     o.position.y += Math.sin(t * 0.53) * it.wander * 0.4
     o.position.z += Math.cos(t * 0.27) * it.wander
+    if (!(e >= 0 && giant > 0)) o.position.y = Math.max(o.position.y, level(o.position.x, o.position.z) + MIN_HEIGHT + BOB_ROOM)
+    o.position.y += Math.sin(t * 0.9 + it.seed) * 0.12 // a slow bob of its own, so nothing ever looks parked
     push.subVectors(o.position, chest)
     const d = push.length(), clear = 0.6 + 0.8 * s
     if (it.kind === 'teacup') {
@@ -84,6 +90,7 @@ export function updateFloating(dt) {
       const look = Math.atan2(-push.x, -push.z) - o.rotation.y
       o.rotation.y += Math.atan2(Math.sin(look), Math.cos(look)) * Math.min(1, dt * 3)
     } else o.rotation.y += it.spin * dt
+    o.rotation.x = Math.sin(t * 0.6 + it.seed) * 0.12
     o.rotation.z = Math.sin(t * 0.7) * 0.15 + hop(it.seed, it.extent * it.size, offset)
     o.position.add(offset)
     keepOut(o.position, it.extent * it.size / 2)
