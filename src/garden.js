@@ -189,5 +189,5 @@ export function updateGarden(dt, time) {
   })
 
   wind.bushes.value = awake.flowers ? 2.5 : 0.4
-  wind.pulse.value = game.pulse
+  wind.pulse.value = game.pass >= 1 ? game.pulse : 0
 }

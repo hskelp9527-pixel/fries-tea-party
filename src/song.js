@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu'
 import beatMap from '../audio/04t_little_bat_a.beats.json'
 import { camera, scene, sun } from './scene.js'
-import { cups, tableProps } from './garden.js'
+import { cups, tableProps, things } from './garden.js'
 import { glow } from './models.js'
 import { song as staging, cast as stage } from './layout.js'
 import { stand } from './cast.js'
@@ -120,7 +120,7 @@ export function updateSong() {
   const k = from.glide ? Math.min(1, (t - beats[from.beat]) / (beats[to.beat] - beats[from.beat])) : 0
   shoot(from, from.glide ? to : from, k * k * (3 - 2 * k))
 
-  for (const cup of cups) cup.scale.setScalar(1 + 0.35 * game.pulse)
+  for (const cup of cups) cup.scale.setScalar(1 + 0.35 * game.pulse * nearDancers(cup.position))
 
   // From the final chorus to the last note, every prop on the table hops on each beat.
   game.hop = pass === 2 ? { beat: last, phase: Math.min(1, (t - beats[last]) / ((beats[last + 1] ?? beats[last] * 2 - beats[last - 1]) - beats[last])) } : null
@@ -136,9 +136,12 @@ export function updateSong() {
 
 // Each prop hops by its own size; one standing on another (a teapot on the tray) rides with that one instead.
 const offset = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0)
+// 1 on a dancer, fading to 0 at 3.5 m: only what stands near the dancers moves with the beat.
+const dancers = () => [player.feet, things.hatter.position, things.hare.position, things.dormouse.position]
+const nearDancers = point => Math.max(0, 1 - Math.min(...dancers().map(d => Math.hypot(d.x - point.x, d.z - point.z))) / 3.5)
 function placeProps() {
   for (const p of tableProps) {
-    const base = p.on ?? p, spin = hop(base.seed, base.size, offset, true)
+    const base = p.on ?? p, spin = nearDancers(base.home) > 0 ? hop(base.seed, base.size, offset, true) : (offset.set(0, 0, 0), 0)
     p.object.rotation.y = p.turn + spin
     p.object.position.copy(p.home).sub(base.home).applyAxisAngle(UP, spin).add(base.home).add(offset)
   }
