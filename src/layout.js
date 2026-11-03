@@ -548,6 +548,9 @@ export const lanterns = [
   [-1.4, 3.3, -4.6], [-3.7, 3.5, -6.8], [-6.2, 3.2, -10.8], [0.6, 3.8, -9.2],
 ]
 
+// Butterflies resting in the beds; the fountain's rim is their other perch.
+export const butterflyBeds = [[6, 0.7, -0.8], [5.5, 0.7, 6.2], [-7, 0.65, 2.5]]
+
 // Floating things drift inside these boxes, at about their real size. Each gear found adds another batch of
 // `perGear` of each kind.
 export const floating = {

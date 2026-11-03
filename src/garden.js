@@ -1,12 +1,14 @@
 import * as THREE from 'three/webgpu'
-import { uv, vec3, smoothstep, max, abs, time, sin, attribute, texture, mix, positionLocal } from 'three/tsl'
+import { uv, vec3, smoothstep, max, abs, time, sin, attribute, texture, mix, positionGeometry, cameraPosition, uniform, dot } from 'three/tsl'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { scene } from './scene.js'
+import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js'
+import { scene, SUN } from './scene.js'
 import { model, glow, addColliders } from './models.js'
 import * as layout from './layout.js'
 import { game } from './state.js'
 import { wind } from './plants.js'
 import { RAPIER, world } from './physics.js'
+import { random } from './fields.js'
 
 const DEG = Math.PI / 180
 
@@ -258,7 +260,7 @@ const lanterns = layout.lanterns.map(pos => {
 })
 const lanternBatch = instanceModel('lantern', lanterns)
 // Keep the brass cage dark; the luminous chamber is the small, bounded source.
-const chamber = smoothstep(0.07, 0.12, positionLocal.y).mul(smoothstep(0.31, 0.26, positionLocal.y))
+const chamber = smoothstep(0.07, 0.12, positionGeometry.y).mul(smoothstep(0.31, 0.26, positionGeometry.y))
 lanternBatch.material.emissiveNode = vec3(1, 0.57, 0.16).mul(chamber).mul(2.6)
 const chains = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.006, 0.006, 1, 5), chain, chainTransforms.length)
 chains.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
@@ -277,9 +279,8 @@ for (const flame of oldFlames) {
 }
 const flameMaterial = new THREE.MeshBasicNodeMaterial()
 const flicker = sin(time.mul(7).add(attribute('flamePhase'))).mul(0.09).add(sin(time.mul(13).add(attribute('flamePhase').mul(2))).mul(0.04)).add(1)
-flameMaterial.positionNode = vec3(positionLocal.x.add(sin(time.mul(5).add(attribute('flamePhase'))).mul(positionLocal.y.pow(2)).mul(0.08)), positionLocal.y.mul(flicker), positionLocal.z)
 // HDR hierarchy: flame cores 5, lantern cores 2.6, halos below 0.25, ordinary brass below 0.1.
-flameMaterial.colorNode = mix(vec3(1, 0.86, 0.46), vec3(1, 0.32, 0.035), positionLocal.y.mul(0.5)).mul(5).mul(flicker)
+flameMaterial.colorNode = mix(vec3(1, 0.86, 0.46), vec3(1, 0.32, 0.035), positionGeometry.y.mul(0.5)).mul(5).mul(flicker)
 const flameGeometry = new THREE.SphereGeometry(1, 8, 8).translate(0, 1, 0)
 flameGeometry.setAttribute('flamePhase', new THREE.InstancedBufferAttribute(Float32Array.from(flameAnchors, (_, i) => i * 2.399), 1))
 const candleFlames = new THREE.InstancedMesh(flameGeometry, flameMaterial, flameAnchors.length)
@@ -329,6 +330,39 @@ export const glints = gears.map(g => {
   scene.add(sprite)
   return sprite
 })
+
+// Area-weighted samples stay on the actual brass surfaces, including while the watch is held in a hand.
+// The surface normal owns the flash; a slow envelope softens it without moving sparkle across the object.
+const glintRand = random(83), brassSamples = []
+for (const [index, object] of [things.pocket_watch, ...gears.map(g => g.object)].entries()) {
+  const mesh = object.getObjectByProperty('isMesh', true)
+  const sampler = new MeshSurfaceSampler(mesh).setRandomGenerator(glintRand).build()
+  for (let i = 0; i < 8; i++) {
+    const local = new THREE.Vector3(), normal = new THREE.Vector3()
+    sampler.sample(local, normal)
+    local.addScaledVector(normal, 0.001)
+    brassSamples.push({ object: mesh, local, normal, gear: index - 1 })
+  }
+}
+const brassGeometry = new THREE.InstancedBufferGeometry().copy(new THREE.PlaneGeometry(1, 1))
+const brassPosition = new THREE.InstancedBufferAttribute(new Float32Array(brassSamples.length * 4), 4).setUsage(THREE.DynamicDrawUsage)
+const brassNormal = new THREE.InstancedBufferAttribute(new Float32Array(brassSamples.length * 3), 3).setUsage(THREE.DynamicDrawUsage)
+brassGeometry.setAttribute('brassPosition', brassPosition)
+brassGeometry.setAttribute('brassNormal', brassNormal)
+brassGeometry.setAttribute('brassPhase', new THREE.InstancedBufferAttribute(Float32Array.from(brassSamples, (_, i) => i * 2.399), 1))
+brassGeometry.instanceCount = brassSamples.length
+const brassMaterial = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+const brassPoint = attribute('brassPosition', 'vec4')
+brassMaterial.positionNode = brassPoint.xyz
+brassMaterial.scaleNode = cameraPosition.sub(brassPoint.xyz).length().mul(0.002).clamp(0.018, 0.1).mul(brassPoint.w)
+const halfLight = cameraPosition.sub(brassPoint.xyz).normalize().add(uniform(SUN)).normalize()
+const catchLight = dot(attribute('brassNormal', 'vec3'), halfLight).abs().pow(18)
+const glintBreath = sin(time.mul(0.8).add(attribute('brassPhase'))).mul(0.5).add(0.5).pow(3)
+brassMaterial.colorNode = vec3(1, 0.84, 0.42).mul(rays.add(smoothstep(0.45, 0, p.length()).mul(0.3)))
+  .mul(catchLight.mul(glintBreath).mul(3.5).add(0.025))
+const brassGlints = new THREE.Mesh(brassGeometry, brassMaterial)
+brassGlints.frustumCulled = false
+scene.add(brassGlints)
 
 export const drinks = layout.drinks.map(d => {
   const object = place({ ...d, solid: false })
@@ -382,7 +416,8 @@ export function updateGarden(dt, time) {
 
 // After the song and hand poses: instances, flames and halos follow the same final prop transforms.
 const dressTransform = new THREE.Object3D(), dressPoint = new THREE.Vector3(), dressScale = new THREE.Vector3()
-export function updateDressing() {
+const brassNormalMatrix = new THREE.Matrix3(), brassDirection = new THREE.Vector3()
+export function updateDressing(time) {
   for (const { mesh, objects } of dressBatches) {
     objects.forEach((object, i) => {
       object.updateWorldMatrix(true, false)
@@ -399,7 +434,8 @@ export function updateDressing() {
     object.updateWorldMatrix(true, false)
     dressTransform.position.copy(local).applyMatrix4(object.matrixWorld)
     object.getWorldScale(dressScale)
-    dressTransform.scale.set(0.007 * dressScale.x, 0.018 * dressScale.y, 0.007 * dressScale.z)
+    const flutter = 1 + 0.09 * Math.sin(time * 7 + i * 2.399) + 0.04 * Math.sin(time * 13 + i * 4.798)
+    dressTransform.scale.set(0.007 * dressScale.x, 0.018 * dressScale.y * flutter, 0.007 * dressScale.z)
     object.getWorldQuaternion(dressTransform.quaternion)
     dressTransform.updateMatrix()
     candleFlames.setMatrixAt(i, dressTransform.matrix)
@@ -410,4 +446,13 @@ export function updateDressing() {
     haloPosition.setXYZW(i, dressPoint.x, dressPoint.y, dressPoint.z, size)
   })
   haloPosition.needsUpdate = true
+  brassSamples.forEach(({ object, local, normal, gear }, i) => {
+    object.updateWorldMatrix(true, false)
+    dressPoint.copy(local).applyMatrix4(object.matrixWorld)
+    brassPosition.setXYZW(i, dressPoint.x, dressPoint.y, dressPoint.z, gear < 0 || !gears[gear].found ? 1 : 0)
+    brassNormalMatrix.getNormalMatrix(object.matrixWorld)
+    brassDirection.copy(normal).applyNormalMatrix(brassNormalMatrix)
+    brassNormal.setXYZ(i, brassDirection.x, brassDirection.y, brassDirection.z)
+  })
+  brassPosition.needsUpdate = brassNormal.needsUpdate = true
 }
