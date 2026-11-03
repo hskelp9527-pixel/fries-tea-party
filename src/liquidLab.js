@@ -4,8 +4,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { renderer } from './scene.js'
 import { stream, surface, sheet, updateLiquids, liquidDebug, TEA } from './liquids.js'
-import potURL from '../../tea_party/art/models/pink_teapot.glb?url'
-import cupURL from '../../tea_party/art/models/teacup.glb?url'
+import potURL from '/art/models/pink_teapot.glb?url'
+import cupURL from '/art/models/teacup.glb?url'
 
 // Visual contract: downward advection without post, attached spout, falling tail,
 // contained fill, and identical local proportions/timing at 1x and 0.18x.
