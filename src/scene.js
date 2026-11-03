@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu'
 import {
   pass, mrt, normalView, normalWorldGeometry, uniform, vec3, vec4, float, Fn, dot, pow, exp, screenUV,
   positionWorld, cameraPosition, cameraViewMatrix, positionViewDirection, materialEmissive, texture3D, renderOutput,
-  output, context, fog,
+  output, context, fog, rtt, vec2, mix, smoothstep,
 } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
 import { ao } from 'three/addons/tsl/display/GTAONode.js'
@@ -165,6 +165,21 @@ const sixOhOne = lut(c => {
 })
 export const pink = uniform(0)
 
+// Authored cameras supply a world-space subject. Free play clears that ownership in main.js.
+export const lens = { target: null, enabled: false, distance: uniform(4), range: uniform(1), radius: uniform(new THREE.Vector2()) }
+const lensDirection = new THREE.Vector3(), lensOffset = new THREE.Vector3()
+export function updateLens(cinematic, subject) {
+  lens.enabled = cinematic
+  if (!cinematic) {
+    lens.target = null
+    return
+  }
+  camera.getWorldDirection(lensDirection)
+  lens.distance.value = Math.max(camera.near, lensOffset.copy(lens.target ?? subject).sub(camera.position).dot(lensDirection))
+  lens.range.value = Math.max(0.08, lens.distance.value * 0.35)
+  lens.radius.value.set(0.009 / camera.aspect, 0.009)
+}
+
 // Render colour, normals and indirect light together. Capture the lighting context through a zero GI input;
 // the MRT reads the finished indirect terms. This keeps sun, emission and haze out of the AO composite.
 const scenePass = pass(scene, camera)
@@ -192,6 +207,32 @@ const hdr = scenePass.getTextureNode('output').sub(scenePass.getTextureNode('ind
 // Geometry highlights and emission bloom in HDR; the sky and small sun already own their soft halo.
 // Reuse scene depth rather than render the garden again for selective bloom.
 const sceneDepth = scenePass.getTextureNode('depth')
+
+// Signed circle of confusion in alpha, linear HDR in RGB. Both lens buffers are half resolution,
+// capped at 960 x 540. Depth-similar taps keep soft background bokeh off the sharp subject's silhouette.
+const viewDistance = scenePass.getViewZNode().negate()
+const coc = viewDistance.sub(lens.distance).div(viewDistance.max(0.01)).mul(lens.distance.div(lens.range)).clamp(-1, 1)
+const lensSource = rtt(vec4(hdr.rgb, coc), null, null, { depthBuffer: false })
+const bokeh = rtt(Fn(() => {
+  const centre = lensSource.sample(screenUV).toVar()
+  const sum = centre.rgb.toVar(), weight = float(1).toVar()
+  for (let i = 0; i < 16; i++) {
+    const angle = i * 2.399963, radius = Math.sqrt((i + 0.5) / 16)
+    const offset = vec2(Math.cos(angle) * radius, Math.sin(angle) * radius).mul(lens.radius).mul(centre.a.abs())
+    const tap = lensSource.sample(screenUV.add(offset)).toVar()
+    const w = float(1).sub(smoothstep(0.15, 0.6, tap.a.sub(centre.a).abs()))
+    sum.addAssign(tap.rgb.mul(w))
+    weight.addAssign(w)
+  }
+  return vec4(sum.div(weight), 1)
+})(), null, null, { depthBuffer: false })
+function resizeLens() {
+  const scale = Math.min(0.5, 960 / (innerWidth * renderer.getPixelRatio()), 540 / (innerHeight * renderer.getPixelRatio()))
+  lensSource.setResolutionScale(scale)
+  bokeh.setResolutionScale(scale)
+}
+resizeLens()
+const lensHdr = vec4(mix(hdr.rgb, bokeh.rgb, smoothstep(0.03, 0.35, coc.abs())), 1)
 const glow = bloom(hdr.mul(sceneDepth.lessThan(1)), 0.32, 0.5, 1.05)
 glow.smoothWidth.value = 0.25
 glow.setResolutionScale(0.35)
@@ -205,10 +246,17 @@ pipeline.outputNode = VIEW === 'ao' ? vec4(vec3(occlusion), 1)
   : VIEW === 'look-off' ? renderOutput(hdr, THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
   : graded
 
-export const render = POST ? () => pipeline.render() : () => renderer.render(scene, camera)
+const cinematicPipeline = new THREE.RenderPipeline(renderer)
+cinematicPipeline.outputColorTransform = false
+const lensToned = renderOutput(lensHdr.add(glow), THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace)
+cinematicPipeline.outputNode = VIEW === 'dof' ? vec4(coc.negate().max(0), float(1).sub(coc.abs()), coc.max(0), 1)
+  : VIEW === 'grade-off' ? lensToned : lut3D(lut3D(lensToned, evening, 32, 1), sixOhOne, 32, pink)
+const authoredLensView = !VIEW || VIEW === 'grade-off' || VIEW === 'dof'
+export const render = POST ? () => (lens.enabled && authoredLensView ? cinematicPipeline : pipeline).render() : () => renderer.render(scene, camera)
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight
   camera.updateProjectionMatrix()
   renderer.setSize(innerWidth, innerHeight)
+  resizeLens()
 })

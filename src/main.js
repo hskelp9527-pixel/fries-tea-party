@@ -1,4 +1,5 @@
-import { renderer, camera, webgpu, render, updateSun } from './scene.js'
+import * as THREE from 'three/webgpu'
+import { renderer, camera, webgpu, render, updateSun, updateLens } from './scene.js'
 import { world } from './physics.js'
 import { updateGround } from './ground.js'
 import { updateGarden } from './garden.js'
@@ -53,6 +54,21 @@ renderer.domElement.addEventListener('click', () => {
 
 let last = performance.now(), time = 0, frameMs = 1000 / 60
 let sampleTime = last, sampleFrames = 0, sampleCalls = 0, sampleTriangles = 0, sampleShadows = 0
+const lensSubject = new THREE.Vector3(), candidate = new THREE.Vector3(), lensForward = new THREE.Vector3(), toSubject = new THREE.Vector3()
+function focusCharacters() {
+  // The drinking camera centres Fries; the song centres the hosts. Pick the closest to the optical axis,
+  // using character centres rather than autofocus on a foreground cup or the distant sky.
+  camera.getWorldDirection(lensForward)
+  let best = Infinity
+  for (const [object, height] of [[player.mesh, 0.88 * player.p.scale], ...Object.entries(cast).map(([name, c]) => [c.object, name === 'dormouse' ? 0.2 : 1.05])]) {
+    candidate.copy(object.position).y += height
+    toSubject.subVectors(candidate, camera.position)
+    const depth = toSubject.dot(lensForward)
+    if (depth <= camera.near) continue
+    const score = toSubject.lengthSq() / (depth * depth) - 1
+    if (score < best) { best = score; lensSubject.copy(candidate) }
+  }
+}
 renderer.setAnimationLoop(now => {
   const elapsed = now - last
   const dt = Math.min(elapsed / 1000, 0.05)
@@ -75,6 +91,8 @@ renderer.setAnimationLoop(now => {
   world.step()
   updateHands()
   updateSun()
+  if (player.cinematic) focusCharacters()
+  updateLens(player.cinematic, lensSubject)
   renderer.info.reset()
   render()
   sampleFrames++

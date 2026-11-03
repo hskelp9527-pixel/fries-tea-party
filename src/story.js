@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { renderer, scene, camera, air, pink } from './scene.js'
+import { renderer, scene, camera, air, pink, lens } from './scene.js'
 import { things, gears, clocks, doors, wake } from './garden.js'
 import { roses } from './foliage.js'
 import { model } from './models.js'
@@ -67,6 +67,7 @@ function shot(pos0, look0, pos1 = pos0, look1 = look0, seconds = 0) {
     const k = t * t * (3 - 2 * t)
     camera.position.lerpVectors(pos0, pos1, k)
     camera.lookAt(look.lerpVectors(look0, look1, k))
+    lens.target = look // keep the focal plane on this shot's authored subject throughout the glide
   })
 }
 
