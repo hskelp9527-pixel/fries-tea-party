@@ -30,37 +30,43 @@ const BEATS = {
 const SITTING = { idle: 'sit_idle', talk: 'sit_talk', laugh: 'sit_laugh', yell: 'sit_yell', point: 'sit_point' }
 const STANDING = { idle: 'idle', talk: 'talk', laugh: 'laugh', yell: 'talk', point: 'talk' }
 
-// Where a clip's body rests, in the model's own frame: for sitting, the height of the buttocks in sit_idle (the
-// lowest point just behind the hip joint); otherwise the lowest point of the body, under its middle.
-function rest(name, clip, buttocks) {
-  const object = model(name), anim = new Animator(object, name)
-  anim.actions[clip].play()
-  anim.mixer.update(0)
-  object.updateMatrixWorld(true)
-  const hips = object.getObjectByName('mixamorigHips').getWorldPosition(new THREE.Vector3()), v = new THREE.Vector3()
-  const middle = new THREE.Vector3()
-  let low = Infinity, n = 0
-  object.traverse(o => {
-    if (!o.isSkinnedMesh) return
-    for (let i = 0; i < o.geometry.attributes.position.count; i++) {
-      o.getVertexPosition(i, v).applyMatrix4(o.matrixWorld)
-      if (buttocks && (Math.abs(v.x - hips.x) > 0.1 || v.z > hips.z || v.z < hips.z - 0.1 || v.y > hips.y)) continue
-      low = Math.min(low, v.y)
-      middle.add(v)
-      n++
-    }
-  })
-  return buttocks ? new THREE.Vector3(0, low, 0) : middle.divideScalar(n).setY(low)
+// Where a clip's body rests, in the model's own frame, at `samples` evenly spaced times through the clip: for
+// sitting, the height of the buttocks (the lowest point just behind the hip joint); otherwise the lowest point of
+// the body, which moves as it breathes and curls. `middle` is where the body is centred at the clip's start.
+function rest(name, clip, buttocks, samples = 1) {
+  const object = model(name), anim = new Animator(object, name), action = anim.actions[clip]
+  action.play()
+  const v = new THREE.Vector3(), middle = new THREE.Vector3(), lows = []
+  for (let k = 0; k < samples; k++) {
+    action.time = action.getClip().duration * k / samples
+    anim.mixer.update(0)
+    object.updateMatrixWorld(true)
+    const hips = object.getObjectByName('mixamorigHips').getWorldPosition(new THREE.Vector3())
+    let low = Infinity, n = 0
+    object.traverse(o => {
+      if (!o.isSkinnedMesh) return
+      for (let i = 0; i < o.geometry.attributes.position.count; i++) {
+        o.getVertexPosition(i, v).applyMatrix4(o.matrixWorld)
+        if (buttocks && (Math.abs(v.x - hips.x) > 0.1 || v.z > hips.z || v.z < hips.z - 0.1 || v.y > hips.y)) continue
+        low = Math.min(low, v.y)
+        if (k === 0) middle.add(v)
+        n++
+      }
+    })
+    if (k === 0) middle.divideScalar(n)
+    lows.push(low)
+  }
+  return { middle, lows }
 }
 
 // The Hatter, the March Hare and the Dormouse. The game moves their roots; this plays their clips and shifts each
-// model's armature so the clip's body rests on its seat, plate, tabletop or lawn (the Dormouse's lying and
-// sitting bodies centred over its plate).
+// model's armature so the clip's body rests on its seat, plate, tabletop or lawn: the Dormouse, in every clip,
+// touches his plate or the table at every moment, centred over it.
 export const cast = Object.fromEntries(['hatter', 'hare', 'dormouse'].map(name => {
   const object = things[name], anim = new Animator(object, name)
   const member = { name, object, anim, armature: object.getObjectByName('Armature'), seated: 'seat' in stage[name], rests: {} }
   if (member.seated && anim.has('sit_idle')) member.rests.sitting = rest(name, 'sit_idle', true)
-  for (const clip of ['sleep', 'wake', 'sit_talk', 'sit_idle']) if (name === 'dormouse' && anim.has(clip)) member.rests[clip] = rest(name, clip)
+  if (name === 'dormouse') for (const clip in anim.actions) member.rests[clip] = rest(name, clip, false, 12)
   return [name, member]
 }))
 
@@ -101,8 +107,10 @@ export function updateCast(dt) {
     play(m, line)
     m.anim.mixer.update(dt)
     if (!m.armature) continue
-    if (m.seated && m.anim.current.getClip().name.startsWith('sit_')) lift.set(0, stage[m.name].seat - m.object.position.y - m.rests.sitting.y, 0)
-    else lift.copy(m.rests[m.anim.current.getClip().name] ?? lift.set(0, 0, 0)).negate()
+    const action = m.anim.current, clip = action.getClip(), r = m.rests[clip.name]
+    if (m.seated && clip.name.startsWith('sit_')) lift.set(0, stage[m.name].seat - m.object.position.y - m.rests.sitting.lows[0], 0)
+    else if (r) lift.set(-r.middle.x, -r.lows[Math.floor(action.time / clip.duration * r.lows.length) % r.lows.length], -r.middle.z)
+    else lift.set(0, 0, 0)
     m.armature.position.lerp(lift, Math.min(1, dt * 10))
   }
 }

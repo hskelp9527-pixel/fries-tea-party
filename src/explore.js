@@ -1,9 +1,10 @@
 import * as THREE from 'three/webgpu'
-import { player, setSize, reaches, nearProp, facePoint, act } from './player.js'
+import { player, setSize, reaches, nearProp, facePoint, act, walkTo } from './player.js'
 import { use, release, fly } from './hands.js'
-import { things, drinks, gears, wake } from './garden.js'
+import { things, drinks, gears, doors, wake } from './garden.js'
+import { world } from './physics.js'
 import { zones } from './layout.js'
-import { setMusic, say, speaking } from './audio.js'
+import { setMusic, say, speaking, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { game } from './state.js'
 import { setFloatingLevel, cupDodging } from './floating.js'
@@ -61,6 +62,7 @@ async function drink(d) {
   await use(d, d.object, () => {})
   release(d.object)
   await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
+  if (d.grow) await walkTo(d.grow, 90)
   setSize(d.becomes)
   if (d.becomes === 'small' && player.shrinks === 1) await firstShrink()
   else if (d.becomes === 'big' && player.grows === 1) await firstGrow()
@@ -111,6 +113,26 @@ async function firstGrow() {
   await tween(0.6, () => facePoint(head(things.hare, 1.2), 0.15))
   await say('SZ-04')
   player.control = true
+}
+
+// Doors. The cottage door swings open into its warm hall when Fries comes to it at his normal size (the giant and
+// the small Fries are blocked by size alone). The tree door rattles and stays locked until 6:01, and the Hatter
+// tells Fries so.
+const DEG = Math.PI / 180
+let cottageOpen = false, rattled = -Infinity, clock = 0
+function tryDoors() {
+  const cottage = doors.cottage, tree = doors.tree
+  if (!cottageOpen && player.size === 'normal' && cottage.front.distanceTo(player.feet) < 1.2) {
+    cottageOpen = true
+    for (const c of cottage.colliders) world.removeCollider(c, false)
+    tween(1.2, t => { cottage.pivot.rotation.y = 95 * DEG * t * t * (3 - 2 * t) })
+  }
+  if (player.size !== 'small' && clock - rattled > 12 && tree.front.distanceTo(player.feet) < 1.1 * player.p.scale) {
+    rattled = clock
+    burst(3, 0.5)
+    tween(0.7, t => { tree.pivot.rotation.y = Math.sin(t * 40) * (1 - t) * 1.5 * DEG })
+    say('OP-05')
+  }
 }
 
 function find(gear) {
@@ -190,6 +212,8 @@ export function updateExplore(dt) {
   if (target) prompt.textContent = `E  ${target.label}`
 
   for (const g of gears) if (!g.found && nearProp(g, g.pos)) pickUp(g)
+  clock += dt
+  tryDoors()
 
   trackCircling()
   quiet = speaking() ? 0 : quiet + dt

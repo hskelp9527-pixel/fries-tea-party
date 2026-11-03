@@ -74,26 +74,27 @@ const v = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3
 
 // Static colliders for a placed object: the glb's <name>_collider mesh, else the glb's own meshes (so openings in
 // a model, the tunnel through the tree's roots, the grotto under the fountain, the cottage's doorway, stay
-// open), else the placeholder boxes.
-export function addColliders(name, object) {
+// open), else the placeholder boxes; with `boxes`, the placeholder boxes always. Returns the colliders.
+export function addColliders(name, object, boxes = false) {
   object.updateMatrixWorld(true)
-  const node = object.getObjectByName(`${name}_collider`)
-  if (node || gltfs[name]) {
+  const node = object.getObjectByName(`${name}_collider`), colliders = []
+  if (!boxes && (node || gltfs[name])) {
     ;(node ?? object).traverse(mesh => {
       if (!mesh.isMesh) return
       const position = mesh.geometry.attributes.position
       const vertices = new Float32Array(position.count * 3)
       for (let i = 0; i < position.count; i++) v.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld).toArray(vertices, i * 3)
-      world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, new Uint32Array(mesh.geometry.index.array)))
+      colliders.push(world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, new Uint32Array(mesh.geometry.index.array))))
     })
     node?.removeFromParent()
-    return
+    return colliders
   }
   object.getWorldQuaternion(q)
   object.getWorldScale(s)
   for (const [x, y, z, w, h, d, , rx = 0, ry = 0, rz = 0] of shapes[name]) {
     v.set(x, y, z).applyMatrix4(object.matrixWorld)
-    world.createCollider(RAPIER.ColliderDesc.cuboid(w * s.x / 2, h * s.y / 2, d * s.z / 2)
-      .setTranslation(v.x, v.y, v.z).setRotation(new THREE.Quaternion().setFromEuler(turn.set(rx * DEG, ry * DEG, rz * DEG, 'YXZ')).premultiply(q)))
+    colliders.push(world.createCollider(RAPIER.ColliderDesc.cuboid(w * s.x / 2, h * s.y / 2, d * s.z / 2)
+      .setTranslation(v.x, v.y, v.z).setRotation(new THREE.Quaternion().setFromEuler(turn.set(rx * DEG, ry * DEG, rz * DEG, 'YXZ')).premultiply(q))))
   }
+  return colliders
 }

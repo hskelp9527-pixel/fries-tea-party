@@ -16,7 +16,7 @@ const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, GRAVITY = 18, RUN = 2.6
 const SIZES = {
   small: { scale: 0.18, fov: 82, speed: 0.22, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
   normal: { scale: 1, fov: 70, speed: 1.2, jump: 0.7, reach: 0.9, stepPitch: 1, stepGain: 0.5, shake: 0, voice: 1 },
-  big: { scale: 2.6, fov: 58, speed: 3.0, jump: 1.2, reach: 2.2, stepPitch: 0.45, stepGain: 1, shake: 0.07, voice: 1.45 },
+  big: { scale: 5, fov: 62, speed: 4.2, jump: 2.2, reach: 4.5, stepPitch: 0.3, stepGain: 1, shake: 0.12, voice: 1.6 },
 }
 
 const collider = world.createCollider(RAPIER.ColliderDesc.capsule(HEIGHT / 2 - RADIUS, RADIUS))
@@ -91,7 +91,9 @@ function resize(dt) {
   collider.setRadius(RADIUS * s)
   controller.setOffset(0.01 * s)
   controller.enableSnapToGround(0.3 * s)
-  controller.enableAutostep(0.3 * s, 0.2 * s, false) // a narrower minimum width fails on 0.2 m steps
+  // Steps up to 0.25 m (at his size) are walked up, never jumped: the stone steps, the cottage's steps; a big Fries
+  // walks up the 0.6 m terraces without stairs. A narrower minimum width fails on 0.2 m steps.
+  controller.enableAutostep(0.26 * s, 0.2 * s, false)
   player.mesh.scale.setScalar(s)
   setVoicePitch(player.p.voice)
 }
@@ -111,9 +113,10 @@ export function updatePlayer(dt) {
     velY -= GRAVITY * dt
 
     collider.setTranslation({ x: player.feet.x, y: player.feet.y + HEIGHT / 2 * s, z: player.feet.z })
-    // While on the ground, probe a little downward every frame: a near-zero fall reads as not grounded,
-    // which flicked the clips to jump and back
-    const down = grounded && velY <= 0 ? Math.min(velY * dt, -0.05 * s) : velY * dt
+    // On the ground the move is purely sideways (snapping keeps him on it): Rapier's autostep only climbs steps
+    // for a move with no downward part. A frame read as not grounded falls a little and lands the next; the
+    // jump clip waits out such flickers (see airTime).
+    const down = grounded && velY <= 0 ? 0 : velY * dt
     controller.computeColliderMovement(collider, { x: move.x * dt, y: down, z: move.z * dt }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS)
     const m = controller.computedMovement()
     grounded = controller.computedGrounded()

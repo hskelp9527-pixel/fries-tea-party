@@ -3,6 +3,7 @@ import { scene, webgpu } from './scene.js'
 import { model } from './models.js'
 import { floating } from './layout.js'
 import { player } from './player.js'
+import { camera } from './scene.js'
 import { game, hop } from './state.js'
 import { meanSize, keepOut } from './garden.js'
 
@@ -41,17 +42,26 @@ setFloatingLevel(0)
 // Whether a teacup is dodging Fries right now.
 export const cupDodging = () => items.some(it => it.kind === 'teacup' && it.away.lengthSq() > 0.04 * player.p.scale ** 2)
 
-const chest = new THREE.Vector3(), push = new THREE.Vector3(), offset = new THREE.Vector3()
+const chest = new THREE.Vector3(), push = new THREE.Vector3(), offset = new THREE.Vector3(), near = new THREE.Vector3()
 let clock = 0
+
+// For a big Fries, two teacups and a spoon drift close by his camera, so the giant sees how small they are.
+const ESCORT = [[-1.6, -0.5, -3.2], [1.9, 0.3, -4.2], [0.7, -1.1, -2.6]]
+const escorts = () => [...items.filter(it => it.kind === 'teacup').slice(0, 2), items.find(it => it.kind === 'spoon')]
+let giant = 0
 
 export function updateFloating(dt) {
   clock += dt * (1 + 0.35 * game.gears) // livelier with each gear
   const s = player.p.scale
   chest.copy(player.feet).setY(player.feet.y + 0.8 * s)
+  giant = Math.max(0, Math.min(1, giant + (player.size === 'big' ? dt : -dt) * 0.6))
+  const escorting = escorts()
   for (const it of items) {
     const t = clock + it.phase, o = it.object
     it.grow = Math.min(1, it.grow + dt)
     o.position.copy(it.home)
+    const e = escorting.indexOf(it)
+    if (e >= 0 && giant > 0) o.position.lerp(camera.localToWorld(near.set(...ESCORT[e])), giant * giant * (3 - 2 * giant))
     o.position.x += Math.sin(t * 0.31) * it.wander
     o.position.y += Math.sin(t * 0.53) * it.wander * 0.4
     o.position.z += Math.cos(t * 0.27) * it.wander

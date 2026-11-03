@@ -309,7 +309,8 @@ export const paths = [
 ]
 
 // Every fixed object. `onTable` props dance on the table in the final chorus; `on` names the prop one stands on,
-// which it rides with. `solid: false` leaves it without colliders; `scale` is uniform.
+// which it rides with. `solid: false` leaves it without colliders, `boxes` makes its placeholder boxes its colliders
+// (the step modules: their flower planters would block the steps); `scale` is uniform.
 export const placed = [
   { model: 'big_tree', pos: [-4.2, 0, -12.2], rot: -30 }, // its long branches reach south-east over the head of the table; the tunnel through its roots runs north-north-east from the door
   { model: 'long_table', pos: [0, 0, -3.5], rot: 90 },
@@ -323,7 +324,7 @@ export const placed = [
   { model: 'armchair', pos: [1.55, 0, -2], rot: -90 },
   { model: 'armchair', pos: [1.55, 0, 0.4], rot: -90 },
   { model: 'plate', pos: [0.1, 0.76, -7.9], scale: 1.3, solid: false }, // the Dormouse's bed
-  { model: 'dormouse', pos: [0.1, 0.77, -7.9], rot: -60, solid: false },
+  { model: 'dormouse', pos: [0.1, 0.785, -7.9], rot: -60, solid: false }, // on the plate's top
   { model: 'tea_tray', pos: [-0.45, 0.76, -5], solid: false, onTable: true },
   { model: 'pink_teapot', pos: [-0.45, 0.79, -5.25], rot: 180, solid: false, on: 'tea_tray' }, // spouts toward the teacups
   { model: 'blue_teapot', pos: [-0.45, 0.79, -4.75], rot: 180, solid: false, on: 'tea_tray' },
@@ -340,9 +341,9 @@ export const placed = [
   // The cottage, high at the back right on its terraces (see `terraces`): flights of step modules up each 0.6 m,
   // staggered, and flowered retaining walls on the terraces' edges. Its high porch, 2.4 m above the top
   // terrace with no steps up, holds the hat rack with gear 3 on its top hat.
-  { model: 'steps_stone', pos: [8, 0, -11.45] },
-  { model: 'steps_stone', pos: [11, 0.6, -12.85] },
-  { model: 'steps_stone', pos: [12.6, 1.2, -14.25] },
+  { model: 'steps_stone', pos: [8, 0, -11.45], boxes: true },
+  { model: 'steps_stone', pos: [11, 0.6, -12.85], boxes: true },
+  { model: 'steps_stone', pos: [12.6, 1.2, -14.25], boxes: true },
   ...wall([4, -12.1], [7.4, -12.1], 0), ...wall([8.7, -12.1], [32, -12.1], 0), ...wall([3.9, -12], [3.9, -38], 0),
   ...wall([7, -13.5], [10.3, -13.5], 0.6), ...wall([11.7, -13.5], [32, -13.5], 0.6), ...wall([6.9, -13.4], [6.9, -38], 0.6),
   ...wall([9.5, -14.9], [11.9, -14.9], 1.2), ...wall([13.3, -14.9], [30, -14.9], 1.2), ...wall([9.4, -14.8], [9.4, -38], 1.2),
@@ -432,14 +433,15 @@ export const gears = [
 ]
 
 // Things that change Fries's size into `becomes`. The drink clip holds them at his waist from its start, so
-// each flies the short way into his left hand, goes to his mouth and flies back to its place at the end.
+// each flies the short way into his left hand, goes to his mouth and flies back to its place at the end. One that
+// makes him big first walks him to `grow`, where a giant has room.
 export const drinks = [
   {
     model: 'pink_teacup', pos: [-0.95, 0.76, -5.6], becomes: 'small', label: 'Drink the pink tea', onTable: true,
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -5.557], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'blue_teacup', pos: [-0.95, 0.76, -4.45], becomes: 'big', label: 'Drink the blue tea', onTable: true,
+    model: 'blue_teacup', pos: [-0.95, 0.76, -4.45], becomes: 'big', grow: [-4.4, 0, -4.4], label: 'Drink the blue tea', onTable: true,
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {

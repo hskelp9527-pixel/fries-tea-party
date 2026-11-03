@@ -7,13 +7,13 @@ import { wind } from './plants.js'
 
 const DEG = Math.PI / 180
 
-function place({ model: name, pos, rot = 0, scale = 1, solid = true }) {
+function place({ model: name, pos, rot = 0, scale = 1, solid = true, boxes = false }) {
   const object = model(name)
   object.position.set(...pos)
   object.rotation.y = rot * DEG
   object.scale.setScalar(scale)
   scene.add(object)
-  if (solid) addColliders(name, object)
+  if (solid) addColliders(name, object, boxes)
   return object
 }
 
@@ -41,7 +41,8 @@ export function keepOut(p, margin) {
 export const meanSize = object => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).toArray().reduce((a, b) => a + b) / 3
 glow(things.book_page, 0xfff0b0, 2)
 
-// Doors on their hinges: `pivot` turns about the hinge, positive inwards. A closed door is solid.
+// Doors on their hinges: `pivot` turns about the hinge, positive inwards; `colliders` keep a closed door solid.
+// `front` is a point a step in front of the closed door.
 export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name, { in: host, hinge, scale }]) => {
   const pivot = new THREE.Group(), door = model('tree_door')
   if (typeof hinge === 'string') things[host].getObjectByName(hinge).add(pivot)
@@ -50,8 +51,8 @@ export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name,
   door.position.x = 0.655 * scale[0]
   pivot.add(door)
   things[host].updateMatrixWorld(true)
-  addColliders('tree_door', door)
-  return [name, { pivot, door }]
+  const front = door.localToWorld(new THREE.Vector3(0, 0, 0.9))
+  return [name, { pivot, door, colliders: addColliders('tree_door', door), front }]
 }))
 
 // Hands at six o'clock on a face: the minute hand up, the hour hand down. `centre` is the pivot in the face's
