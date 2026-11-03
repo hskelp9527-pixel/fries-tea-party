@@ -11,6 +11,7 @@ import { world } from './physics.js'
 import { setMusic, say, speaking, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { game } from './state.js'
+import { teaService, hallNote, insideHall } from './tasks.js'
 import { setFloatingLevel } from './floating.js'
 
 const FIRST_HINT = 45 // seconds without finding a gear before the Dormouse sleep-talks a hint
@@ -22,6 +23,11 @@ const head = (character, height) => character.localToWorld(new THREE.Vector3(0, 
 
 // What E can do: { pos, label, can(), use() }. The nearest one Fries can use is offered.
 const uses = drinks.map(d => ({ ...d, can: () => nearProp(d, d.pos), use: () => drink(d) }))
+for (const gear of gears) uses.push({
+  pos: gear.pos, label: 'Pick up the gear',
+  can: () => !gear.found && nearProp(gear, gear.pos), use: () => pickUp(gear),
+})
+uses.push(teaService, hallNote)
 let target, toldAboutTea = false, drank = false
 
 // Any empty armchair at the table: Fries walks to its front, turns and sits down; E or a step gets him up again.
@@ -66,7 +72,11 @@ async function rise() {
 
 addEventListener('keydown', e => {
   if (seat && ['KeyE', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) rise()
-  else if (e.code === 'KeyE' && target) target.use()
+  else if (e.code === 'KeyE' && !e.repeat && player.control && target) {
+    const useTarget = target
+    target = undefined
+    useTarget.use()
+  }
 })
 
 let exploring = false, onMended
@@ -90,6 +100,12 @@ async function drink(d) {
   await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
   if (d.grow) await walkTo(d.grow, 90)
   setSize(d.becomes)
+  if ((d.becomes === 'small' && player.shrinks === 1) || (d.becomes === 'big' && player.grows === 1)) {
+    const hint = document.getElementById('size-hint')
+    hint.textContent = 'Eat a cake to change back'
+    hint.getAnimations().forEach(animation => animation.cancel())
+    hint.animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: 6000 })
+  }
   if (d.becomes === 'small' && player.shrinks === 1) await firstShrink()
   else if (d.becomes === 'big' && player.grows === 1) await firstGrow()
   else {
@@ -145,6 +161,8 @@ const watchPoint = things.pocket_watch.position.clone().setY(things.pocket_watch
 async function pickUp(gear) {
   player.control = false
   await use(gear, gear.object, () => find(gear))
+  act('examine')
+  await wait(anim.actions.examine.getClip().duration)
   release(gear.object)
   player.control = true
   await fly(gear.object, end => end.copy(watchPoint), 1.2, 0.6)
@@ -246,7 +264,7 @@ function happenings() {
   const basinNow = Math.hypot(f.x - basin.x, f.z - basin.z) < 1.3 && f.y > 0.25
   if (basinNow && !inBasin) event('fountain')
   inBasin = basinNow
-  const hallNow = doors.cottage.front.distanceTo(f) < 0.9 && f.y > 2.5
+  const hallNow = insideHall()
   if (hallNow && !inHall) event('cottage')
   inHall = hallNow
 }
@@ -263,7 +281,6 @@ export function updateExplore(dt) {
   }
   if (target) prompt.textContent = `E  ${target.label}`
 
-  for (const g of gears) if (!g.found && nearProp(g, g.pos)) pickUp(g)
   clock += dt
   tryDoors()
   happenings()

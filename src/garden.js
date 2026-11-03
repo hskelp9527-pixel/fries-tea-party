@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu'
+import { uv, vec3, smoothstep, max, abs, time, sin } from 'three/tsl'
 import { scene } from './scene.js'
 import { model, glow, addColliders } from './models.js'
 import * as layout from './layout.js'
@@ -129,13 +130,27 @@ for (const flame of flames) glow(flame, 0xffa040, 4)
 
 export const gears = layout.gears.map(g => {
   const object = place({ model: 'gear', pos: g.pos, solid: false })
-  glow(object, 0xffb030, 1.2)
+  glow(object, 0xffb030, 0.06)
   return { ...g, object, pos: new THREE.Vector3(...g.pos), found: false }
+})
+
+
+// A small warm star marks the brass without bleaching its material.
+const glintMaterial = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+const p = uv().sub(0.5).mul(2)
+const rays = max(smoothstep(0.12, 0, abs(p.x)).mul(smoothstep(1, 0, abs(p.y))), smoothstep(0.12, 0, abs(p.y)).mul(smoothstep(1, 0, abs(p.x))))
+glintMaterial.colorNode = vec3(1, 0.85, 0.5).mul(rays.add(smoothstep(0.35, 0, p.length()))).mul(sin(time.mul(4)).mul(0.15).add(0.65))
+export const glints = gears.map(g => {
+  const sprite = new THREE.Sprite(glintMaterial)
+  sprite.position.copy(g.pos).add(new THREE.Vector3(0, 0.035, 0))
+  sprite.scale.setScalar(0.09)
+  scene.add(sprite)
+  return sprite
 })
 
 export const drinks = layout.drinks.map(d => {
   const object = place({ ...d, solid: false })
-  return { ...d, object, pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + 0.05), home: object.position.clone() }
+  return { ...d, object, pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + (d.by === 'small' ? 0.01 : 0.05)), home: object.position.clone() }
 })
 
 // Everything standing on the table, which dances in the final chorus: { object, home, turn, seed, size, on }, where
@@ -159,9 +174,10 @@ bubble.position.set(0, 0.07, 0.18)
 things.dormouse.add(bubble)
 
 export function updateGarden(dt, time) {
+  glints.forEach((sprite, i) => { sprite.visible = !gears[i].found })
   gears.forEach((g, i) => {
     if (!g.found) g.object.rotation.y += dt * 1.5
-    g.object.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 1 + 0.8 * Math.sin(time * 3 + i * 2) })
+    g.object.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 0.045 + 0.015 * Math.sin(time * 3 + i * 2) })
   })
 
   const breath = (time / 3) % 1
