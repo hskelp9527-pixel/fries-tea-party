@@ -2,8 +2,9 @@ import * as THREE from 'three/webgpu'
 import { scene, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { things } from './garden.js'
-import { bushes, hedges, meadow } from './layout.js'
-import { LEAVES, cardMaterial, cards } from './plants.js'
+import { model } from './models.js'
+import { bushes, hedges, meadow, rosePath } from './layout.js'
+import { LEAVES, FLOWERS, cardMaterial, cards } from './plants.js'
 import { noise, random, ground } from './fields.js'
 
 // Leaves in volumes: the big tree's crown, the ivy on its trunk, the bushes and hedges, and the trees on the far
@@ -64,6 +65,8 @@ for (const { sum, n } of cellsOfWood.values()) {
   const centre = sum.divideScalar(n)
   if (noise(centre.x * 0.55 + 2, centre.z * 0.55 + centre.y * 0.3) < 0.32) continue
   const outer = Math.min(1, Math.hypot(centre.x - treeBase.x, centre.z - treeBase.z) / 6)
+  // The camera's sweep stops at the leaves (a sensor nothing else feels), so it pulls in rather than entering them.
+  world.createCollider(RAPIER.ColliderDesc.ball(1.2).setTranslation(centre.x, centre.y + 0.25, centre.z).setSensor(true))
   crown(treeLeaves, {
     centre: centre.add(new THREE.Vector3(0, 0.25, 0)), radii: new THREE.Vector3(1.15, 0.8, 1.15),
     cell: LEAVES.round, size: 0.32, light: 0.8 + 0.3 * outer, layers: 1.6 + outer,
@@ -150,6 +153,37 @@ for (let i = 0; i < 150 * share; i++) {
     cell: tall ? LEAVES.laurel : LEAVES.round, size: tall ? 1.6 : 2.4, light: 0.75 - distance * 0.002, layers: 1.5,
   })
 }
+
+// The rose path behind the big tree, hidden until the ending: flagstones between banks of red roses, ending in
+// the heart-shaped arch.
+export const roses = new THREE.Group()
+roses.visible = false
+scene.add(roses)
+const roseLeaves = [], roseHeads = []
+const [rx0, rz0] = rosePath.from, [rx1, rz1] = rosePath.to, length = Math.hypot(rx1 - rx0, rz1 - rz0)
+const along = new THREE.Vector2(rx1 - rx0, rz1 - rz0).normalize(), across = new THREE.Vector2(-along.y, along.x)
+for (let d = 0; d < length; d += 0.55) {
+  const stone = model(`flagstone_${'abcd'[Math.floor(rand() * 4)]}`)
+  stone.position.set(rx0 + along.x * d, ground(rx0, rz0), rz0 + along.y * d)
+  stone.rotation.y = rand() * 3
+  roses.add(stone)
+  for (const side of [-1, 1]) {
+    const centre = new THREE.Vector3(rx0 + along.x * d + across.x * side * 1.05, 0.5, rz0 + along.y * d + across.y * side * 1.05)
+    crown(roseLeaves, { centre, radii: new THREE.Vector3(0.55, 0.5, 0.55), cell: LEAVES.round, size: 0.16, light: 0.8 })
+    for (let k = 0; k < 7; k++) {
+      const out = new THREE.Vector3(rand() - 0.5, rand() * 0.8, rand() - 0.5).normalize()
+      roseHeads.push({
+        position: centre.clone().add(out.clone().multiply(new THREE.Vector3(0.55, 0.5, 0.55))),
+        quaternion: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), out), scale: 0.13 + rand() * 0.05,
+        cell: FLOWERS.redRose, base: [centre.x, centre.y, centre.z, 0.6], tint: new THREE.Color(1, 1, 1),
+      })
+    }
+  }
+}
+const arch = model('heart_arch')
+arch.position.set(rosePath.arch[0], 0, rosePath.arch[1])
+arch.rotation.y = Math.atan2(along.x, along.y)
+roses.add(arch, cards(cardMaterial(LEAVES, { crown: true, sway: 0.01 }), LEAVES, roseLeaves), cards(cardMaterial(FLOWERS, { crown: true, sway: 0.01, gloss: 0.5 }), FLOWERS, roseHeads))
 
 const leafMaterial = cardMaterial(LEAVES, { crown: true, sway: 0.012 })
 scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves]))

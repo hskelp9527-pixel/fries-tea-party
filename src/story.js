@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { renderer, scene, camera, air, pink } from './scene.js'
-import { things, gears, clocks, wake } from './garden.js'
+import { things, gears, clocks, doors, wake } from './garden.js'
+import { roses } from './foliage.js'
 import { model } from './models.js'
 import { start, song, page as pageStand } from './layout.js'
 import contacts from '../docs/fries_hand_contacts.json'
@@ -133,7 +134,7 @@ async function opening() {
 async function ending() {
   cutscene()
   document.getElementById('hud').textContent = ''
-  const watch = things.pocket_watch, page = things.book_page, door = things.tree_door
+  const watch = things.pocket_watch, page = things.book_page, door = doors.tree.pivot
 
   // 6:01: the click, every clock moves on a minute, the sky and the whole picture turn pink.
   await shot(v(-2.8, 2.2, -1.8), v(0, 1.2, -8))
@@ -153,7 +154,7 @@ async function ending() {
   await Promise.all([say('ED-03'), stand('dormouse', { pos: [teapot.x, teapot.y + 0.12, teapot.z], rot: 90 }, 1.2, 0.5)])
 
   // Fries reaches out and the page flies from the watch into his palm, arriving as his hand does; it stays in
-  // his hand. The door at the foot of the big tree opens.
+  // his hand. The door at the mouth of the tunnel through the big tree's roots swings open.
   await walkTo(pageStand.stand, pageStand.rot)
   page.position.copy(watch.position)
   page.visible = true
@@ -161,19 +162,19 @@ async function ending() {
   await wait(contacts.reach.time - 1.5)
   await fly(page, end => palmAt('reach', end), 1.5, 0.4)
   hold(page, { clip: 'reach', grip: pageStand.grip })
-  await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = -100 * DEG * t })])
+  await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = 100 * DEG * t })])
 
-  // Fries walks to the door; the three ignore him completely.
-  const walking = walk([[-2.4, 0, -5.6], [-2.5, 0, -8.6], [-1, 0, -9.45], [0, 0, -9.45], [0, 0.15, -9.75], [0, 0.3, -10.05], [0, 0.45, -10.45]], 1.3)
+  // Fries walks round the table to the door; the three ignore him completely.
+  const walking = walk([[-2.4, 0, -5.6], [-2.5, 0, -8.6], [-1.2, 0, -9.6], [-0.3, 0, -10]], 1.3)
   await say('ED-05')
   await say('ED-06')
   await walking
   await say('ED-07')
 
-  // He steps through and sees red roses; the picture freezes.
-  things.roses.visible = true
-  await shot(v(0, 1.6, -8.6), v(0, 1.4, -12.6))
-  await Promise.all([say('ED-08'), walk([[0, 0.45, -11.2]], 1)])
+  // He steps into the tunnel and sees the red roses beyond it; the picture freezes.
+  roses.visible = true
+  await shot(v(-0.3, 1.6, -8.8), v(-0.3, 1.3, -16))
+  await Promise.all([say('ED-08'), walk([[-0.3, 0, -11.6]], 1)])
   await wait(0.4)
   renderer.setAnimationLoop(null)
 }

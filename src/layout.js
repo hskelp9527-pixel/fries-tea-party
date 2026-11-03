@@ -71,29 +71,19 @@ export const shapes = {
     [0.5, 1, 0, 1, 2, 0.08, DOOR],
     [0.85, 1, 0.06, 0.08, 0.08, 0.06, BRASS],
   ],
-  roses: [ // inside the hollow trunk, on its floor; hidden until the final shot
-    [0, 1, -1.25, 2.5, 2, 0.05, GLOW],
-    [-0.6, 0.35, -0.9, 0.8, 0.7, 0.6, LEAF],
-    [0.6, 0.35, -0.9, 0.8, 0.7, 0.6, LEAF],
-    [-0.75, 0.75, -0.8, 0.16, 0.14, 0.16, ROSE],
-    [-0.35, 0.8, -0.95, 0.16, 0.14, 0.16, ROSE],
-    [0.3, 0.78, -0.8, 0.16, 0.14, 0.16, ROSE],
-    [0.7, 0.74, -1, 0.16, 0.14, 0.16, ROSE],
-    [0.05, 0.72, -0.7, 0.14, 0.12, 0.14, ROSE],
+  long_table: [ // 8.57 m long along its x, top at 0.76 m; the cloth hangs to 0.35 m, so only a small Fries gets under it
+    [0, 0.74, 0, 8.57, 0.04, 2.27, CLOTH],
+    [0, 0.545, -1.125, 8.57, 0.39, 0.02, FRINGE],
+    [0, 0.545, 1.125, 8.57, 0.39, 0.02, FRINGE],
+    [-4.275, 0.545, 0, 0.02, 0.39, 2.27, FRINGE],
+    [4.275, 0.545, 0, 0.02, 0.39, 2.27, FRINGE],
+    [-4.1, 0.36, -1, 0.08, 0.72, 0.08, WOOD],
+    [-4.1, 0.36, 1, 0.08, 0.72, 0.08, WOOD],
+    [4.1, 0.36, -1, 0.08, 0.72, 0.08, WOOD],
+    [4.1, 0.36, 1, 0.08, 0.72, 0.08, WOOD],
   ],
-  long_table: [ // top at 0.75 m; the tablecloth hangs to 0.3 m, so only a small Fries gets under it
-    [0, 0.73, 0, 1.6, 0.04, 10, CLOTH],
-    [-0.79, 0.505, 0, 0.02, 0.41, 10, FRINGE],
-    [0.79, 0.505, 0, 0.02, 0.41, 10, FRINGE],
-    [0, 0.505, -4.99, 1.6, 0.41, 0.02, FRINGE],
-    [0, 0.505, 4.99, 1.6, 0.41, 0.02, FRINGE],
-    [-0.7, 0.355, -4.9, 0.08, 0.71, 0.08, WOOD],
-    [0.7, 0.355, -4.9, 0.08, 0.71, 0.08, WOOD],
-    [-0.7, 0.355, 4.9, 0.08, 0.71, 0.08, WOOD],
-    [0.7, 0.355, 4.9, 0.08, 0.71, 0.08, WOOD],
-  ],
-  armchair: [ // seat at 0.45 m
-    [0, 0.225, 0, 0.75, 0.45, 0.7, CHAIR],
+  armchair: [ // seat at 0.48 m
+    [0, 0.24, 0, 0.75, 0.48, 0.7, CHAIR],
     [0, 0.85, -0.3, 0.75, 0.9, 0.12, CHAIR],
     [-0.33, 0.6, 0.02, 0.1, 0.3, 0.66, CHAIR],
     [0.33, 0.6, 0.02, 0.1, 0.3, 0.66, CHAIR],
@@ -160,27 +150,15 @@ export const shapes = {
     [0, 1.65, 0, 0.36, 1.6, 0.36, STONE],
     [0, 2.5, 0, 1.2, 0.14, 1.2, STONE],
   ],
-  terrace: [ // raised 1.2 m, a wide flight of steps up its east side, dry-stone walls along its edges
-    [0, 0.6, 0, 10, 1.2, 12, TERRACE],
-    [5.2, 0.5, 0, 0.4, 1, 5, STONE],
-    [5.6, 0.4, 0, 0.4, 0.8, 5, STONE],
-    [6, 0.3, 0, 0.4, 0.6, 5, STONE],
-    [6.4, 0.2, 0, 0.4, 0.4, 5, STONE],
-    [6.8, 0.1, 0, 0.4, 0.2, 5, STONE],
-    [4.8, 1.45, -4.25, 0.4, 0.5, 3.5, WALLSTONE],
-    [4.8, 1.45, 4.25, 0.4, 0.5, 3.5, WALLSTONE],
-    [0, 1.45, -5.8, 10, 0.5, 0.4, WALLSTONE],
-    [0, 1.45, 5.8, 10, 0.5, 0.4, WALLSTONE],
-    [-4.8, 1.45, 0, 0.4, 0.5, 11.2, WALLSTONE],
-  ],
-  cottage: [
+  terrace: [[0, 0.6, 0, 10, 1.2, 12, TERRACE]], // raised 1.2 m
+  landing: [[0, 0.3, 0, 1.4, 0.6, 1.1, STONE]], // under the upper flight of steps
+  house: [ // the March Hare's cottage, its door at the top of three steps, 1.1 m up
     [0, 1.5, 0, 6, 3, 5, WALL],
     [0, 3.25, 0, 6.6, 0.5, 5.6, ROOF],
     [0, 3.75, 0, 5.4, 0.5, 4.2, ROOF],
     [0, 4.25, 0, 4, 0.5, 2.6, ROOF],
     [0, 4.7, 0, 2.6, 0.4, 1, ROOF],
     [1.8, 4.6, -1, 0.6, 1.8, 0.6, BRICK],
-    [0, 1, 2.52, 1, 2, 0.06, DOOR], // 2 m
     [-1.9, 1.7, 2.52, 0.9, 0.8, 0.06, GLASS],
     [1.9, 1.7, 2.52, 0.9, 0.8, 0.06, GLASS],
     [0, 0.2, 3.5, 6, 0.4, 2, PLANK], // porch, step and railings
@@ -190,18 +168,10 @@ export const shapes = {
     [-2.96, 0.85, 3.5, 0.08, 0.9, 2, PLANK],
     [2.96, 0.85, 3.5, 0.08, 0.9, 2, PLANK],
   ],
-  hat_rack: [ // the tallest hat (top_hat) sits on top of the 1.425 m pole
+  hat_rack: [ // three hats on its pegs; the top hat's crown is at 2 m
     [0, 0.04, 0, 0.3, 0.08, 0.3, WOOD],
-    [0, 0.7125, 0, 0.08, 1.425, 0.08, WOOD],
-    [0, 0.95, 0, 0.5, 0.04, 0.04, WOOD],
-    [0, 1.2, 0, 0.04, 0.04, 0.5, WOOD],
-    [-0.25, 1.07, 0, 0.2, 0.2, 0.2, HATBAND],
-    [0.25, 1.07, 0, 0.2, 0.2, 0.2, COAT],
-    [0, 1.32, -0.25, 0.2, 0.2, 0.2, HARE_COAT],
-  ],
-  top_hat: [ // not solid, so it never comes between a big Fries and the gear sitting on it
-    [0, 0.02, 0, 0.42, 0.04, 0.42, HAT],
-    [0, 0.25, 0, 0.3, 0.46, 0.3, HAT],
+    [0, 0.9, 0, 0.08, 1.8, 0.08, WOOD],
+    [0, 1.9, -0.2, 0.3, 0.2, 0.3, HAT],
   ],
   hat: [
     [0, 0.015, 0, 0.42, 0.03, 0.42, HAT],
@@ -256,26 +226,41 @@ export const shapes = {
     [0, 0, 0, 0.064, 0.008, 0.014, BRASS],
     [0, 0, 0, 0.014, 0.008, 0.064, BRASS],
   ],
-  wall_clock: [
-    [0, 0, 0, 0.62, 0.62, 0.05, WOOD],
-    [0, 0, 0.03, 0.54, 0.54, 0.01, CHINA],
+  hanging_clock: [ // 0.7 m with its ring; the face's centre is 0.26 m up
+    [0, 0.26, 0, 0.34, 0.34, 0.1, BRASS],
+    [0, 0.26, 0.05, 0.28, 0.28, 0.01, CHINA],
+    [0, 0.6, 0, 0.04, 0.2, 0.04, BRASS],
   ],
-  hanging_clock: [ // hangs from a branch on a 2 m string
-    [0, 0, 0, 0.62, 0.62, 0.05, WOOD],
-    [0, 0, 0.03, 0.54, 0.54, 0.01, CHINA],
-    [0, 1.31, 0, 0.012, 2, 0.012, BLACK],
-  ],
-  lantern: [ // hangs from a branch on a 3 m string
+  lantern: [ // 0.4 m with its ring
     [0, 0.15, 0, 0.2, 0.3, 0.2, LANTERN],
     [0, 0.33, 0, 0.26, 0.06, 0.26, LANTERN],
-    [0, 1.86, 0, 0.012, 3, 0.012, LANTERN],
   ],
-  clock_hand: [[0, 0.11, 0, 0.03, 0.22, 0.012, BLACK]], // pivots at the clock centre, points up
-  fence: [ // 2 m of picket fence along its x
-    [0, 0.3, 0, 2, 0.06, 0.05, FENCE],
-    [0, 0.62, 0, 2, 0.06, 0.05, FENCE],
-    ...[-0.8, -0.4, 0, 0.4, 0.8].map(x => [x, 0.4, 0.03, 0.08, 0.8, 0.03, FENCE]),
+  clock_hand: [[0, 0.075, 0, 0.02, 0.21, 0.008, BLACK]], // pivots at the clock centre, points up
+  fence_picket: [ // 1.5 m of picket fence along its x
+    [0, 0.3, 0, 1.5, 0.06, 0.05, FENCE],
+    [0, 0.62, 0, 1.5, 0.06, 0.05, FENCE],
+    ...[-0.6, -0.3, 0, 0.3, 0.6].map(x => [x, 0.4, 0.03, 0.08, 0.8, 0.03, FENCE]),
   ],
+  fence_broken: [
+    [-0.4, 0.3, 0, 0.7, 0.06, 0.05, FENCE],
+    ...[-0.6, -0.3, 0.6].map(x => [x, 0.4, 0.03, 0.08, 0.8, 0.03, FENCE]),
+  ],
+  wall_stone: [[0, 0.3, 0, 2, 0.6, 0.36, WALLSTONE]], // 2 m of dry-stone wall along its x
+  wall_cap_flowers: [[0, 0.1, 0, 2, 0.2, 0.36, LEAF]], // sits on a wall
+  steps_stone: [ // three 0.2 m steps rising towards -Z, 1.4 m wide
+    [0, 0.1, 0, 1.4, 0.2, 1.1, STONE],
+    [0, 0.3, -0.18, 1.4, 0.2, 0.74, STONE],
+    [0, 0.5, -0.37, 1.4, 0.2, 0.36, STONE],
+  ],
+  heart_arch: [
+    [-0.9, 1.3, 0, 0.12, 2.6, 0.12, ARCH],
+    [0.9, 1.3, 0, 0.12, 2.6, 0.12, ARCH],
+    [0, 2.5, 0, 1.9, 0.14, 0.14, ROSE],
+  ],
+  ivy_strand: [[0, 0.65, 0, 0.3, 1.3, 0.03, LEAF]],
+  candle: [[0, 0.1, 0, 0.05, 0.2, 0.05, CHINA], [0, 0.22, 0, 0.015, 0.04, 0.015, LANTERN]],
+  candelabra: [[0, 0.2, 0, 0.26, 0.4, 0.06, BRASS]],
+  milk_jug: [[0, 0.055, 0, 0.1, 0.11, 0.07, CHINA]],
   rose_arch: [ // an arch over the path; its climbers are pale, since red roses appear only in the final shot
     [-0.85, 1.3, 0, 0.12, 2.6, 0.12, ARCH],
     [0.85, 1.3, 0, 0.12, 2.6, 0.12, ARCH],
@@ -289,7 +274,10 @@ export const shapes = {
     [0.35, 2.95, 0, 0.3, 0.2, 0.25, BLOSSOM2],
     [0, 3.1, 0, 0.25, 0.2, 0.25, BLOSSOM],
   ],
-  stone_path: [[0, 0.01, 0, 0.7, 0.02, 0.5, PATH]],
+  flagstone_a: [[0, 0.03, 0, 0.44, 0.06, 0.38, PATH]],
+  flagstone_b: [[0, 0.03, 0, 0.5, 0.06, 0.44, PATH]],
+  flagstone_c: [[0, 0.03, 0, 0.58, 0.06, 0.48, PATH]],
+  flagstone_d: [[0, 0.03, 0, 0.64, 0.06, 0.52, PATH]],
 }
 
 // Fries's starting place, at the south end of the long table, facing north.
@@ -301,12 +289,18 @@ const row = (model, [x0, z0], [x1, z1], length) => {
   const rot = Math.atan2(z0 - z1, x1 - x0) * 180 / Math.PI
   return Array.from({ length: n }, (_, i) => ({ model, pos: [x0 + (x1 - x0) * (i + 0.5) / n, 0, z0 + (z1 - z0) * (i + 0.5) / n], rot }))
 }
-// Stepping stones along a path's centre line, about `spacing` apart.
+// Flagstones along a path's centre line, about `spacing` apart, the four shapes in turn, set a little to either
+// side.
 const stones = (line, spacing) => line.slice(1).flatMap(([x1, z1], i) => {
   const [x0, z0] = line[i], n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / spacing))
-  return Array.from({ length: n }, (_, k) => ({
-    model: 'stone_path', pos: [x0 + (x1 - x0) * k / n, 0, z0 + (z1 - z0) * k / n], rot: (i * 7 + k) * 37 % 40 - 20, solid: false,
-  }))
+  const across = [(z0 - z1) / Math.hypot(x1 - x0, z1 - z0), (x1 - x0) / Math.hypot(x1 - x0, z1 - z0)]
+  return Array.from({ length: n }, (_, k) => {
+    const j = i * 7 + k, side = ((j * 53 % 7) / 7 - 0.5) * 0.25
+    return {
+      model: `flagstone_${'abcd'[j % 4]}`, pos: [x0 + (x1 - x0) * k / n + across[0] * side, 0, z0 + (z1 - z0) * k / n + across[1] * side],
+      rot: j * 37 % 90, solid: false,
+    }
+  })
 })
 
 // The paths, as centre lines of [x, z] points. Flowers grow in bands either side of them.
@@ -319,52 +313,76 @@ export const paths = [
 // Every fixed object. `onTable` props dance on the table in the final chorus; `on` names the prop one stands on,
 // which it rides with. `solid: false` leaves it without colliders; `scale` is uniform.
 export const placed = [
-  { model: 'big_tree', pos: [0, 0, -12] },
-  { model: 'tree_door', pos: [-0.5, 0.45, -10.24] },
-  { model: 'roses', pos: [0, 0.45, -12], solid: false },
-  { model: 'long_table', pos: [0, 0, -3.5] },
-  { model: 'armchair', pos: [-1.35, 0, -6.8], rot: 90 },
-  { model: 'hatter', pos: [-1.35, 0, -6.8], rot: 90 },
-  { model: 'armchair', pos: [1.35, 0, -7.4], rot: -90 },
-  { model: 'hare', pos: [1.35, 0, -7.4], rot: -90 },
-  { model: 'armchair', pos: [-1.35, 0, -2.6], rot: 90 },
-  { model: 'armchair', pos: [-1.35, 0, -0.4], rot: 90 },
-  { model: 'armchair', pos: [1.35, 0, -4.6], rot: -90 },
-  { model: 'armchair', pos: [1.35, 0, -2], rot: -90 },
-  { model: 'armchair', pos: [1.35, 0, 0.4], rot: -90 },
-  { model: 'plate', pos: [0.1, 0.75, -7.9], scale: 1.3, solid: false }, // the Dormouse's bed
-  { model: 'dormouse', pos: [0.1, 0.76, -7.9], rot: -60, solid: false },
-  { model: 'tea_tray', pos: [-0.45, 0.75, -5], solid: false, onTable: true },
-  { model: 'pink_teapot', pos: [-0.45, 0.77, -5.25], rot: 180, solid: false, on: 'tea_tray' }, // spouts toward the teacups
-  { model: 'blue_teapot', pos: [-0.45, 0.77, -4.75], rot: 180, solid: false, on: 'tea_tray' },
-  { model: 'cake_stand', pos: [0.2, 0.75, -3.4], solid: false, onTable: true },
-  { model: 'teapot', pos: [0.3, 0.75, -2.6], solid: false, onTable: true },
-  { model: 'teapot', pos: [-0.2, 0.75, 0.2], rot: 180, solid: false, onTable: true },
-  { model: 'pocket_watch', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false, onTable: true },
-  { model: 'book_page', pos: [-0.5, 0.75, -6.75], rot: 90, solid: false, on: 'pocket_watch' },
-  { model: 'fountain', pos: [7, 0, -3] }, // about 6 m east of the table
-  { model: 'terrace', pos: [-11, 0, -2] }, // west of the table
-  { model: 'cottage', pos: [-11.5, 1.2, -2], rot: 90 }, // on the terrace, porch facing the table
-  { model: 'hat_rack', pos: [-7.169, 1.6, -3.205] }, // at the front edge of the porch, by the top of the steps
-  { model: 'top_hat', pos: [-7.169, 3.03, -3.205], solid: false }, // its crown under gear 3
-  // Fences along the path, and arches over it
-  ...row('fence', [-1, 4.6], [-1, 8.6], 2),
-  ...row('fence', [1, 4.6], [1, 8.6], 2),
-  ...row('fence', [-1.3, 3.4], [-3.5, 2.3], 2),
-  ...row('fence', [-4.2, 2.8], [-4.2, 0.8], 2),
-  ...row('fence', [1.3, 3.4], [3.5, 2.3], 2),
-  ...row('fence', [3.7, 1.4], [3.75, -0.6], 2),
-  ...row('fence', [-3.5, -3.6], [-3.5, -7.6], 2),
+  { model: 'big_tree', pos: [0, 0, -12] }, // the tunnel through its roots runs north from the door
+  { model: 'long_table', pos: [0, 0, -3.5], rot: 90 },
+  { model: 'armchair', pos: [-1.55, 0, -6.8], rot: 90 },
+  { model: 'hatter', pos: [-1.55, 0, -6.8], rot: 90, solid: false },
+  { model: 'armchair', pos: [1.55, 0, -7.4], rot: -90 },
+  { model: 'hare', pos: [1.55, 0, -7.4], rot: -90, solid: false },
+  { model: 'armchair', pos: [-1.55, 0, -2.6], rot: 90 },
+  { model: 'armchair', pos: [-1.55, 0, -0.4], rot: 90 },
+  { model: 'armchair', pos: [1.55, 0, -4.6], rot: -90 },
+  { model: 'armchair', pos: [1.55, 0, -2], rot: -90 },
+  { model: 'armchair', pos: [1.55, 0, 0.4], rot: -90 },
+  { model: 'plate', pos: [0.1, 0.76, -7.9], scale: 1.3, solid: false }, // the Dormouse's bed
+  { model: 'dormouse', pos: [0.1, 0.77, -7.9], rot: -60, solid: false },
+  { model: 'tea_tray', pos: [-0.45, 0.76, -5], solid: false, onTable: true },
+  { model: 'pink_teapot', pos: [-0.45, 0.79, -5.25], rot: 180, solid: false, on: 'tea_tray' }, // spouts toward the teacups
+  { model: 'blue_teapot', pos: [-0.45, 0.79, -4.75], rot: 180, solid: false, on: 'tea_tray' },
+  { model: 'cake_stand', pos: [0.2, 0.76, -3.4], solid: false, onTable: true },
+  { model: 'teapot', pos: [0.3, 0.76, -2.6], solid: false, onTable: true },
+  { model: 'teapot', pos: [-0.2, 0.76, 0.2], rot: 180, solid: false, onTable: true },
+  { model: 'pocket_watch', pos: [-0.5, 0.76, -6.75], rot: 90, solid: false, onTable: true },
+  { model: 'book_page', pos: [-0.5, 0.76, -6.75], rot: 90, solid: false, on: 'pocket_watch' },
+  { model: 'milk_jug', pos: [0.45, 0.76, -4.4], rot: -90, solid: false, onTable: true },
+  { model: 'candelabra', pos: [0, 0.76, -5.9], rot: 90, solid: false, onTable: true },
+  { model: 'candle', pos: [0.15, 0.76, -1.6], solid: false, onTable: true },
+  { model: 'candle', pos: [-0.2, 0.76, -0.6], solid: false, onTable: true },
+  { model: 'fountain', pos: [7, 0, -3], rot: 180 }, // about 6 m east of the table; its grotto opens west, towards the table
+  // The terrace west of the table: a flight of two step modules (the upper one on a landing) up its east face,
+  // dry-stone walls with flowers along its other edges
+  { model: 'terrace', pos: [-11, 0, -2] },
+  { model: 'landing', pos: [-5.45, 0, -2] },
+  { model: 'steps_stone', pos: [-5.45, 0.6, -2], rot: 90 },
+  { model: 'steps_stone', pos: [-4.35, 0, -2], rot: 90 },
+  ...row('wall_stone', [-16, -7.8], [-6, -7.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.2, w.pos[2]] })),
+  ...row('wall_cap_flowers', [-16, -7.8], [-6, -7.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.8, w.pos[2]], solid: false })),
+  ...row('wall_stone', [-16, 3.8], [-12, 3.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.2, w.pos[2]] })),
+  ...row('wall_cap_flowers', [-16, 3.8], [-12, 3.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.8, w.pos[2]], solid: false })),
+  { model: 'house', pos: [-11.5, 1.2, -2], rot: 90 }, // on the terrace, its door facing the table
+  { model: 'hat_rack', pos: [-6.7, 1.2, -5.8], rot: -90 }, // on the terrace by the cottage's front; gear 3 on its top hat
+  // Fences along the paths (one broken where the view from the south-east looks through), and arches at bends
+  ...row('fence_picket', [-1, 4.6], [-1, 8.6], 1.5),
+  ...row('fence_picket', [1, 4.6], [1, 8.6], 1.5),
+  ...row('fence_picket', [-1.3, 3.4], [-3.5, 2.3], 1.5),
+  ...row('fence_picket', [-4.2, 2.8], [-4.2, 0.8], 1.5),
+  ...row('fence_broken', [1.3, 3.4], [3.5, 2.3], 1.5),
+  ...row('fence_picket', [3.7, 1.4], [3.75, -0.6], 1.5),
+  ...row('fence_picket', [-3.5, -3.6], [-3.5, -7.6], 1.5),
   { model: 'rose_arch', pos: [0, 0, 6.2] },
-  { model: 'rose_arch', pos: [2.85, 0, -2.4] },
-  { model: 'rose_arch', pos: [-2.6, 0, -7.4] },
-  ...paths.flatMap(line => stones(line, 0.75)),
+  { model: 'rose_arch', pos: [2.85, 0, -0.2], rot: 90 },
+  { model: 'rose_arch', pos: [-3.2, 0, -2.4], rot: 90 },
+  { model: 'ivy_strand', pos: [-1.05, 0, -10.6], rot: 20, solid: false },
+  { model: 'ivy_strand', pos: [1.0, 0, -10.7], rot: -15, solid: false },
+  { model: 'ivy_strand', pos: [-15, 1.2, -7.6], solid: false },
+  ...paths.flatMap(line => stones(line, 0.6)),
 ]
+
+// Doors hang on a hinge at the bottom of their left edge: a node in the model they are set in, or a point in its
+// frame, scaled to fill the opening. Positive angles swing them inwards.
+export const doors = {
+  cottage: { in: 'house', hinge: 'door_hinge', scale: [1.2, 0.95, 1] },
+  tree: { in: 'big_tree', hinge: [-1.2, 0, 1.6], scale: [1.45, 1.45, 1] },
+}
+
+// Behind the big tree, out through the tunnel in its roots: a path of red roses ending in a heart-shaped arch,
+// hidden until the ending. [x, z] from the tunnel's far end to the arch.
+export const rosePath = { from: [-0.3, -13.8], to: [-0.3, -24], arch: [-0.3, -24.4] }
 
 // The walkable garden, about 30 by 25 m, closed by a tall hedge: [x0, z0, x1, z1] along its middle, height and
 // thickness. Hedges and bushes are dense volumes of leaves, solid to walk into.
 export const hedges = [
-  [-17, -16, 12.5, -16, 3, 1.2], [-17, 9, 12.5, 9, 3, 1.2], [-17, -16, -17, 9, 3, 1.2], [12.5, -16, 12.5, 9, 3, 1.2],
+  [-17, -16, -2, -16, 3, 1.2], [1.4, -16, 12.5, -16, 3, 1.2], [-17, 9, 12.5, 9, 3, 1.2], [-17, -16, -17, 9, 3, 1.2], [12.5, -16, 12.5, 9, 3, 1.2],
 ]
 
 // Flower bushes, [x, z]. They sway and hum once the third layer wakes.
@@ -387,13 +405,13 @@ export const gears = [
     pos: [0.1, 0.022, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
     by: 'small', clip: 'pick_up', stand: [0.055, 0, -2.203], rot: 90, grip: [-0.004, -0.03, 0.072],
   },
-  { // in the hollow under the fountain
-    pos: [7, 0.022, -3], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
-    by: 'small', clip: 'pick_up', stand: [6.955, 0, -3.003], rot: 90, grip: [-0.004, -0.03, 0.072],
+  { // in the grotto under the fountain's basin
+    pos: [6.7, 0.022, -3], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
+    by: 'small', clip: 'pick_up', stand: [6.655, 0, -3.003], rot: 90, grip: [-0.004, -0.03, 0.072],
   },
-  { // on the tallest hat, where a big Fries at the top of the terrace steps reaches at chest height
-    pos: [-7.169, 3.516, -3.205], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
-    by: 'big', clip: 'reach', stand: [-6.09, 1.2, -3.03], rot: -90, grip: [0, 0.05, 0.007],
+  { // on the crown of the hat rack's top hat, where a big Fries on the terrace reaches
+    pos: [-6.5, 3.206, -5.778], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
+    by: 'big', clip: 'reach', stand: [-6.674, 1.2, -4.715], rot: 180, grip: [0, 0.05, 0.007],
   },
 ]
 
@@ -401,12 +419,12 @@ export const gears = [
 // each flies the short way into his left hand, goes to his mouth and flies back to its place at the end.
 export const drinks = [
   {
-    model: 'pink_teacup', pos: [-0.62, 0.75, -5.6], becomes: 'small', label: 'Drink the pink tea', onTable: true,
-    by: 'normal', clip: 'drink', stand: [-1.12, 0, -5.557], rot: 90, grip: [-0.008, 0.045, 0.003],
+    model: 'pink_teacup', pos: [-0.95, 0.76, -5.6], becomes: 'small', label: 'Drink the pink tea', onTable: true,
+    by: 'normal', clip: 'drink', stand: [-1.45, 0, -5.557], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'blue_teacup', pos: [-0.62, 0.75, -4.45], becomes: 'big', label: 'Drink the blue tea', onTable: true,
-    by: 'normal', clip: 'drink', stand: [-1.12, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
+    model: 'blue_teacup', pos: [-0.95, 0.76, -4.45], becomes: 'big', label: 'Drink the blue tea', onTable: true,
+    by: 'normal', clip: 'drink', stand: [-1.45, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
     model: 'cake', pos: [1.6, 0, 2.6], becomes: 'normal', label: 'Eat the cake',
@@ -423,29 +441,28 @@ export const drinks = [
 ]
 
 // The book page in the ending flies into Fries's palm as he reaches, standing where the song left him.
-export const page = { stand: [-1.15, 0, -4.2], rot: 90, grip: [0, 0.05, 0.007] }
+export const page = { stand: [-1.45, 0, -4.2], rot: 90, grip: [0, 0.05, 0.007] }
 
 // Teacups standing on the long table. They pulse on every beat of the song.
 export const tableCups = [
-  [-0.55, 0.75, -7.6], [0.5, 0.75, -6.9], [-0.55, 0.75, -6.2], [0.5, 0.75, -5.9], [0.45, 0.75, -5],
-  [-0.55, 0.75, -4.2], [0.5, 0.75, -3.9], [-0.5, 0.75, -2.8], [0.45, 0.75, -2.2], [-0.5, 0.75, -1.5],
-  [0.5, 0.75, -0.9], [-0.45, 0.75, -0.1], [0.4, 0.75, 0.6], [-0.4, 0.75, 1.1],
+  [-0.55, 0.76, -7.6], [0.5, 0.76, -6.9], [-0.55, 0.76, -6.2], [0.5, 0.76, -5.9], [0.45, 0.76, -5],
+  [-0.75, 0.76, -4.2], [0.5, 0.76, -3.9], [-0.5, 0.76, -2.8], [0.45, 0.76, -2.2], [-0.5, 0.76, -1.5],
+  [0.5, 0.76, -0.9], [-0.45, 0.76, -0.1], [0.4, 0.76, 0.6], [-0.4, 0.76, 1.1],
 ]
 
-// Clocks stuck at six. They jump to 6:01 in the ending.
+// Clocks stuck at six, hanging from the big tree's branches on chains: [x, y, z] of each clock's foot and the
+// way its face looks (degrees). They jump to 6:01 in the ending.
 export const clocks = [
-  { model: 'wall_clock', pos: [0, 3.1, -10.17] }, // over the door in the big tree
-  { model: 'wall_clock', pos: [-8.95, 3.65, -0.6], rot: 90 }, // on the front of the cottage
-  { model: 'hanging_clock', pos: [-2.7, 3.3, -6], rot: 90 }, // hanging from the branches over the table
-  { model: 'hanging_clock', pos: [2.9, 3.4, -5], rot: -90 },
-  { model: 'hanging_clock', pos: [-2.6, 3.2, -0.5], rot: 90 },
-  { model: 'hanging_clock', pos: [3, 3.3, -1], rot: -90 },
+  { pos: [-0.3, 2.35, -10.2], rot: 0 }, // over the tree door
+  { pos: [-3.2, 2.4, -11], rot: 30 },
+  { pos: [3.1, 2.5, -11.4], rot: -25 },
+  { pos: [-5, 2.6, -12.5], rot: 60 },
 ]
 
-// Lanterns hanging from the branches over the table.
+// Lanterns hanging from the big tree's branches on chains: [x, y, z] of each lantern's foot.
 export const lanterns = [
-  [-1.7, 3.3, -7.2], [1.8, 3.2, -6.4], [-1.9, 3.4, -3.4], [1.9, 3.3, -2.8],
-  [-1.7, 3.2, 0.4], [1.7, 3.4, 1], [0.3, 3.6, -4.6], [-0.2, 3.5, -1.2],
+  [-2, 2.2, -10.3], [1.8, 2.3, -10.6], [-4.2, 2.5, -12], [4.4, 2.4, -12.2], [-6, 2.7, -12.4], [5.6, 2.6, -11.6],
+  [0.8, 2.6, -14.2], [-2.6, 2.5, -14.6],
 ]
 
 // Floating things drift inside these boxes, at about their real size. Each gear found adds another batch of
@@ -465,7 +482,7 @@ export const floating = {
 export const zones = {
   table: { pos: [0, -3.5], r: 6.5 },
   tray: { pos: [-1.2, -5], r: 1.4 },
-  hareChair: { pos: [2.2, -7.4], r: 0.9 },
+  hareChair: { pos: [2.4, -7.4], r: 0.9 },
   dormouse: { pos: [0, -9], r: 1.6 },
   cottage: { pos: [-8, -2], r: 4.5 },
 }
@@ -473,20 +490,20 @@ export const zones = {
 // Room kept clear of floating things, falling petals and steam: the cast at their seats and song spots and
 // Fries at his song spot, as upright cylinders [x, z, radius, bottom, top].
 export const keepClear = [
-  [-1.35, -6.8, 0.35, 0, 1.7], // the Hatter in his armchair
-  [1.35, -7.4, 0.35, 0, 1.8], // the March Hare in his armchair
-  [-0.1, -6.3, 0.3, 0.75, 2.6], // the Hatter on the table in the song
-  [2.3, -7.4, 0.35, 0, 1.8], // the March Hare beside his chair in the song
-  [0.1, -7.9, 0.2, 0.75, 1.1], // the Dormouse on its plate
-  [-1.15, -4.2, 0.3, 0, 1.35], // Fries at his song spot
+  [-1.55, -6.8, 0.35, 0, 1.7], // the Hatter in his armchair
+  [1.55, -7.4, 0.35, 0, 1.8], // the March Hare in his armchair
+  [-0.1, -6.3, 0.3, 0.76, 2.6], // the Hatter on the table in the song
+  [2.5, -7.4, 0.35, 0, 1.8], // the March Hare beside his chair in the song
+  [0.1, -7.9, 0.2, 0.76, 1.1], // the Dormouse on its plate
+  [-1.45, -4.2, 0.3, 0, 1.35], // Fries at his song spot
 ]
 
 // Where the world-waking effects sit.
 export const effects = {
   // Tea frozen mid-pour from the teapots' spouts into cups: from, to and how high the arc rises
   teaArcs: [
-    { from: [-0.64, 0.89, -5.25], to: [-0.62, 0.82, -5.6], height: 0.08 },
-    { from: [-0.64, 0.89, -4.75], to: [-0.62, 0.82, -4.45], height: 0.07 },
+    { from: [-0.45, 0.99, -5.42], to: [-0.95, 0.84, -5.6], height: 0.08 },
+    { from: [-0.45, 0.99, -4.92], to: [-0.95, 0.84, -4.45], height: 0.07 },
     { from: [0.49, 0.87, -2.6], to: [0.45, 0.83, -2.2], height: 0.18 },
     { from: [-0.39, 0.87, 0.2], to: [-0.45, 0.83, -0.1], height: 0.16 },
   ],
@@ -504,7 +521,7 @@ export const effects = {
 
 // Staging for the song: Fries faces the table with a teacup in front of him.
 export const song = {
-  fries: { pos: [-1.15, 0, -4.2], rot: 90 },
+  fries: { pos: [-1.45, 0, -4.2], rot: 90 },
   tapCup: 5, // index into tableCups
 }
 
@@ -513,8 +530,8 @@ export const song = {
 // each stands at `song`: the Hatter on the table, the March Hare beside his chair, clear of the table; the
 // Dormouse dances on its plate.
 export const cast = {
-  hatter: { seat: 0.45, song: { pos: [-0.1, 0.75, -6.3], rot: -90 } },
-  hare: { seat: 0.45, song: { pos: [2.3, 0, -7.4], rot: -90 } },
+  hatter: { seat: 0.48, song: { pos: [-0.1, 0.76, -6.3], rot: -90 } },
+  hare: { seat: 0.48, song: { pos: [2.5, 0, -7.4], rot: -90 } },
   dormouse: {},
 }
 

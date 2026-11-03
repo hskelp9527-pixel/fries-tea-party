@@ -17,7 +17,7 @@ function place({ model: name, pos, rot = 0, scale = 1, solid = true }) {
   return object
 }
 
-// The first object placed for each model name: things.hatter, things.tree_door, ...
+// The first object placed for each model name: things.hatter, things.big_tree, ...
 export const things = {}
 const onTable = new Map()
 for (const entry of layout.placed) {
@@ -39,22 +39,82 @@ export function keepOut(p, margin) {
 
 // The mean of an object's width, height and depth.
 export const meanSize = object => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).toArray().reduce((a, b) => a + b) / 3
-things.roses.visible = false
 glow(things.book_page, 0xfff0b0, 2)
+
+// Doors on their hinges: `pivot` turns about the hinge, positive inwards. A closed door is solid.
+export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name, { in: host, hinge, scale }]) => {
+  const pivot = new THREE.Group(), door = model('tree_door')
+  if (typeof hinge === 'string') things[host].getObjectByName(hinge).add(pivot)
+  else things[host].add(pivot.translateX(hinge[0]).translateY(hinge[1]).translateZ(hinge[2]))
+  door.scale.set(...scale)
+  door.position.x = 0.655 * scale[0]
+  pivot.add(door)
+  things[host].updateMatrixWorld(true)
+  addColliders('tree_door', door)
+  return [name, { pivot, door }]
+}))
+
+// Hands at six o'clock on a face: the minute hand up, the hour hand down. `centre` is the pivot in the face's
+// frame and `length` the minute hand's length in metres.
+function hands(face, centre, length) {
+  const minute = model('clock_hand'), hour = model('clock_hand')
+  for (const hand of [minute, hour]) {
+    hand.position.set(...centre)
+    face.add(hand)
+  }
+  minute.scale.setScalar(length / 0.18)
+  hour.scale.setScalar(length * 0.65 / 0.18)
+  hour.rotation.z = Math.PI
+  return { minute, hour }
+}
+hands(things.pocket_watch, [0, 0.026, 0.014], 0.02)
+
+// Hung from the big tree on a chain from the ring on top (`ring` metres up) to the nearest point of a branch
+// above it, the object moved under that point.
+const chain = new THREE.MeshStandardMaterial({ color: 0x3a3028, metalness: 0.6, roughness: 0.5 })
+const wood = []
+things.big_tree.updateMatrixWorld(true)
+things.big_tree.traverse(o => {
+  if (!o.isMesh) return
+  const position = o.geometry.attributes.position
+  for (let i = 0; i < position.count; i++) {
+    const p = new THREE.Vector3().fromBufferAttribute(position, i).applyMatrix4(o.matrixWorld)
+    if (p.y > 2.5) wood.push(p)
+  }
+})
+function hang(object, ring) {
+  const top = object.position.y + ring
+  let branch, best = Infinity
+  for (const p of wood) {
+    const d = Math.hypot(p.x - object.position.x, p.z - object.position.z)
+    if (p.y > top + 0.3 && d < best) { best = d; branch = p }
+  }
+  object.position.x = branch.x
+  object.position.z = branch.z
+  const length = branch.y - top
+  const link = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, length, 4).translate(0, ring + length / 2, 0), chain)
+  link.castShadow = true
+  object.add(link)
+}
 
 export const cups = layout.tableCups.map(pos => place({ model: 'teacup', pos, solid: false }))
 
-export const clocks = layout.clocks.map(c => {
-  const face = place({ ...c, solid: false })
-  const minute = model('clock_hand'), hour = model('clock_hand')
-  minute.position.z = hour.position.z = 0.045
-  hour.scale.y = 0.65
-  hour.rotation.z = Math.PI // six o'clock
-  face.add(minute, hour)
-  return { minute, hour }
+export const clocks = layout.clocks.map(({ pos, rot }) => {
+  const clock = place({ model: 'hanging_clock', pos, rot, solid: false })
+  hang(clock, 0.7)
+  return hands(clock, [0, 0.26, 0.066], 0.13)
 })
 
-for (const pos of layout.lanterns) glow(place({ model: 'lantern', pos, solid: false }), 0xffb050, 3)
+for (const pos of layout.lanterns) {
+  const lantern = place({ model: 'lantern', pos, solid: false })
+  glow(lantern, 0xffb050, 3)
+  hang(lantern, 0.4)
+}
+
+// Candle flames, flickering.
+const flames = []
+scene.traverse(o => { if (o.isMesh && o.name.startsWith('flame')) flames.push(o) })
+for (const flame of flames) glow(flame, 0xffa040, 4)
 
 export const gears = layout.gears.map(g => {
   const object = place({ model: 'gear', pos: g.pos, solid: false })
@@ -142,6 +202,11 @@ export function updateGarden(dt, time) {
     }
     placeDrips()
   }
+
+  flames.forEach((flame, i) => {
+    flame.material.emissiveIntensity = 3.5 + Math.sin(time * 13 + i * 2.1) * 0.6 + Math.sin(time * 31 + i) * 0.4
+    flame.scale.y = 1 + 0.12 * Math.sin(time * 17 + i * 3)
+  })
 
   wind.bushes.value = awake.flowers ? 2.5 : 0.4
   wind.pulse.value = game.pulse

@@ -5,12 +5,13 @@ import { RAPIER, world } from './physics.js'
 import { shapes } from './layout.js'
 import { rimLit } from './scene.js'
 
-// Every art/models/<name>.glb on disk at build time. Dropping a file in replaces that model's boxes.
-const files = import.meta.glob('/art/models/*.glb', { eager: true, query: '?url', import: 'default' })
+// Every art/models/<name>.glb on disk at build time, the garden kit in art/models/kit/ included, named by file.
+// Dropping a file in replaces that model's boxes.
+const files = import.meta.glob('/art/models/**/*.glb', { eager: true, query: '?url', import: 'default' })
 const loader = new GLTFLoader()
 const gltfs = {}
 await Promise.all(Object.entries(files).map(async ([path, url]) => {
-  const gltf = gltfs[path.slice('/art/models/'.length, -'.glb'.length)] = await loader.loadAsync(url)
+  const gltf = gltfs[path.split('/').pop().slice(0, -'.glb'.length)] = await loader.loadAsync(url)
   stripRootMotion(gltf)
   // The characters (the models with clips) catch the sun on their edges.
   if (gltf.animations.length) gltf.scene.traverse(o => { if (o.isMesh) o.material = rimLit(o.material) })
@@ -71,19 +72,21 @@ export function glow(object, colour, intensity) {
 
 const v = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(), turn = new THREE.Euler()
 
-// Static colliders for a placed object: the glb's <name>_collider mesh, or else the placeholder boxes.
+// Static colliders for a placed object: the glb's <name>_collider mesh, else the glb's own meshes (so openings in
+// a model, the tunnel through the tree's roots, the grotto under the fountain, the cottage's doorway, stay
+// open), else the placeholder boxes.
 export function addColliders(name, object) {
   object.updateMatrixWorld(true)
   const node = object.getObjectByName(`${name}_collider`)
-  if (node) {
-    node.traverse(mesh => {
+  if (node || gltfs[name]) {
+    ;(node ?? object).traverse(mesh => {
       if (!mesh.isMesh) return
       const position = mesh.geometry.attributes.position
       const vertices = new Float32Array(position.count * 3)
       for (let i = 0; i < position.count; i++) v.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld).toArray(vertices, i * 3)
       world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, new Uint32Array(mesh.geometry.index.array)))
     })
-    node.removeFromParent()
+    node?.removeFromParent()
     return
   }
   object.getWorldQuaternion(q)

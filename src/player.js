@@ -114,7 +114,7 @@ export function updatePlayer(dt) {
     // While on the ground, probe a little downward every frame: a near-zero fall reads as not grounded,
     // which flicked the clips to jump and back
     const down = grounded && velY <= 0 ? Math.min(velY * dt, -0.05 * s) : velY * dt
-    controller.computeColliderMovement(collider, { x: move.x * dt, y: down, z: move.z * dt })
+    controller.computeColliderMovement(collider, { x: move.x * dt, y: down, z: move.z * dt }, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS)
     const m = controller.computedMovement()
     grounded = controller.computedGrounded()
     if (grounded && velY < 0) velY = 0
@@ -249,6 +249,6 @@ function sees(point) {
   const length = dir.length()
   ray.origin = eye
   ray.dir = dir.divideScalar(length)
-  return world.castRay(ray, length, true, undefined, undefined, collider) === null
+  return world.castRay(ray, length, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, collider) === null
 }
 

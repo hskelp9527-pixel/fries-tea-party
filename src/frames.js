@@ -1,7 +1,8 @@
 import * as THREE from 'three/webgpu'
 import { camera } from './scene.js'
 import { player, placePlayer, setSize, act } from './player.js'
-import { things, gears, cups, wake } from './garden.js'
+import { things, gears, cups, doors, wake } from './garden.js'
+import { roses } from './foliage.js'
 import { setFloatingLevel } from './floating.js'
 import { cast } from './cast.js'
 import { hold } from './hands.js'
@@ -83,9 +84,9 @@ export function stageFrame(id) {
   }
   if (f.ending) {
     turnPink(1)
-    things.tree_door.rotation.y = -100 * DEG
+    doors.tree.pivot.rotation.y = 100 * DEG
   }
-  if (f.roses) things.roses.visible = true
+  if (f.roses) roses.visible = true
   camera.fov = f.fov
   camera.near = f.size === 'small' ? 0.01 : 0.05
   camera.updateProjectionMatrix()
