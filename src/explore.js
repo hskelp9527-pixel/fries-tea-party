@@ -136,9 +136,9 @@ async function eat(d) {
 // Fries takes up the empty cup and holds it out; the Hatter beckons from his chair and the teapot flies over from
 // the tray, tilts and pours, the tea rising in the cup. Then, seen by a fixed camera from his front three-quarters,
 // he lifts the cup to his mouth, drinks and lowers it.
-const SPOUT = new THREE.Vector3(0, 0.2, 0.172), TILT = 0.8
+const SPOUT = new THREE.Vector3(0.001, 0.198, 0.172), TILT = 0.8
 async function pour(d) {
-  const pot = things[d.pot], home = pot.position.clone(), turn = pot.rotation.y
+  const pot = things[d.pot], home = pot.position.clone(), homeTurn = pot.quaternion.clone()
   await walkTo(d.stand, d.rot)
   const yaw = d.rot * DEG, side = yaw + 1.1, f = player.feet
   player.cinematic = true
@@ -153,18 +153,39 @@ async function pour(d) {
   const tea = surface(d.object, new THREE.Vector3(0, 0.025, 0), 0.032, 0.055, { colour: new THREE.Color(d.tea), fill: 0 })
 
   cast.hatter.doing = 'sit_beckon'
-  const cup = d.object.getWorldPosition(new THREE.Vector3()), potYaw = yaw + Math.PI
-  const tip = SPOUT.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), TILT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, potYaw)
-  const over = cup.clone().setY(cup.y + 0.2).sub(tip)
-  pot.rotation.y = potYaw
-  await fly(pot, end => end.copy(over), 1.3, 0.35)
-  await tween(0.5, t => { pot.rotation.x = TILT * t })
+  const cup = d.object.getWorldPosition(new THREE.Vector3())
+  const chest = player.mesh.getObjectByName('mixamorigSpine2').getWorldPosition(new THREE.Vector3())
+  const elbow = player.mesh.getObjectByName('mixamorigLeftForeArm').getWorldPosition(new THREE.Vector3())
+  const away = cup.clone().sub(chest.lerp(elbow, 0.5)).setY(0).normalize(), potYaw = Math.atan2(-away.x, -away.z)
+  const upright = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, potYaw, 0, 'YXZ'))
+  const pouringTurn = new THREE.Quaternion().setFromEuler(new THREE.Euler(TILT, potYaw, 0, 'YXZ'))
+  const tip = new THREE.Vector3(), above = cup.clone().setY(cup.y + 0.2)
+  const over = above.clone().sub(tip.copy(SPOUT).applyQuaternion(pouringTurn))
+  // Tilt outside the arms, then slide in with only the spout over the rim. The two GLBs' bodies clear the
+  // posed arm/chest bone envelopes by over 0.10 m throughout this corridor (including the return).
+  const stageSpout = above.clone().addScaledVector(away, 0.45).add(new THREE.Vector3(0, 0.25, 0))
+  const parked = stageSpout.clone().sub(tip.copy(SPOUT).applyQuaternion(upright))
+  await Promise.all([
+    fly(pot, end => end.copy(parked), 1.3, 0.25),
+    tween(1.3, t => pot.quaternion.slerpQuaternions(homeTurn, upright, t)),
+  ])
+  const tilt = t => {
+    pot.rotation.set(TILT * t, potYaw, 0)
+    pot.position.copy(stageSpout).sub(tip.copy(SPOUT).applyQuaternion(pot.quaternion))
+  }
+  await tween(0.5, tilt)
+  const stage = pot.position.clone()
+  await fly(pot, end => end.copy(over), 0.65, 0)
   const spout = pot.localToWorld(SPOUT.clone()), pouring = stream(spout, cup.clone().setY(cup.y + 0.045), { height: 0.02, radius: 0.007, colour: new THREE.Color(d.tea) })
   await tween(2.2, t => tea.set(t))
   pouring.remove()
   cast.hatter.doing = null
-  await tween(0.5, t => { pot.rotation.x = TILT * (1 - t) })
-  fly(pot, end => end.copy(home), 1.2, 0.3).then(() => { pot.rotation.y = turn })
+  await fly(pot, end => end.copy(stage), 0.65, 0)
+  await tween(0.5, t => tilt(1 - t))
+  await Promise.all([
+    fly(pot, end => end.copy(home), 1.2, 0.3),
+    tween(1.2, t => pot.quaternion.slerpQuaternions(upright, homeTurn, t)),
+  ])
 
   anim.hold('drink', false)
   await wait(contacts.drink.time - 0.6)
