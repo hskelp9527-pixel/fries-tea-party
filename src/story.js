@@ -102,7 +102,7 @@ async function opening() {
   await say('OP-03')
 
   // Shot 2: Fries reaches for the glowing page in the Hatter's watch; it snaps shut.
-  placePlayer([-1.3, 0, -5.7], 143)
+  placePlayer([-1.5, 0, -5.9], 143)
   await shot(v(-2.15, 1.5, -4.55), home)
   act('reach')
   await tween(0.8, t => { player.mesh.rotation.x = 0.25 * t })
@@ -128,7 +128,7 @@ async function opening() {
   await Promise.all([say('OP-10'), arc(watch, home, 0.3, 0.8)])
 
   player.mesh.rotation.x = 0
-  placePlayer([-1.3, 0, -5.7], 200)
+  placePlayer([-1.5, 0, -5.9], 200)
 }
 
 async function ending() {
@@ -150,7 +150,7 @@ async function ending() {
 
   // The March Hare grabs the Dormouse and stuffs him into the pink teapot.
   const teapot = things.pink_teapot.position
-  await Promise.all([say('ED-02'), stand('hare', { pos: [0.95, 0, -7.7], rot: -90 }, 0.8)])
+  await Promise.all([say('ED-02'), stand('hare', { pos: [0.6, 0, -8.4], rot: -60 }, 0.8)])
   await Promise.all([say('ED-03'), stand('dormouse', { pos: [teapot.x, teapot.y + 0.12, teapot.z], rot: 90 }, 1.2, 0.5)])
 
   // Fries reaches out and the page flies from the watch into his palm, arriving as his hand does; it stays in
@@ -165,7 +165,7 @@ async function ending() {
   await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = 100 * DEG * t })])
 
   // Fries walks round the table to the door; the three ignore him completely.
-  const walking = walk([[-2.4, 0, -5.6], [-2.5, 0, -8.6], [-1.2, 0, -9.6], [-0.3, 0, -10]], 1.3)
+  const walking = walk([[-2.6, 0, -5.6], [-3.6, 0, -8.2], [-5.96, 0, -9.75]], 1.3)
   await say('ED-05')
   await say('ED-06')
   await walking
@@ -173,8 +173,8 @@ async function ending() {
 
   // He steps into the tunnel and sees the red roses beyond it; the picture freezes.
   roses.visible = true
-  await shot(v(-0.3, 1.6, -8.8), v(-0.3, 1.3, -16))
-  await Promise.all([say('ED-08'), walk([[-0.3, 0, -11.6]], 1)])
+  await shot(v(-6.6, 1.6, -8.7), v(-3, 1.3, -15))
+  await Promise.all([say('ED-08'), walk([[-4.6, 0, -12.1]], 1)])
   await wait(0.4)
   renderer.setAnimationLoop(null)
 }

@@ -12,7 +12,7 @@ const STONE = 0xaaa59b, SYRUP = 0xc98a2b, WALL = 0xe8dcc4, ROOF = 0x8a4b3a, BRIC
 const CHINA = 0xf6f6f2, PINK = 0xf29bc0, BLUE = 0x7fb0f0, SILVER = 0xc8c8cc, PATH = 0xbdb4a2
 const SKIN = 0xf1c9a5, NOSE = 0xe0a080, COAT = 0x6a4a8c, TROUSERS = 0x4a5a3a, HAT = 0x3c4a3a, HATBAND = 0xc23b4a
 const FUR = 0xc8a27a, HARE_COAT = 0x3f6f8f, MOUSE = 0x8a6a52, SHIRT = 0xf2c230, JEANS = 0x35507a, HAIR = 0x5a3a20
-const ROSE = 0xd0182c, GLOW = 0xfff2e0, BLACK = 0x222222, TERRACE = 0xb7ab96, WALLSTONE = 0x9d9283, LANTERN = 0xffc070
+const ROSE = 0xd0182c, GLOW = 0xfff2e0, BLACK = 0x222222, WALLSTONE = 0x9d9283, LANTERN = 0xffc070
 const FENCE = 0xd8c8a8, ARCH = 0xf0ece0, BLOSSOM = 0xf6d6e2, BLOSSOM2 = 0xfff6ee, SOIL = 0x6e5038
 const FLOWERS = [0xe88ab0, 0xf2d04a, 0xffffff, 0xb08ae0, 0xf6a86a], CYPRESS = 0x2c4630
 
@@ -124,34 +124,21 @@ export const shapes = {
     [0, 1.06, 0.14, 0.05, 0.05, 0.04, NOSE],
     [0, 1.2, -0.01, 0.3, 0.06, 0.28, HAIR],
   ],
-  fountain: [ // a raised stone basin up two steps; a crack at the foot of its west wall leads a small Fries
-    // through a tunnel to a hollow under the fountain
-    [0, 0.225, -1.8, 6, 0.45, 2.4, STONE],
-    [0, 0.225, 1.8, 6, 0.45, 2.4, STONE],
-    [1.8, 0.225, 0, 2.4, 0.45, 1.2, STONE],
-    [-1.8, 0.225, -0.3875, 2.4, 0.45, 0.425, STONE],
-    [-1.8, 0.225, 0.3875, 2.4, 0.45, 0.425, STONE],
-    [-1.8, 0.375, 0, 2.4, 0.15, 0.35, STONE], // over the tunnel, 0.35 wide and 0.3 high
-    [0, 0.425, 0, 1.2, 0.05, 1.2, STONE], // over the hollow
-    [-3.6, 0.075, -1.9, 0.4, 0.15, 1.8, STONE], // steps
-    [-3.2, 0.15, -1.9, 0.4, 0.3, 1.8, STONE],
-    [-3.3, 0.06, 0.35, 0.12, 0.12, 0.1, STONE], // rubble by the crack
-    [-3.35, 0.05, -0.4, 0.1, 0.1, 0.12, STONE],
-    [0, 0.625, -2.875, 6, 0.35, 0.25, WALLSTONE], // low walls round the edge
-    [0, 0.625, 2.875, 6, 0.35, 0.25, WALLSTONE],
-    [2.875, 0.625, 0, 0.25, 0.35, 6, WALLSTONE],
-    [-2.875, 0.625, 1, 0.25, 0.35, 4, WALLSTONE],
-    [-2.875, 0.625, -2.9, 0.25, 0.35, 0.2, WALLSTONE],
-    [0, 0.7, -1.4, 3, 0.5, 0.2, STONE], // the fountain
-    [0, 0.7, 1.4, 3, 0.5, 0.2, STONE],
-    [-1.4, 0.7, 0, 0.2, 0.5, 2.6, STONE],
-    [1.4, 0.7, 0, 0.2, 0.5, 2.6, STONE],
-    [0, 0.85, 0, 2.6, 0.04, 2.6, SYRUP],
-    [0, 1.65, 0, 0.36, 1.6, 0.36, STONE],
-    [0, 2.5, 0, 1.2, 0.14, 1.2, STONE],
+  fountain: [ // a round basin 2.8 m across with its floor 0.42 m up over a hollow, a small arch into it at the foot
+    // of its +X wall, and a column of tiers
+    [0, 0.25, -1.3, 2.8, 0.5, 0.2, STONE],
+    [0, 0.25, 1.3, 2.8, 0.5, 0.2, STONE],
+    [-1.3, 0.25, 0, 0.2, 0.5, 2.4, STONE],
+    [1.3, 0.25, -0.7, 0.2, 0.5, 1, STONE],
+    [1.3, 0.25, 0.7, 0.2, 0.5, 1, STONE],
+    [1.3, 0.4, 0, 0.2, 0.2, 0.4, STONE],
+    [0, 0.44, 0, 2.4, 0.04, 2.4, STONE],
+    [0, 0.47, 0, 2.4, 0.02, 2.4, SYRUP],
+    [0, 1.4, 0, 0.3, 1.9, 0.3, STONE],
+    [0, 1.6, 0, 1.2, 0.12, 1.2, STONE],
+    [0, 2.4, 0, 0.7, 0.12, 0.7, STONE],
   ],
-  terrace: [[0, 0.6, 0, 10, 1.2, 12, TERRACE]], // raised 1.2 m
-  landing: [[0, 0.3, 0, 1.4, 0.6, 1.1, STONE]], // under the upper flight of steps
+  porch: [[0, 1.2, 0, 3.2, 2.4, 2.4, STONE]], // the cottage's high stone porch, 2.4 m above the top terrace
   house: [ // the March Hare's cottage, its door at the top of three steps, 1.1 m up
     [0, 1.5, 0, 6, 3, 5, WALL],
     [0, 3.25, 0, 6.6, 0.5, 5.6, ROOF],
@@ -280,15 +267,22 @@ export const shapes = {
   flagstone_d: [[0, 0.03, 0, 0.64, 0.06, 0.52, PATH]],
 }
 
-// Fries's starting place, at the south end of the long table, facing north.
+// Fries's starting place, at the south end of the long table, facing north up it at the hosts.
 export const start = { pos: [0, 0, 3.6], rot: 180 }
 
-// Copies of a model laid end to end from one [x, z] point to another; the model's length runs along its x.
-const row = (model, [x0, z0], [x1, z1], length) => {
+// Copies of a model laid end to end from one [x, z] point to another at height `y`; the model's length runs along
+// its x.
+const row = (model, [x0, z0], [x1, z1], length, y = 0, extra = {}) => {
   const n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / length))
   const rot = Math.atan2(z0 - z1, x1 - x0) * 180 / Math.PI
-  return Array.from({ length: n }, (_, i) => ({ model, pos: [x0 + (x1 - x0) * (i + 0.5) / n, 0, z0 + (z1 - z0) * (i + 0.5) / n], rot }))
+  return Array.from({ length: n }, (_, i) => ({ model, pos: [x0 + (x1 - x0) * (i + 0.5) / n, y, z0 + (z1 - z0) * (i + 0.5) / n], rot, ...extra }))
 }
+// A flowered dry-stone wall along a line, `courses` walls high, its foot at `y`.
+const wall = (from, to, y, courses = 1) => [
+  ...Array.from({ length: courses }, (_, k) => row('wall_stone', from, to, 2, y + 0.6 * k)).flat(),
+  ...row('wall_cap_flowers', from, to, 2, y + 0.6 * courses, { solid: false }),
+]
+
 // Flagstones along a path's centre line, about `spacing` apart, the four shapes in turn, set a little to either
 // side.
 const stones = (line, spacing) => line.slice(1).flatMap(([x1, z1], i) => {
@@ -303,17 +297,21 @@ const stones = (line, spacing) => line.slice(1).flatMap(([x1, z1], i) => {
   })
 })
 
-// The paths, as centre lines of [x, z] points. Flowers grow in bands either side of them.
+// The paths, as centre lines of [x, z] points: up from the southern approach along the west side of the table
+// to the door in the big tree; across the lawn to the fountain's plaza and on to the cottage's first flight of
+// steps; and out to the overlook. Flowers grow in bands either side of them.
 export const paths = [
-  [[0, 8.4], [0, 2.6]],
-  [[-0.8, 2.4], [-3, 0.6], [-3.2, -1.8], [-3.2, -2.6], [-2.5, -8.6], [-2, -9.2], [-0.6, -9.5]],
-  [[0.8, 2.4], [2.6, 1], [2.8, 0.4], [2.9, -4.6]],
+  [[1, 27], [0.6, 20], [0, 14], [-0.5, 9], [-1.4, 5.6], [-2.7, 2.6], [-3.1, -1], [-3.2, -4.5], [-3.7, -7.6], [-4.9, -9.3], [-5.9, -9.8]],
+  [[0, 14], [3, 11.6], [6.6, 9], [9.4, 5.4], [10.9, 0.6]],
+  [[0.4, 2.4], [4, 1.4], [8.6, -2.4]],
+  [[13.6, -9.4], [11.6, -10.2], [9.2, -10.7], [8, -10.8]],
+  [[17.4, -4.2], [21.5, -3.6], [26, -3.2], [30, -3.4]],
 ]
 
 // Every fixed object. `onTable` props dance on the table in the final chorus; `on` names the prop one stands on,
 // which it rides with. `solid: false` leaves it without colliders; `scale` is uniform.
 export const placed = [
-  { model: 'big_tree', pos: [0, 0, -12] }, // the tunnel through its roots runs north from the door
+  { model: 'big_tree', pos: [-4.2, 0, -12.2], rot: -30 }, // its long branches reach south-east over the head of the table; the tunnel through its roots runs north-north-east from the door
   { model: 'long_table', pos: [0, 0, -3.5], rot: 90 },
   { model: 'armchair', pos: [-1.55, 0, -6.8], rot: 90 },
   { model: 'hatter', pos: [-1.55, 0, -6.8], rot: 90, solid: false },
@@ -338,33 +336,36 @@ export const placed = [
   { model: 'candelabra', pos: [0, 0.76, -5.9], rot: 90, solid: false, onTable: true },
   { model: 'candle', pos: [0.15, 0.76, -1.6], solid: false, onTable: true },
   { model: 'candle', pos: [-0.2, 0.76, -0.6], solid: false, onTable: true },
-  { model: 'fountain', pos: [7, 0, -3], rot: 180 }, // about 6 m east of the table; its grotto opens west, towards the table
-  // The terrace west of the table: a flight of two step modules (the upper one on a landing) up its east face,
-  // dry-stone walls with flowers along its other edges
-  { model: 'terrace', pos: [-11, 0, -2] },
-  { model: 'landing', pos: [-5.45, 0, -2] },
-  { model: 'steps_stone', pos: [-5.45, 0.6, -2], rot: 90 },
-  { model: 'steps_stone', pos: [-4.35, 0, -2], rot: 90 },
-  ...row('wall_stone', [-16, -7.8], [-6, -7.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.2, w.pos[2]] })),
-  ...row('wall_cap_flowers', [-16, -7.8], [-6, -7.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.8, w.pos[2]], solid: false })),
-  ...row('wall_stone', [-16, 3.8], [-12, 3.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.2, w.pos[2]] })),
-  ...row('wall_cap_flowers', [-16, 3.8], [-12, 3.8], 2).map(w => ({ ...w, pos: [w.pos[0], 1.8, w.pos[2]], solid: false })),
-  { model: 'house', pos: [-11.5, 1.2, -2], rot: 90 }, // on the terrace, its door facing the table
-  { model: 'hat_rack', pos: [-6.7, 1.2, -5.8], rot: -90 }, // on the terrace by the cottage's front; gear 3 on its top hat
-  // Fences along the paths (one broken where the view from the south-east looks through), and arches at bends
-  ...row('fence_picket', [-1, 4.6], [-1, 8.6], 1.5),
-  ...row('fence_picket', [1, 4.6], [1, 8.6], 1.5),
-  ...row('fence_picket', [-1.3, 3.4], [-3.5, 2.3], 1.5),
-  ...row('fence_picket', [-4.2, 2.8], [-4.2, 0.8], 1.5),
-  ...row('fence_broken', [1.3, 3.4], [3.5, 2.3], 1.5),
-  ...row('fence_picket', [3.7, 1.4], [3.75, -0.6], 1.5),
-  ...row('fence_picket', [-3.5, -3.6], [-3.5, -7.6], 1.5),
-  { model: 'rose_arch', pos: [0, 0, 6.2] },
-  { model: 'rose_arch', pos: [2.85, 0, -0.2], rot: 90 },
-  { model: 'rose_arch', pos: [-3.2, 0, -2.4], rot: 90 },
-  { model: 'ivy_strand', pos: [-1.05, 0, -10.6], rot: 20, solid: false },
-  { model: 'ivy_strand', pos: [1.0, 0, -10.7], rot: -15, solid: false },
-  { model: 'ivy_strand', pos: [-15, 1.2, -7.6], solid: false },
+  { model: 'fountain', pos: [13, 0, -5], rot: 180 }, // on its plaza 13 m east of the table; its grotto opens west, towards the table
+  // The cottage, high at the back right on its terraces (see `terraces`): flights of step modules up each 0.6 m,
+  // staggered, and flowered retaining walls on the terraces' edges. Its high porch, 2.4 m above the top
+  // terrace with no steps up, holds the hat rack with gear 3 on its top hat.
+  { model: 'steps_stone', pos: [8, 0, -11.45] },
+  { model: 'steps_stone', pos: [11, 0.6, -12.85] },
+  { model: 'steps_stone', pos: [12.6, 1.2, -14.25] },
+  ...wall([4, -12.1], [7.4, -12.1], 0), ...wall([8.7, -12.1], [32, -12.1], 0), ...wall([3.9, -12], [3.9, -38], 0),
+  ...wall([7, -13.5], [10.3, -13.5], 0.6), ...wall([11.7, -13.5], [32, -13.5], 0.6), ...wall([6.9, -13.4], [6.9, -38], 0.6),
+  ...wall([9.5, -14.9], [11.9, -14.9], 1.2), ...wall([13.3, -14.9], [30, -14.9], 1.2), ...wall([9.4, -14.8], [9.4, -38], 1.2),
+  { model: 'house', pos: [19, 1.8, -24], rot: -20 }, // its door faces south-south-west, down the terraces to the table
+  { model: 'porch', pos: [16.6, 1.8, -18.2] },
+  ...wall([15, -16.82], [18.2, -16.82], 1.8, 4), ...wall([14.82, -17], [14.82, -19.4], 1.8, 4), ...wall([18.38, -17], [18.38, -19.4], 1.8, 4),
+  { model: 'hat_rack', pos: [16.6, 4.2, -17.5], rot: 180 },
+  // Fences along the paths (one broken where the view from the flowers looks through to the table), arches at
+  // the bends, and the low walls and bushes that close the garden at the brow
+  ...row('fence_picket', [-1.2, 9], [-2.3, 5], 1.5),
+  ...row('fence_broken', [0.9, 9.2], [0.1, 6], 1.5),
+  ...row('fence_picket', [2.6, 12.6], [6, 10.2], 1.5),
+  ...row('fence_picket', [-4.2, 2.2], [-4.5, -2.6], 1.5),
+  ...row('fence_picket', [12.6, -8.6], [9, -9.4], 1.5),
+  { model: 'rose_arch', pos: [-2.7, 0, 2.6], rot: -50 },
+  { model: 'rose_arch', pos: [6.6, 0, 9], rot: 35 },
+  { model: 'rose_arch', pos: [-3.7, 0, -7.6], rot: 15 },
+  { model: 'rose_arch', pos: [21.5, 0, -3.6], rot: 85 },
+  ...wall([-34, 27], [-12, 27], 0), ...wall([12, 27], [34, 27], 0), ...wall([-35, 26], [-35, 6], 0),
+  { model: 'ivy_strand', pos: [-6.8, 0, -10.9], rot: -30, solid: false },
+  { model: 'ivy_strand', pos: [-3.9, 0, -9.9], rot: -40, solid: false },
+  { model: 'ivy_strand', pos: [4.2, 0, -12.4], solid: false },
+  { model: 'ivy_strand', pos: [14.5, 1.8, -15.2], solid: false },
   ...paths.flatMap(line => stones(line, 0.6)),
 ]
 
@@ -377,18 +378,32 @@ export const doors = {
 
 // Behind the big tree, out through the tunnel in its roots: a path of red roses ending in a heart-shaped arch,
 // hidden until the ending. [x, z] from the tunnel's far end to the arch.
-export const rosePath = { from: [-0.3, -13.8], to: [-0.3, -24], arch: [-0.3, -24.4] }
+export const rosePath = { from: [-3.4, -14.3], to: [2.6, -24.7], arch: [2.8, -25.1] }
 
-// The walkable garden, about 30 by 25 m, closed by a tall hedge: [x0, z0, x1, z1] along its middle, height and
-// thickness. Hedges and bushes are dense volumes of leaves, solid to walk into.
+// The terraces the cottage stands on, each [x0, z0, x1, z1, height]: lawn on top, retaining walls on the edges.
+export const terraces = [
+  [4, -38, 32, -12, 0.6],
+  [7, -38, 32, -13.4, 1.2],
+  [9.5, -38, 30, -14.8, 1.8],
+]
+
+// The fountain's round plaza, paving flush with the lawn: [x, z, radius].
+export const plaza = [13, -5, 4.5]
+
+// The overlook: a high meadow at the east edge, [x, z, radius, height], where a big Fries sees the whole garden.
+export const overlook = [30, -3, 9, 3.5]
+
+// Low hedges at the brow: [x0, z0, x1, z1] along the middle, height and thickness. Hedges and bushes are dense
+// volumes of leaves, solid to walk into.
 export const hedges = [
-  [-17, -16, -2, -16, 3, 1.2], [1.4, -16, 12.5, -16, 3, 1.2], [-17, 9, 12.5, 9, 3, 1.2], [-17, -16, -17, 9, 3, 1.2], [12.5, -16, 12.5, 9, 3, 1.2],
+  [35, 24, 35, -8, 1.1, 0.9], [-35, -2, -35, -36, 1.1, 0.9], [-30, -37, -8, -37, 1.1, 0.9],
 ]
 
 // Flower bushes, [x, z]. They sway and hum once the third layer wakes.
 export const bushes = [
-  [-2.2, 7.6], [-5.2, 7.4], [-7.2, 7.4], [-15.8, 7.4], [2.4, 7.8], [6.8, 7.6], [11.2, 7.4], [5.2, 0.9], [8.8, 1],
-  [11.2, -7.6], [3, -9.4], [6.8, -14.6], [11.2, -14.4], [-3.6, -11.6], [-1.6, -14.8], [-15.4, -14.6],
+  [-7.5, 6], [-10, 1], [-12, -5.5], [-9.5, -9.5], [4.6, -9.6], [7.8, 2.4], [18, 4], [22.6, 8.4], [-6, 12], [8.6, 15], [-14, 12],
+  [21, -8.6], [-18, 20], [-26, 14], [16, 20], [27, 16], [-22, -14], [-14, -24], [-26, -28], [2, -30], [-30, 2], [33, 12],
+  [-3, 22], [5, 24],
 ]
 
 // The three gears, collectable in any order. Each wakes its own layer of the world.
@@ -406,12 +421,13 @@ export const gears = [
     by: 'small', clip: 'pick_up', stand: [0.055, 0, -2.203], rot: 90, grip: [-0.004, -0.03, 0.072],
   },
   { // in the grotto under the fountain's basin
-    pos: [6.7, 0.022, -3], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
-    by: 'small', clip: 'pick_up', stand: [6.655, 0, -3.003], rot: 90, grip: [-0.004, -0.03, 0.072],
+    pos: [12.7, 0.022, -5], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
+    by: 'small', clip: 'pick_up', stand: [12.655, 0, -5.003], rot: 90, grip: [-0.004, -0.03, 0.072],
   },
-  { // on the crown of the hat rack's top hat, where a big Fries on the terrace reaches
-    pos: [-6.5, 3.206, -5.778], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
-    by: 'big', clip: 'reach', stand: [-6.674, 1.2, -4.715], rot: 180, grip: [0, 0.05, 0.007],
+  { // on the crown of the hat rack's top hat on the cottage's high porch, where a big Fries on the top terrace
+    // reaches
+    pos: [16.578, 6.206, -17.3], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
+    by: 'big', clip: 'reach', stand: [16.243, 1.8, -15.255], rot: 180, grip: [0, 0.05, 0.007],
   },
 ]
 
@@ -435,8 +451,8 @@ export const drinks = [
     by: 'small', clip: 'drink', stand: [3.3, 0, -1.6], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [-7.6, 1.2, 2.9], becomes: 'normal', label: 'Eat the cake',
-    by: 'big', clip: 'drink', stand: [-7.6, 1.2, 1.95], rot: 0, grip: [-0.008, 0.045, 0.003],
+    model: 'cake', pos: [12, 1.2, -16.2], becomes: 'normal', label: 'Eat the cake',
+    by: 'big', clip: 'drink', stand: [12, 1.2, -15.25], rot: 0, grip: [-0.008, 0.045, 0.003],
   },
 ]
 
@@ -453,16 +469,16 @@ export const tableCups = [
 // Clocks stuck at six, hanging from the big tree's branches on chains: [x, y, z] of each clock's foot and the
 // way its face looks (degrees). They jump to 6:01 in the ending.
 export const clocks = [
-  { pos: [-0.3, 2.35, -10.2], rot: 0 }, // over the tree door
-  { pos: [-3.2, 2.4, -11], rot: 30 },
-  { pos: [3.1, 2.5, -11.4], rot: -25 },
-  { pos: [-5, 2.6, -12.5], rot: 60 },
+  { pos: [-5.2, 2.4, -10], rot: -30 }, // over the tree door
+  { pos: [-1.6, 2.5, -8.8], rot: 60 },
+  { pos: [1, 2.6, -8.2], rot: -40 },
+  { pos: [-7.5, 2.6, -8.8], rot: 10 },
 ]
 
 // Lanterns hanging from the big tree's branches on chains: [x, y, z] of each lantern's foot.
 export const lanterns = [
-  [-2, 2.2, -10.3], [1.8, 2.3, -10.6], [-4.2, 2.5, -12], [4.4, 2.4, -12.2], [-6, 2.7, -12.4], [5.6, 2.6, -11.6],
-  [0.8, 2.6, -14.2], [-2.6, 2.5, -14.6],
+  [-1.6, 2.2, -7.6], [1.4, 2.3, -7.2], [0, 2.5, -8.4], [-2.8, 2.4, -6.4], [2.4, 2.4, -8.8], [-3.6, 2.5, -9.6],
+  [-6.6, 2.6, -8.4], [-0.6, 2.6, -10.4],
 ]
 
 // Floating things drift inside these boxes, at about their real size. Each gear found adds another batch of
@@ -471,9 +487,9 @@ export const floating = {
   perGear: { teacup: 14, hat: 5, spoon: 8, plate: 6, pocket_watch: 3 },
   clouds: [
     { center: [0, 2.4, -3.5], size: [4.6, 2, 10] },
-    { center: [7, 2.4, -3], size: [5, 2, 5] },
-    { center: [-8.4, 3.4, -1.6], size: [3, 1.6, 6] },
-    { center: [3.4, 2.6, -10.5], size: [3, 1.6, 4] },
+    { center: [13, 2.4, -5], size: [6, 2, 6] },
+    { center: [16, 5, -19], size: [8, 2, 6] },
+    { center: [-3, 3, -10], size: [5, 1.6, 4] },
     { center: [0, 2.2, 5.2], size: [6, 1.4, 4] },
   ],
 }
@@ -484,7 +500,7 @@ export const zones = {
   tray: { pos: [-1.2, -5], r: 1.4 },
   hareChair: { pos: [2.4, -7.4], r: 0.9 },
   dormouse: { pos: [0, -9], r: 1.6 },
-  cottage: { pos: [-8, -2], r: 4.5 },
+  cottage: { pos: [17, -19], r: 7 },
 }
 
 // Room kept clear of floating things, falling petals and steam: the cast at their seats and song spots and
@@ -509,14 +525,14 @@ export const effects = {
   ],
   // Syrup frozen in arcs from the fountain's bowl into its basin, and golden drops hanging round it
   syrupArcs: [
-    { from: [7.6, 2.5, -3], to: [8.15, 0.87, -3], height: 0.25 },
-    { from: [6.4, 2.5, -3], to: [5.85, 0.87, -3], height: 0.25 },
-    { from: [7, 2.5, -2.4], to: [7, 0.87, -1.85], height: 0.25 },
-    { from: [7, 2.5, -3.6], to: [7, 0.87, -4.15], height: 0.25 },
+    { from: [13.6, 2.3, -5], to: [14.15, 0.55, -5], height: 0.2 },
+    { from: [12.4, 2.3, -5], to: [11.85, 0.55, -5], height: 0.2 },
+    { from: [13, 2.3, -4.4], to: [13, 0.55, -3.85], height: 0.2 },
+    { from: [13, 2.3, -5.6], to: [13, 0.55, -6.15], height: 0.2 },
   ],
-  syrupDrops: { center: [7, 1.7, -3], size: [4.4, 2, 4.4], count: 70 },
+  syrupDrops: { center: [13, 1.6, -5], size: [4.4, 2, 4.4], count: 70 },
   petals: { center: [0, 2.2, -4], size: [12, 3.4, 14], count: 240 },
-  butterflies: { center: [7, 0.97, -3], perch: 1.4, radius: 3.5, count: 14 }, // perched round the basin rim
+  butterflies: { center: [13, 0.52, -5], perch: 1.3, radius: 3.5, count: 14 }, // perched round the basin rim
 }
 
 // Staging for the song: Fries faces the table with a teacup in front of him.
@@ -535,20 +551,21 @@ export const cast = {
   dormouse: {},
 }
 
-// The lawn and its flowers (see src/fields.js). Grass grows over `lawn` [x0, z0, x1, z1] except on the `bare`
-// rectangles (terrace, fountain basin, tree, under the table) and the paths (`pathWidth` wide); flowers bloom in
-// bands along the paths, in the `drifts` [x, z, radius] and in loose patches. The land is flat over `plateau` and
-// falls away beyond it. The WebGL fallback gets a third of the grass and half the flowers.
+// The lawn and its flowers (see src/fields.js). Grass grows over `lawn` [x0, z0, x1, z1], on the land and on the
+// terraces, except on the `bare` rectangles (under the table, round the tree's roots, the cottage, its porch) and
+// the paths (`pathWidth` wide); flowers bloom in bands along the paths, in the `drifts` [x, z, radius] and in loose
+// patches. The land is flat over `plateau` (but for the overlook) and falls away beyond it. The WebGL fallback
+// gets half the grass and flowers.
 export const meadow = {
-  plateau: [-36, -31, 36, 29],
-  lawn: [-16.4, -15.4, 11.9, 8.4],
-  bare: [[-16, -8, -6, 4], [4, -6, 10, 0], [-1.8, -13.8, 1.8, -10.2], [-0.85, -8.6, 0.85, 1.6]],
-  pathWidth: 0.8,
+  plateau: [-36, -38, 36, 29],
+  lawn: [-35, -37, 35, 28],
+  bare: [[-1.15, -7.8, 1.15, 0.8], [-7, -14.6, -1.6, -9.6], [10.3, -32, 28, -16.6], [14.8, -19.4, 18.4, -16.8]],
+  pathWidth: 1.2,
   drifts: [
-    [-3.4, 5.6, 1.6], [-5.3, 2.6, 1.4], [-9.6, 6.4, 1.8], [-13.4, 6.6, 1.8], [3.6, 5.4, 1.6], [6.6, 3, 1.6], [9.8, 5.8, 1.8],
-    [11.1, 2, 1.4], [11.1, -3, 1.4], [4.6, -8.4, 1.6], [8.6, -8.6, 1.6], [5.6, -12.4, 1.8], [9.8, -12.2, 1.8], [-4.4, -9.6, 1.4],
-    [-8.6, -10.2, 1.6], [-12.8, -10.4, 1.6], [-6.4, -13.6, 1.8], [-10.8, -14, 1.8], [-14.8, -12.4, 1.6], [-4.8, -6.4, 1.2],
+    [-4, 4.2, 2.2], [3.6, 5, 2], [-8, 8, 2.5], [6, 12.6, 2.4], [-3.4, 12, 2.2], [12, 8, 2.5], [-12, 4, 2.2], [16, 2, 2.4],
+    [-14, -6, 2], [24, 10, 2.5], [-20, 8, 3], [-20, -8, 3], [26, -1, 2.5], [-9, -12, 2.2], [9, -8.6, 1.8], [-6, 18, 2.6],
+    [10, 18, 2.6], [-16, 18, 2.8], [20, 18, 2.6], [18, -10, 2], [25, -18, 2.4], [13, -21, 2], [-26, -20, 3], [0, -18, 2.6],
   ],
-  grassPerSquareMetre: 30,
-  flowersPerSquareMetre: 22,
+  grassPerSquareMetre: 22,
+  flowersPerSquareMetre: 14,
 }
