@@ -97,8 +97,9 @@ export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name,
     wall = new THREE.Group().add(back, inside)
     wall.position.copy(tree.localToWorld(new THREE.Vector3((x0 + x1) / 2, 0, z)))
     wall.rotation.y = tree.rotation.y
+    wall.scale.copy(tree.scale)
     scene.add(wall)
-    const slab = world.createCollider(RAPIER.ColliderDesc.cuboid(half, (y1 - y0) / 2, 0.1)
+    const slab = world.createCollider(RAPIER.ColliderDesc.cuboid(half * tree.scale.x, (y1 - y0) / 2 * tree.scale.y, 0.1 * tree.scale.z)
       .setTranslation(...tree.localToWorld(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, z)).toArray())
       .setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), tree.rotation.y)))
     unplug = () => {

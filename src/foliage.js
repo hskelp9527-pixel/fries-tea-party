@@ -41,19 +41,21 @@ function crown(list, { centre, radii, cell, size, light = 1, layers = 2.5 }) {
   }
 }
 
-// The big tree's crown: the branch wood above 3.5 m is gathered into cells about 1.6 m across, and each cell that
-// the gap field leaves open grows a cluster of leaves round the branch there. The gaps let the low sun through.
+// The big tree's crown: the branch wood above where the trunk forks (5 m up the unscaled tree, clear of gear 1's
+// hollow) is gathered into cells about 1.6 m across at the tree's scale, and each cell that the gap field leaves open
+// grows a cluster of leaves round the branch there. Few gaps: enough to let the low sun through, not so many that the
+// bare branch wood shows over the table.
 const treeLeaves = []
 const tree = things.big_tree
 tree.updateMatrixWorld(true)
-const cellsOfWood = new Map(), v = new THREE.Vector3()
+const cellsOfWood = new Map(), v = new THREE.Vector3(), FORK = 5.0, CELL = 1.6 * tree.scale.x
 tree.traverse(o => {
   if (!o.isMesh) return
   const position = o.geometry.attributes.position
   for (let i = 0; i < position.count; i += 3) {
     v.fromBufferAttribute(position, i).applyMatrix4(o.matrixWorld)
-    if (v.y < 3.5) continue
-    const key = [Math.floor(v.x / 1.6), Math.floor(v.y / 1.6), Math.floor(v.z / 1.6)].join()
+    if (v.y < tree.position.y + FORK * tree.scale.y) continue
+    const key = [Math.floor(v.x / CELL), Math.floor(v.y / CELL), Math.floor(v.z / CELL)].join()
     const c = cellsOfWood.get(key) ?? cellsOfWood.set(key, { sum: new THREE.Vector3(), n: 0 }).get(key)
     c.sum.add(v)
     c.n++
@@ -63,12 +65,12 @@ const treeBase = tree.position
 for (const { sum, n } of cellsOfWood.values()) {
   if (n < 4) continue
   const centre = sum.divideScalar(n)
-  if (noise(centre.x * 0.55 + 2, centre.z * 0.55 + centre.y * 0.3) < 0.32) continue
-  const outer = Math.min(1, Math.hypot(centre.x - treeBase.x, centre.z - treeBase.z) / 6)
+  if (noise(centre.x * 0.55 + 2, centre.z * 0.55 + centre.y * 0.3) < 0.18) continue
+  const outer = Math.min(1, Math.hypot(centre.x - treeBase.x, centre.z - treeBase.z) / (6 * tree.scale.x))
   // The camera's sweep stops at the leaves (a sensor nothing else feels), so it pulls in rather than entering them.
-  world.createCollider(RAPIER.ColliderDesc.ball(1.2).setTranslation(centre.x, centre.y + 0.25, centre.z).setSensor(true))
+  world.createCollider(RAPIER.ColliderDesc.ball(1.2 * tree.scale.x).setTranslation(centre.x, centre.y + 0.25, centre.z).setSensor(true))
   crown(treeLeaves, {
-    centre: centre.add(new THREE.Vector3(0, 0.25, 0)), radii: new THREE.Vector3(1.15, 0.8, 1.15),
+    centre: centre.add(new THREE.Vector3(0, 0.25, 0)), radii: new THREE.Vector3(1.15, 0.8, 1.15).multiplyScalar(tree.scale.x),
     cell: LEAVES.round, size: 0.32, light: 0.8 + 0.3 * outer, layers: 1.6 + outer,
   })
 }
