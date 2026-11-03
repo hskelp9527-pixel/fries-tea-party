@@ -20,15 +20,15 @@ Generated from the working script; Chinese subtitles are kept outside this repo.
 
 | ID | Speaker | Trigger | English | Delivery |
 |---|---|---|---|---|
-| EX-01 | Dormouse | Idle hint: Gear 1 (Under table) - Level 1 (Vague) | Dark down under... shoes like houses... | muffled, drowsy murmur |
-| EX-02 | Dormouse | Idle hint: Gear 1 (Under table) - Level 2 (Clearer) | Crumbs on the floorcloth... where the dog sits... | sleepy, floating whisper |
-| EX-03 | Dormouse | Idle hint: Gear 1 (Under table) - Level 3 (Clear) | Brass under the bench... squeeze beneath the fringe... | slow, half-awake mutter |
+| EX-01 | Dormouse | Idle hint: Gear 1 (Big tree hollow) - Level 1 (Vague) | Up where the owls keep their clocks... | muffled, drowsy murmur |
+| EX-02 | Dormouse | Idle hint: Gear 1 (Big tree hollow) - Level 2 (Clearer) | A knot in the old oak... far too high for little boys... | sleepy, floating whisper |
+| EX-03 | Dormouse | Idle hint: Gear 1 (Big tree hollow) - Level 3 (Clear) | Grow as tall as the tree... and put your hand in its hollow... | slow, half-awake mutter |
 | EX-04 | Dormouse | Idle hint: Gear 2 (Fountain base gap) - Level 1 (Vague) | Thirsty stone... the cold bath has no water... | trailing, dreamy sigh |
 | EX-05 | Dormouse | Idle hint: Gear 2 (Fountain base gap) - Level 2 (Clearer) | Chipped rock by the basin... where the trickle died... | muffled, heavy breathing |
 | EX-06 | Dormouse | Idle hint: Gear 2 (Fountain base gap) - Level 3 (Clear) | Crawl right into the cracked fountain foot... | sudden, clear mumble |
-| EX-07 | Dormouse | Idle hint: Gear 3 (Porch hat rack) - Level 1 (Vague) | High in the wind... leaves tickling my whiskers... | airy, drifting peep |
-| EX-08 | Dormouse | Idle hint: Gear 3 (Porch hat rack) - Level 2 (Clearer) | Wooden branches by the cottage door... roosting high... | sleepy, singing drone |
-| EX-09 | Dormouse | Idle hint: Gear 3 (Porch hat rack) - Level 3 (Clear) | Top hat on the peg... climb up and peek inside... | drowsy, gravelly grumble |
+| EX-07 | Dormouse | Idle hint: Gear 3 (Cottage mantelpiece) - Level 1 (Vague) | Warm in there... smells of toast and butter... | airy, drifting peep |
+| EX-08 | Dormouse | Idle hint: Gear 3 (Cottage mantelpiece) - Level 2 (Clearer) | The Hare's own door... it only opens for ordinary sizes... | sleepy, singing drone |
+| EX-09 | Dormouse | Idle hint: Gear 3 (Cottage mantelpiece) - Level 3 (Clear) | On the mantel... between the jam and the clocks... | drowsy, gravelly grumble |
 | EX-10 | Dormouse | Drink hint: Player inspects tea tray | Pink shrinks, blue climbs... cake puts you back... | chanting, nodding off |
 ### Scene 3: Ambient Barks (Hatter & March Hare)
 

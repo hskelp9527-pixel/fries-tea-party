@@ -5,6 +5,7 @@ import { model, glow, addColliders } from './models.js'
 import * as layout from './layout.js'
 import { game } from './state.js'
 import { wind } from './plants.js'
+import { RAPIER, world } from './physics.js'
 
 const DEG = Math.PI / 180
 
@@ -66,7 +67,7 @@ glow(things.book_page, 0xfff0b0, 2)
 
 // Doors on their hinges: `pivot` turns about the hinge, positive inwards; `colliders` keep a closed door solid.
 // `front` is a point a step in front of the closed door.
-export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name, { in: host, hinge, scale, recess }]) => {
+export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name, { in: host, hinge, scale, plug }]) => {
   const pivot = new THREE.Group(), door = model('tree_door')
   if (typeof hinge === 'string') things[host].getObjectByName(hinge).add(pivot)
   else things[host].add(pivot.translateX(hinge[0]).translateY(hinge[1]).translateZ(hinge[2]))
@@ -74,18 +75,39 @@ export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name,
   door.position.x = 0.655 * scale[0]
   pivot.add(door)
   things[host].updateMatrixWorld(true)
-  // Behind a door that opens onto a dark passage: a black wall past the open door's sweep, its edges buried in the bark,
-  // seen from the door side only, and hidden when the roses beyond the tunnel appear. It stands in the scene, not in the host, so the host's bark and wood scans leave it out.
-  let wall
-  if (recess) {
-    const [[x0, x1], [y0, y1], z] = recess
-    wall = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshBasicMaterial({ color: 0x0b0705 }))
-    wall.position.copy(things[host].localToWorld(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, z)))
-    wall.rotation.y = things[host].rotation.y
+  // The back mouth of a tunnel: an arch-shaped slab, wider than the opening so its edges are buried in the bark. Seen from
+  // behind it is the host's own bark (the host's texture, mapped flat onto a patch of its atlas); seen from the door side it
+  // is a dark wall past the open door's sweep. It stands in the scene, not in the host, so the host's bark and wood scans leave
+  // it out, and `unplug` removes it and its collider when the roses beyond the tunnel appear.
+  let wall, unplug
+  if (plug) {
+    const [[x0, x1], [y0, y1], shoulder, z] = plug, half = (x1 - x0) / 2, tree = things[host]
+    const outline = new THREE.Shape().moveTo(-half, y0).lineTo(half, y0).lineTo(half, shoulder).absellipse(0, shoulder, half, y1 - shoulder, 0, Math.PI).lineTo(-half, y0)
+    const face = () => {
+      const geometry = new THREE.ShapeGeometry(outline), p = geometry.attributes.position, uvs = geometry.attributes.uv
+      for (let i = 0; i < p.count; i++) uvs.setXY(i, 0.45 + p.getX(i) * 0.12, 0.35 + p.getY(i) * 0.12) // 0.12 of the atlas per metre, over its middle
+      return geometry
+    }
+    let bark
+    tree.traverse(o => { if (o.isMesh) bark ??= o.material })
+    const back = new THREE.Mesh(face(), bark), inside = new THREE.Mesh(face(), new THREE.MeshBasicMaterial({ color: 0x0b0705 }))
+    back.rotation.y = Math.PI
+    back.receiveShadow = true
+    inside.position.z = 0.01
+    wall = new THREE.Group().add(back, inside)
+    wall.position.copy(tree.localToWorld(new THREE.Vector3((x0 + x1) / 2, 0, z)))
+    wall.rotation.y = tree.rotation.y
     scene.add(wall)
+    const slab = world.createCollider(RAPIER.ColliderDesc.cuboid(half, (y1 - y0) / 2, 0.1)
+      .setTranslation(...tree.localToWorld(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, z)).toArray())
+      .setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), tree.rotation.y)))
+    unplug = () => {
+      wall.visible = false
+      world.removeCollider(slab, true)
+    }
   }
   const front = door.localToWorld(new THREE.Vector3(0, 0, 0.9))
-  return [name, { pivot, door, colliders: addColliders('tree_door', door), front, wall }]
+  return [name, { pivot, door, colliders: addColliders('tree_door', door), front, wall, unplug }]
 }))
 
 // Hands at six o'clock on a face: the minute hand up, the hour hand down. `centre` is the pivot in the face's
