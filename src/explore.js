@@ -25,7 +25,7 @@ const head = (character, height) => character.localToWorld(new THREE.Vector3(0, 
 const uses = drinks.map(d => ({ ...d, can: () => nearProp(d, d.pos), use: () => drink(d) }))
 for (const gear of gears) uses.push({
   pos: gear.pos, label: 'Pick up the gear',
-  can: () => !gear.found && nearProp(gear, gear.pos), use: () => pickUp(gear),
+  can: () => !gear.found && nearProp(gear, gear.pos) && (gear.in !== 'house' || insideHall()), use: () => pickUp(gear),
 })
 uses.push(teaService, hallNote)
 let target, toldAboutTea = false, drank = false

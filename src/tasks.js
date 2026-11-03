@@ -129,6 +129,10 @@ let ticking = 0
 // The cottage's hall, at normal size: buttered tools, a clock with butter in it, a note.
 const house = things.house
 house.updateMatrixWorld(true)
+const mantel = new THREE.Mesh(new THREE.BoxGeometry(...hall.mantel.size), new THREE.MeshStandardMaterial({ color: 0x68452f, roughness: 0.85 }))
+mantel.position.set(...hall.mantel.pos)
+mantel.castShadow = mantel.receiveShadow = true
+house.add(mantel)
 for (const { model: name, at, rot = 0, scale = 1 } of hall.props) {
   const object = model(name)
   object.position.copy(house.localToWorld(new THREE.Vector3(...at)))
