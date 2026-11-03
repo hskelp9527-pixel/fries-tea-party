@@ -177,8 +177,9 @@ function simplify(geometry, divisions) {
   return out.setIndex(indices)
 }
 
-// An instanced mesh of a flower clump at the given matrices. Each instance carries its root, which the wind
-// materials need and the instance matrix does not give them.
+// An instanced mesh of a flower clump at the given matrices (a matrix may carry a `tint` Color that multiplies the
+// clump's colours). Each instance carries its root, which the wind materials need and the instance matrix does not give them.
+const WHITE = new THREE.Color(1, 1, 1)
 export function flowerMesh({ geometry, material }, matrices) {
   const own = new THREE.BufferGeometry(), root = new Float32Array(matrices.length * 3), rank = new Float32Array(matrices.length).map((_, i) => i / matrices.length)
   own.setIndex(geometry.index)
@@ -186,6 +187,7 @@ export function flowerMesh({ geometry, material }, matrices) {
   const mesh = new THREE.InstancedMesh(own, material, matrices.length)
   matrices.forEach((matrix, i) => {
     mesh.setMatrixAt(i, matrix)
+    mesh.setColorAt(i, matrix.tint ?? WHITE)
     root.set(matrix.elements.slice(12, 15), i * 3)
   })
   own.setAttribute('aRoot', new THREE.InstancedBufferAttribute(root, 3))

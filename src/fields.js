@@ -1,4 +1,4 @@
-import { paths, trails, meadow, terraces, overlook } from './layout.js'
+import { paths, trails, meadow, terraces, overlook, plaza } from './layout.js'
 
 // The shared fields of the garden. The ground's colour, where grass grows and how lush it is, where flowers bloom
 // and which, and the height of the land beyond the garden all come from these, so they agree with one another.
@@ -38,8 +38,19 @@ export function pathDistance(x, z) {
   return best
 }
 
-// Inside one of the areas where nothing grows: paving, the basin, the trunk, under the table.
+// Inside one of the areas where nothing grows: the cottage and its porch.
 export const bare = (x, z) => meadow.bare.some(([a, b, c, d]) => x > a && x < c && z > b && z < d)
+
+// How mossy the ground is, in [0, 1]: full inside the `meadow.moss` rectangles (under the table, between the tree's
+// roots) and fading to nothing over the 0.8 m inside their edges (a wider ramp is softer but eats the paths' edges).
+export function moss(x, z) {
+  let m = 0
+  for (const [a, b, c, d] of meadow.moss) m = Math.max(m, Math.min(1, Math.max(0, Math.min(x - a, c - x, z - b, d - z) / 0.8)))
+  return m
+}
+
+// How much of the flower bed round the plaza is here, in [0, 1]: a ring from the paving's edge to about 2.5 m out.
+export const bed = (x, z) => Math.exp(-(((Math.hypot(x - plaza[0], z - plaza[1]) - plaza[2] - 0.9) / 1.2) ** 2))
 
 // How lush the lawn is: broad warped patches of deeper, longer grass and drier, shorter grass, in [0, 1].
 export function lush(x, z) {
@@ -57,7 +68,8 @@ export function bloom(x, z) {
   let drift = 0
   for (const [dx, dz, r] of meadow.drifts) drift = Math.max(drift, Math.exp(-((Math.hypot(x - dx, z - dz) / r) ** 2)))
   const patches = Math.max(0, noise(x * 0.16 + 11, z * 0.16) * 1.6 - 0.9)
-  return Math.min(1, Math.max(edge * 0.8, drift, patches) * (0.7 + 0.3 * noise(x * 0.7, z * 0.7)))
+  // Under the table and between the roots only a sprinkle of small daisies; round the plaza a full bed.
+  return Math.min(1, Math.max(edge * 0.8, drift, patches, 0.35 * moss(x, z), bed(x, z)) * (0.7 + 0.3 * noise(x * 0.7, z * 0.7)))
 }
 
 // Which flowers grow here: a slowly changing value in [0, 1] that picks from a palette, so each drift has its own.

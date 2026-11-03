@@ -587,14 +587,17 @@ export const cast = {
 }
 
 // The lawn and its flowers (see src/fields.js). Grass grows over `lawn` [x0, z0, x1, z1], on the land and on the
-// terraces, except on the `bare` rectangles (under the table, round the tree's roots, the cottage, its porch) and
+// terraces, except on the `bare` rectangles (the cottage, its porch; the `moss` rectangles grow only low plants) and
 // the paths (`pathWidth` wide); flowers bloom in bands along the paths, in the `drifts` [x, z, radius] and in loose
 // patches. The land is flat over `plateau` (but for the overlook) and falls away beyond it. The WebGL fallback
 // gets half the grass and flowers.
 export const meadow = {
   plateau: [-36, -38, 36, 29],
   lawn: [-35, -37, 35, 28],
-  bare: [[-1.15, -7.8, 1.15, 0.8], [-7, -14.6, -1.6, -9.6], [12.3, -35, 30, -19.6], [26.6, -25, 31, -21.2]],
+  bare: [[12.3, -35, 30, -19.6], [26.6, -25, 31, -21.2]],
+  // Mossy places [x0, z0, x1, z1]: under and round the long table, and between the big tree's roots. Only low soft
+  // growth (short grass, clover, small daisies) lives here, so Fries can still pass.
+  moss: [[-2.4, -8.6, 2.4, 1.4], [-9, -16.5, -0.2, -8.4]],
   pathWidth: 1.2,
   drifts: [
     [-4, 4.2, 2.2], [3.6, 5, 2], [-8, 8, 2.5], [6, 12.6, 2.4], [-3.4, 12, 2.2], [12, 8, 2.5], [-12, 4, 2.2], [16, 2, 2.4],
