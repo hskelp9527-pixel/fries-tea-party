@@ -94,6 +94,7 @@ export function startExplore(mended) {
   exploring = true
   player.control = true
   player.cinematic = false
+  document.getElementById('controls').textContent = 'WASD move  |  Shift run  |  Space jump  |  E interact  |  V change view  |  Blue tea: big tree  |  Pink tea: fountain grotto  |  Cake: normal size for the hall'
   setMusic({ frozen: 1 - game.gears / 3, awake: game.gears / 3 })
 }
 
@@ -315,12 +316,16 @@ function happenings() {
 let quiet = 0
 export function updateExplore(dt) {
   if (!exploring) return
-  const smallGears = !gears[0].found || !gears[1].found
-  document.getElementById('objective').textContent = game.gears === 3 ? "Bring the gears back to the Hatter's watch"
-    : player.size === 'small' ? (smallGears ? 'Find the gears under the table and in the fountain' : 'Eat a cake to grow back, then drink the blue tea')
-    : player.size === 'big' ? (!gears[2].found ? 'Find the gear on the hat rack' : 'Eat a cake to grow back')
-    : smallGears ? 'Drink the pink tea to shrink, then look under the table and in the fountain'
-    : 'Drink the blue tea to grow tall and reach the hat rack'
+  document.getElementById('objective').textContent = game.gears === 3
+    ? (player.size === 'normal' ? "Bring the gears back to the Hatter's watch" : "Eat a cake to grow back, then return to the Hatter's watch")
+    : player.size === 'small'
+      ? (Math.hypot(player.feet.x - underTable.cup[0], player.feet.z - underTable.cup[1]) < 1
+        ? 'Cross the spoon bridge to the "eat me" cake to grow back'
+        : !gears[1].found ? "Slip into the fountain's grotto and find the gear" : 'Eat a cake to grow back')
+    : player.size === 'big' ? (!gears[0].found ? "Reach into the hollow high in the big tree's trunk" : 'Eat a cake to grow back')
+    : !gears[0].found ? 'Drink the blue tea to grow tall: something glints high in the big tree'
+    : !gears[2].found ? "Only an ordinary-sized boy can open the March Hare's door: look on the hall's mantelpiece"
+    : "Drink the pink tea to shrink and slip into the fountain's grotto"
   target = undefined
   prompt.textContent = ''
   if (banter.seated) updateBanter(dt)
