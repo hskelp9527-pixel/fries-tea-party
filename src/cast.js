@@ -84,7 +84,7 @@ export function stand(name, { pos, rot }, seconds, hop = 0) {
 
 function play(m, line) {
   const speaking = line && speakers[line] === m.name
-  if (m.trying) m.anim.play(m.trying)
+  if (m.doing) m.anim.play(m.doing)
   else if (m.moving) m.anim.play('walk')
   else if (game.pass >= 1) m.anim.play(game.pass === 1 ? 'dance_swing' : 'dance_silly')
   else if (game.pass === 0 && m.name === 'hatter') m.anim.play('sing')

@@ -1,6 +1,10 @@
 import * as THREE from 'three/webgpu'
-import { player, setSize, reaches, nearProp, facePoint, act, walkTo } from './player.js'
-import { use, release, fly } from './hands.js'
+import { player, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
+import { camera } from './scene.js'
+import { cast } from './cast.js'
+import { stream, surface } from './liquids.js'
+import { use, release, fly, toHand } from './hands.js'
+import contacts from '../docs/fries_hand_contacts.json'
 import { things, drinks, gears, doors, wake } from './garden.js'
 import { world } from './physics.js'
 import { zones } from './layout.js'
@@ -55,11 +59,12 @@ export function startExplore(mended) {
 }
 
 // Drinking a tea or eating a cake: it flies into his hand, goes to his mouth and back to its place, then he
-// changes size.
+// changes size. A teacup is first filled at the table (see pour).
 async function drink(d) {
   drank = true
   player.control = false
-  await use(d, d.object, () => {})
+  if (d.pot) await pour(d)
+  else await use(d, d.object, () => {})
   release(d.object)
   await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
   if (d.grow) await walkTo(d.grow, 90)
@@ -67,6 +72,47 @@ async function drink(d) {
   if (d.becomes === 'small' && player.shrinks === 1) await firstShrink()
   else if (d.becomes === 'big' && player.grows === 1) await firstGrow()
   else player.control = true
+}
+
+// Fries takes up the empty cup and holds it out; the Hatter beckons from his chair and the teapot flies over from
+// the tray, tilts and pours, the tea rising in the cup. Then, seen by a fixed camera from his front three-quarters,
+// he lifts the cup to his mouth, drinks and lowers it.
+const SPOUT = new THREE.Vector3(0, 0.2, 0.172), TILT = 0.8
+async function pour(d) {
+  const pot = things[d.pot], home = pot.position.clone(), turn = pot.rotation.y
+  await walkTo(d.stand, d.rot)
+  const yaw = d.rot * DEG, side = yaw + 0.7, f = player.feet
+  player.cinematic = true
+  camera.fov = 45
+  camera.updateProjectionMatrix()
+  camera.position.set(f.x + Math.sin(side) * 1.7, f.y + 1.05, f.z + Math.cos(side) * 1.7)
+  camera.lookAt(f.x, f.y + 0.9, f.z)
+
+  act('drink')
+  await toHand(d.object, d)
+  anim.hold('drink')
+  const tea = surface(d.object, new THREE.Vector3(0, 0.025, 0), 0.032, 0.055, { colour: new THREE.Color(d.tea), fill: 0 })
+
+  cast.hatter.doing = 'sit_beckon'
+  const cup = d.object.getWorldPosition(new THREE.Vector3()), potYaw = yaw + Math.PI
+  const tip = SPOUT.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), TILT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, potYaw)
+  const over = cup.clone().setY(cup.y + 0.2).sub(tip)
+  pot.rotation.y = potYaw
+  await fly(pot, end => end.copy(over), 1.3, 0.35)
+  await tween(0.5, t => { pot.rotation.x = TILT * t })
+  const spout = pot.localToWorld(SPOUT.clone()), pouring = stream(spout, cup.clone().setY(cup.y + 0.045), { height: 0.02, radius: 0.007, colour: new THREE.Color(d.tea) })
+  await tween(2.2, t => tea.set(t))
+  pouring.remove()
+  cast.hatter.doing = null
+  await tween(0.5, t => { pot.rotation.x = TILT * (1 - t) })
+  fly(pot, end => end.copy(home), 1.2, 0.3).then(() => { pot.rotation.y = turn })
+
+  anim.hold('drink', false)
+  await wait(contacts.drink.time - 0.6)
+  await tween(0.8, t => tea.set(1 - t))
+  tea.remove()
+  await wait(contacts.drink.duration - contacts.drink.time - 0.8)
+  player.cinematic = false
 }
 
 // Picking up a gear: it is found the moment it is in his hand, stays there to the end of the clip, then flies

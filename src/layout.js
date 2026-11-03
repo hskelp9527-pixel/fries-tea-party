@@ -433,15 +433,16 @@ export const gears = [
 ]
 
 // Things that change Fries's size into `becomes`. The drink clip holds them at his waist from its start, so
-// each flies the short way into his left hand, goes to his mouth and flies back to its place at the end. One that
-// makes him big first walks him to `grow`, where a giant has room.
+// each flies the short way into his left hand, goes to his mouth and flies back to its place at the end. A teacup
+// is empty until the teapot `pot` pours `tea` into it. One that makes him big first walks him to `grow`, where a
+// giant has room.
 export const drinks = [
   {
-    model: 'pink_teacup', pos: [-0.95, 0.76, -5.6], becomes: 'small', label: 'Drink the pink tea', onTable: true,
+    model: 'pink_teacup', pos: [-0.95, 0.76, -5.6], becomes: 'small', pot: 'pink_teapot', tea: 0xd8608a, label: 'Drink the pink tea', onTable: true,
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -5.557], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'blue_teacup', pos: [-0.95, 0.76, -4.45], becomes: 'big', grow: [-4.4, 0, -4.4], label: 'Drink the blue tea', onTable: true,
+    model: 'blue_teacup', pos: [-0.95, 0.76, -4.45], becomes: 'big', grow: [-4.4, 0, -4.4], pot: 'blue_teapot', tea: 0x5a86d8, label: 'Drink the blue tea', onTable: true,
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
@@ -520,21 +521,27 @@ export const keepClear = [
 export const effects = {
   // Tea frozen mid-pour from the teapots' spouts into cups: from, to and how high the arc rises
   teaArcs: [
-    { from: [-0.45, 0.99, -5.42], to: [-0.95, 0.84, -5.6], height: 0.08 },
-    { from: [-0.45, 0.99, -4.92], to: [-0.95, 0.84, -4.45], height: 0.07 },
     { from: [0.49, 0.87, -2.6], to: [0.45, 0.83, -2.2], height: 0.18 },
     { from: [-0.39, 0.87, 0.2], to: [-0.45, 0.83, -0.1], height: 0.16 },
   ],
-  // Syrup frozen in arcs from the fountain's bowl into its basin, and golden drops hanging round it
-  syrupArcs: [
-    { from: [13.6, 2.3, -5], to: [14.15, 0.55, -5], height: 0.2 },
-    { from: [12.4, 2.3, -5], to: [11.85, 0.55, -5], height: 0.2 },
-    { from: [13, 2.3, -4.4], to: [13, 0.55, -3.85], height: 0.2 },
-    { from: [13, 2.3, -5.6], to: [13, 0.55, -6.15], height: 0.2 },
-  ],
-  syrupDrops: { center: [13, 1.6, -5], size: [4.4, 2, 4.4], count: 70 },
   petals: { center: [0, 2.2, -4], size: [12, 3.4, 14], count: 240 },
   butterflies: { center: [13, 0.52, -5], perch: 1.3, radius: 3.5, count: 14 }, // perched round the basin rim
+}
+
+// The fountain's syrup, in its own frame as [radius, height, angle in degrees from +Z]: streams from the spouts
+// of its teapots (`height` the arc's rise), sheets spilling over the cup tier's lip ([radius, top, bottom]), pools
+// in the cup tier and the basin rising as the syrup flows ([radius, low, high]), and golden drops hanging round
+// it (world [x, y, z]).
+export const syrup = {
+  streams: [
+    { from: [0.74, 2.56, -148], to: [0.42, 1.6, -148], height: 0.12 },
+    { from: [0.57, 1.98, -70], to: [0.4, 1.6, -70], height: 0.08 },
+    { from: [1.2, 0.92, -53], to: [0.95, 0.46, -53], height: 0.06 },
+    { from: [1.2, 0.92, 127], to: [0.95, 0.46, 127], height: 0.06 },
+  ],
+  sheets: [[0.78, 1.64, 0.47]],
+  pools: [[0.7, 1.52, 1.6], [1.32, 0.43, 0.47]],
+  drops: { center: [13, 1.6, -5], size: [4.4, 2, 4.4], count: 70 },
 }
 
 // Staging for the song: Fries faces the table with a teacup in front of him.

@@ -8,7 +8,7 @@ import { cast } from './cast.js'
 // clip until another is picked.
 const characters = {
   fries: { object: player.mesh, clips: Object.keys(anim.actions), play: act },
-  ...Object.fromEntries(Object.values(cast).map(m => [m.name, { object: m.object, clips: Object.keys(m.anim.actions), play: clip => { m.trying = clip } }])),
+  ...Object.fromEntries(Object.values(cast).map(m => [m.name, { object: m.object, clips: Object.keys(m.anim.actions), play: clip => { m.doing = clip } }])),
 }
 
 const bar = document.createElement('div'), who = document.createElement('div'), clips = document.createElement('div')

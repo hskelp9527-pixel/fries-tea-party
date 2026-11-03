@@ -33,9 +33,15 @@ export class Animator {
     this.current = next
   }
 
-  // Whether a clip played with `once` is still going.
+  // Whether a clip played with `once` is still going (a held clip is).
   playing(name) {
-    return this.actions[name].isRunning()
+    return this.actions[name].isRunning() || this.held === name
+  }
+
+  // Holds a clip on its current frame, or (with false) lets it run on.
+  hold(name, held = true) {
+    this.actions[name].paused = held
+    this.held = held ? name : null
   }
 
   // Sets a clip's playback rate so its feet cover `speed` metres per second on a model at `scale`.

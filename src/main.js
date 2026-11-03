@@ -4,6 +4,7 @@ import { updateGround } from './ground.js'
 import { updateGarden } from './garden.js'
 import './foliage.js'
 import { updateMagic } from './magic.js'
+import { updateLiquids } from './liquids.js'
 import { player, updatePlayer } from './player.js'
 import { ctx } from './audio.js'
 import { updateTweens } from './tweens.js'
@@ -50,6 +51,7 @@ renderer.setAnimationLoop(now => {
   updateExplore(dt)
   updateGarden(dt, time)
   updateMagic(dt, time)
+  updateLiquids(dt)
   updateGround()
   updateFloating(dt)
   updateSong()
