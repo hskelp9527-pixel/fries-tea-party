@@ -15,6 +15,7 @@ import { updateSong } from './song.js'
 import { updateCast, cast } from './cast.js'
 import { updateGaze } from './gaze.js'
 import { updateLooks, banter } from './banter.js'
+import { updateTasks } from './tasks.js'
 import { updateHands } from './hands.js'
 
 const params = new URLSearchParams(location.search)
@@ -51,6 +52,7 @@ renderer.setAnimationLoop(now => {
   updateTweens(dt)
   updatePlayer(dt)
   updateExplore(dt)
+  updateTasks(dt, time)
   updateGarden(dt, time)
   updateMagic(dt, time)
   updateLiquids(dt)

@@ -433,11 +433,10 @@ export const bushes = [
 // Props Fries takes in his hands. Each is for one size (`by`) and one clip; before the clip Fries walks to the
 // `stand` point (his feet) and turns to face `rot`, so that his palm meets the prop at the contact time in
 // docs/fries_hand_contacts.json: stand = prop - palm offset in the clip, turned to `rot` and scaled to his size
-// (small 0.18, big 2.6). `grip` (metres at scale 1, in the hand bone's frame) sets the prop in the palm.
+// (small 0.18, big 5). `grip` (metres at scale 1, in the hand bone's frame) sets the prop in the palm.
 
-// The three gears, collectable in any order. Each wakes its own layer of the world, and once picked up flies
-// to the watch. Each rests where the palm comes at contact: the pick_up palm stops 2.2 cm above the ground for
-// a small Fries, so gears 1 and 2 hang just off it in the frozen air.
+// Each gear rests at the pickup palm above the floor of its small route.
+// Gear 3 meets the giant reach from the top terrace.
 export const gears = [
   { // under the long table
     pos: [0.1, 0.022, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
@@ -603,4 +602,27 @@ export const meadow = {
   ],
   grassPerSquareMetre: 22,
   flowersPerSquareMetre: 14,
+}
+
+// Small routes use the existing table and fountain openings; their low ceilings exclude larger bodies.
+export const underTable = {
+  crumbs: [-0.6, -2.8, 0.7, -1.3],
+  cup: [gears[0].pos[0], gears[0].pos[2] + 0.55],
+  spoon: [[0.1, 0.09, -1.65], [0.1, 0.008, -2.12]],
+  hare: [1.45, 0, -1.65],
+}
+export const grotto = { valve: [gears[1].pos[0], gears[1].pos[2]] }
+
+// In the house's own frame, behind its door_hinge at (0.5, 1.1, 2.877).
+export const hall = {
+  centre: [1.28, 1.1, 2.2], halfWidth: 0.72, depth: 0.6,
+  note: [1.28, 1.65, 1.76],
+  props: [
+    { model: 'saucer', at: [1.55, 1.12, 2.05], scale: 1.7 },
+    { model: 'spoon', at: [1.52, 1.14, 2.05], rot: 35, scale: 1.6 },
+    { model: 'spoon', at: [1.65, 1.14, 2.08], rot: -25, scale: 1.4 },
+    { model: 'butter', at: [1.55, 1.15, 2.05], scale: 0.6 },
+    { model: 'pocket_watch', at: [0.86, 1.12, 2.05], scale: 3 },
+    { model: 'butter', at: [0.86, 1.2, 2.05], scale: 0.7 },
+  ],
 }

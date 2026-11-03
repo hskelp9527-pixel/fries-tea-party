@@ -11,6 +11,7 @@ import { world } from './physics.js'
 import { setMusic, say, speaking, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { game } from './state.js'
+import { teaService, hallNote, insideHall } from './tasks.js'
 import { setFloatingLevel } from './floating.js'
 
 const FIRST_HINT = 45 // seconds without finding a gear before the Dormouse sleep-talks a hint
@@ -26,6 +27,7 @@ for (const gear of gears) uses.push({
   pos: gear.pos, label: 'Pick up the gear',
   can: () => !gear.found && nearProp(gear, gear.pos), use: () => pickUp(gear),
 })
+uses.push(teaService, hallNote)
 let target, toldAboutTea = false, drank = false
 
 // Any empty armchair at the table: Fries walks to its front, turns and sits down; E or a step gets him up again.
@@ -159,6 +161,8 @@ const watchPoint = things.pocket_watch.position.clone().setY(things.pocket_watch
 async function pickUp(gear) {
   player.control = false
   await use(gear, gear.object, () => find(gear))
+  act('examine')
+  await wait(anim.actions.examine.getClip().duration)
   release(gear.object)
   player.control = true
   await fly(gear.object, end => end.copy(watchPoint), 1.2, 0.6)
@@ -260,7 +264,7 @@ function happenings() {
   const basinNow = Math.hypot(f.x - basin.x, f.z - basin.z) < 1.3 && f.y > 0.25
   if (basinNow && !inBasin) event('fountain')
   inBasin = basinNow
-  const hallNow = doors.cottage.front.distanceTo(f) < 0.9 && f.y > 2.5
+  const hallNow = insideHall()
   if (hallNow && !inHall) event('cottage')
   inHall = hallNow
 }

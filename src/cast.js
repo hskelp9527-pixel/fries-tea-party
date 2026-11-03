@@ -195,16 +195,19 @@ export function updateCast(dt) {
 }
 
 // The under-table task chooses the bridge point and calls this when the Hare is needed.
-export async function laySpoon(point) {
-  const m = cast.hare
+export async function laySpoon(point, spoon = model('spoon'), approach = point) {
+  const m = cast.hare, chair = m.chair
   if (m.seated) await standUp('hare')
-  await walk('hare', [[point.x, point.z]])
-  const spoon = model('spoon')
+  await walk('hare', [[approach.x, approach.z]])
+  m.object.rotation.y = Math.atan2(point.x - approach.x, point.z - approach.z)
   scene.add(spoon)
   holdCast(spoon, m.object, 'RightHand', [0, 0.03, 0])
   m.doing = 'lay_spoon'
   await wait(m.anim.actions.lay_spoon.getClip().duration)
   release(spoon)
-  spoon.position.copy(point)
+  const from = spoon.position.clone()
+  await tween(0.35, t => spoon.position.lerpVectors(from, point, t))
   m.doing = null
+  sitDown('hare', chair)
+  return spoon
 }
