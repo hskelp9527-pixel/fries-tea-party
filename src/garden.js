@@ -45,6 +45,13 @@ export function keepOut(p, margin) {
   }
 }
 
+// The cottage's doorway lining lies exactly on the arch's reveals (and the house's feet on the terrace lawn), and from
+// far away the depth buffer cannot tell such faces apart, so they flicker. The house is pushed back in depth, and the
+// lining and the lawn win.
+things.house.traverse(o => {
+  if (o.name === 'house_13') Object.assign(o.material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 })
+})
+
 // The hosts' end of the dressed table (beyond 2.6 m along it) is kept empty for the game's own cups, teapots and
 // the watch; the few pieces of dressing that stray into it stay hidden.
 const dressed = things.long_table_dressed

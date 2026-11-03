@@ -386,7 +386,7 @@ export const placed = [
 // Doors hang on a hinge at the bottom of their left edge: a node in the model they are set in, or a point in its
 // frame, scaled to fill the opening. Positive angles swing them inwards.
 export const doors = {
-  cottage: { in: 'house', hinge: 'door_hinge', scale: [1.2, 0.95, 1] },
+  cottage: { in: 'house', hinge: 'door_hinge', scale: [1.25, 0.97, 1] }, // fills the 1.62 x 1.92 m arch, so the lining behind it does not show round the edges
   tree: { in: 'big_tree', hinge: [-1.2, 0, 1.6], scale: [1.45, 1.45, 1] },
 }
 
