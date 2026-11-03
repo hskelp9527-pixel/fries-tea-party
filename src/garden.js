@@ -8,8 +8,13 @@ import { wind } from './plants.js'
 
 const DEG = Math.PI / 180
 
+// The armchair model is built 38.5 degrees off square (its back runs diagonally across the model's frame). Its
+// meshes are turned back inside the object, so the object's own turn, which the seated cast follows, squares it.
+const ARMCHAIR_YAW = 38.5 * DEG
+
 function place({ model: name, pos, rot = 0, scale = 1, solid = true, boxes = false, hidden = false }) {
   const object = model(name)
+  if (name === 'armchair') object.children.forEach(mesh => { mesh.rotation.y = -ARMCHAIR_YAW })
   object.position.set(...pos)
   object.rotation.y = rot * DEG
   object.scale.setScalar(scale)
