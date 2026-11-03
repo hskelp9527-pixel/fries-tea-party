@@ -193,7 +193,7 @@ async function ending() {
   await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = 100 * DEG * t })])
 
   // Fries walks round the table to the door; the three ignore him completely.
-  const walking = walk([[-2.6, 0, -5.6], [-3.6, 0, -8.2], [-5.96, 0, -9.75]], 1.3)
+  const walking = walk([[-2.6, 0, -5.6], [-5.38, 0, -10.09], [-7.74, 0, -11.64]], 1.3)
   await say('ED-05')
   await say('ED-06')
   await walking
@@ -202,8 +202,8 @@ async function ending() {
   // He steps into the tunnel and sees the red roses beyond it; the picture freezes.
   roses.visible = true
   doors.tree.unplug()
-  await shot(v(-6.6, 1.6, -8.7), v(-3, 1.3, -15))
-  await Promise.all([say('ED-08'), walk([[-4.6, 0, -12.1]], 1)])
+  await shot(v(-8.38, 1.6, -10.59), v(-4.78, 1.3, -16.89))
+  await Promise.all([say('ED-08'), walk([[-6.38, 0, -13.99]], 1)])
   await wait(0.4)
   renderer.setAnimationLoop(null)
 }
