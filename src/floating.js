@@ -13,14 +13,24 @@ import { meanSize, keepOut } from './garden.js'
 const items = []
 const density = webgpu ? 1 : 0.5
 
-function add(kind, n) {
-  const cloud = floating.clouds[n % floating.clouds.length]
+function add(kind, cloud, size = 0.9 + Math.random() * 0.4) {
   const object = model(kind)
+  if (kind === 'hat') {
+    // The hat has one textured material (olive cloth with the ribbon painted on) that a colour alone cannot change, so each hat
+    // gets its own plain-coloured copy that keeps the normal and roughness maps.
+    const tint = floating.hatTints[items.filter(it => it.kind === 'hat').length % floating.hatTints.length]
+    object.traverse(o => {
+      if (!o.isMesh) return
+      o.material = o.material.clone()
+      o.material.map = null
+      o.material.color.set(tint)
+    })
+  }
   scene.add(object)
   items.push({
     kind,
     object,
-    size: 0.9 + Math.random() * 0.4, // near real size, varied
+    size, // near real size, varied
     home: new THREE.Vector3(...cloud.center.map((c, k) => c + (Math.random() - 0.5) * cloud.size[k])),
     phase: Math.random() * 100,
     wander: 0.3 + Math.random() * 0.5,
@@ -34,10 +44,11 @@ function add(kind, n) {
 
 export function setFloatingLevel(gearsFound) {
   for (const [kind, perGear] of Object.entries(floating.perGear)) {
-    for (let n = items.filter(it => it.kind === kind).length; n < Math.round(perGear * (gearsFound + 1) * density); n++) add(kind, n)
+    for (let n = items.filter(it => it.kind === kind).length; n < Math.round(perGear * (gearsFound + 1) * density); n++) add(kind, floating.clouds[n % floating.clouds.length])
   }
 }
 setFloatingLevel(0)
+for (const [kind, n] of Object.entries(floating.treats)) for (let i = 0; i < n; i++) add(kind, floating.treatCloud, 1.2 + Math.random() * 0.4)
 
 const chest = new THREE.Vector3(), push = new THREE.Vector3(), offset = new THREE.Vector3(), near = new THREE.Vector3()
 let clock = 0

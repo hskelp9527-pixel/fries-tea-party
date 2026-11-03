@@ -200,6 +200,7 @@ async function ending() {
 
   // He steps into the tunnel and sees the red roses beyond it; the picture freezes.
   roses.visible = true
+  doors.tree.wall.visible = false
   await shot(v(-6.6, 1.6, -8.7), v(-3, 1.3, -15))
   await Promise.all([say('ED-08'), walk([[-4.6, 0, -12.1]], 1)])
   await wait(0.4)
