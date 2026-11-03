@@ -176,10 +176,9 @@ function updateCamera(dt) {
     dir.set(Math.sin(player.yaw) * cp, -Math.sin(player.pitch), Math.cos(player.yaw) * cp)
     ball.radius = 0.1 * s
     const far = 3.2 * s
-    const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, undefined, undefined, collider)
-    const distance = hit ? hit.time_of_impact : far
+    const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, collider)
+    const distance = hit ? Math.max(0, hit.time_of_impact - 0.02 * s) : far
     camera.position.copy(eye).addScaledVector(dir, distance)
-    if (distance < 0.6 * s) camera.layers.disable(1)
   }
   camera.position.x += (Math.random() - 0.5) * shake
   camera.position.y += (Math.random() - 0.5) * shake
