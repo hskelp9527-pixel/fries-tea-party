@@ -286,7 +286,7 @@ let quiet = 0
 export function updateExplore(dt) {
   if (!exploring) return
   const smallGears = !gears[0].found || !gears[1].found
-  document.getElementById('objective').textContent = game.gears === 3 ? 'Bring the gears back to the Hatter¡¯s watch'
+  document.getElementById('objective').textContent = game.gears === 3 ? "Bring the gears back to the Hatter's watch"
     : player.size === 'small' ? (smallGears ? 'Find the gears under the table and in the fountain' : 'Eat a cake to grow back, then drink the blue tea')
     : player.size === 'big' ? (!gears[2].found ? 'Find the gear on the hat rack' : 'Eat a cake to grow back')
     : smallGears ? 'Drink the pink tea to shrink, then look under the table and in the fountain'
