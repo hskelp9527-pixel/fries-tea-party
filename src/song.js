@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu'
 import beatMap from '../audio/04t_little_bat_a.beats.json'
-import { camera, hemi, sun } from './scene.js'
+import { camera, scene, sun } from './scene.js'
 import { cups, tableProps } from './garden.js'
 import { glow } from './models.js'
 import { song as staging, cast as stage } from './layout.js'
@@ -22,7 +22,7 @@ const CUES = [
 ]
 const WINDOW = 0.12 // seconds either side of a beat that count as a hit
 // Light rises with each pass, since the three passes are about equally loud.
-const LIGHT = [[1.2, 2.2], [1.6, 3], [2.1, 3.8]] // [hemisphere, sun] intensity per pass
+const LIGHT = [[0.45, 2.8], [0.6, 3.6], [0.75, 4.4]] // [sky, sun] intensity per pass
 // Camera keyframes on beats; each holds until the next one, or glides to it. The crane in the final chorus
 // first backs out from under the canopy, then rises over the garden.
 const SHOTS = [
@@ -106,8 +106,8 @@ export function updateSong() {
   const pass = PASSES.findLastIndex(p => last >= p)
   if (pass !== game.pass) {
     game.pass = pass
-    const [h0, s0] = [hemi.intensity, sun.intensity], [h1, s1] = LIGHT[pass]
-    tween(2, k => { hemi.intensity = h0 + (h1 - h0) * k; sun.intensity = s0 + (s1 - s0) * k })
+    const [h0, s0] = [scene.environmentIntensity, sun.intensity], [h1, s1] = LIGHT[pass]
+    tween(2, k => { scene.environmentIntensity = h0 + (h1 - h0) * k; sun.intensity = s0 + (s1 - s0) * k })
     if (pass === 1) {
       score()
       stand('hare', stage.hare.song, 0.8)

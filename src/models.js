@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
 import { RAPIER, world } from './physics.js'
 import { shapes } from './layout.js'
+import { rimLit } from './scene.js'
 
 // Every art/models/<name>.glb on disk at build time. Dropping a file in replaces that model's boxes.
 const files = import.meta.glob('/art/models/*.glb', { eager: true, query: '?url', import: 'default' })
@@ -11,6 +12,8 @@ const gltfs = {}
 await Promise.all(Object.entries(files).map(async ([path, url]) => {
   const gltf = gltfs[path.slice('/art/models/'.length, -'.glb'.length)] = await loader.loadAsync(url)
   stripRootMotion(gltf)
+  // The characters (the models with clips) catch the sun on their edges.
+  if (gltf.animations.length) gltf.scene.traverse(o => { if (o.isMesh) o.material = rimLit(o.material) })
 }))
 
 // Root motion: the clips carry the hips across the ground, but the game moves the character itself. Every

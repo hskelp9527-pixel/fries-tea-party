@@ -1,81 +1,131 @@
 import * as THREE from 'three/webgpu'
-import { positionLocal, time, sin, vec3 } from 'three/tsl'
-import { scene, webgpu } from './scene.js'
+import { scene, camera, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
-import { placed, grass } from './layout.js'
+import { meadow, placed } from './layout.js'
+import { LEAVES, FLOWERS, cardMaterial, cards } from './plants.js'
+import { lush, bloom, species, bare, pathDistance, ground, random } from './fields.js'
 
-// The lawn, with gentle patches of lighter, yellower and darker green.
-const plane = new THREE.PlaneGeometry(300, 300, 150, 150)
-plane.rotateX(-Math.PI / 2)
-const base = new THREE.Color(0x6f9a5c), dry = new THREE.Color(0x9aa860), colour = new THREE.Color(), colours = []
-for (let i = 0; i < plane.attributes.position.count; i++) {
-  const x = plane.attributes.position.getX(i), z = plane.attributes.position.getZ(i)
-  const n = Math.sin(x * 0.21 + Math.sin(z * 0.13)) + Math.sin(z * 0.17 - x * 0.05) + 0.5 * Math.sin((x + z) * 0.43)
-  colour.lerpColors(base, dry, 0.25 + 0.15 * n).multiplyScalar(0.92 + 0.06 * Math.sin(x * 0.9) * Math.sin(z * 0.7)).toArray(colours, i * 3)
+// ?view=fields colours the land by its fields instead: green how lush, magenta where flowers bloom, grey the paths.
+const FIELDS = new URLSearchParams(location.search).get('view') === 'fields'
+
+// The land, out to the far hills, coloured by the lawn's lushness (paths worn to earth).
+const land = new THREE.PlaneGeometry(420, 420, 210, 210)
+land.rotateX(-Math.PI / 2)
+const deep = new THREE.Color(0x4f7a3a), dry = new THREE.Color(0x9a9a58), earth = new THREE.Color(0x8a7556), colour = new THREE.Color(), colours = []
+const position = land.attributes.position
+for (let i = 0; i < position.count; i++) {
+  const x = position.getX(i), z = position.getZ(i)
+  position.setY(i, ground(x, z))
+  const worn = Math.max(0, 1 - pathDistance(x, z) / (meadow.pathWidth * 0.7))
+  if (FIELDS) colour.setRGB(worn * 0.5, lush(x, z), bloom(x, z))
+  else colour.lerpColors(dry, deep, lush(x, z)).lerp(earth, worn * 0.8)
+  colour.toArray(colours, i * 3)
 }
-plane.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3))
-const lawn = new THREE.Mesh(plane, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }))
+land.computeVertexNormals()
+land.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3))
+const lawn = new THREE.Mesh(land, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }))
 lawn.receiveShadow = true
 scene.add(lawn)
 world.createCollider(RAPIER.ColliderDesc.cuboid(40, 0.5, 40).setTranslation(0, -0.5, 0))
 
-// One wind for grass and flowers, computed on the GPU: a gust rolling across the garden, bending each blade
-// more the higher up it is. Instancing is applied before this, so positionLocal is in garden space.
-const gust = sin(time.mul(1.7).add(positionLocal.x.mul(0.5)).add(positionLocal.z.mul(0.35))).mul(0.25)
-  .add(sin(time.mul(3.1).add(positionLocal.x.mul(1.3))).mul(0.06))
-const wind = positionLocal.add(vec3(gust, 0, gust.mul(0.6)).mul(positionLocal.y.mul(0.6)))
+// Grass and flowers grow in 6 m chunks. Each chunk's cards are shuffled, so drawing fewer of them thins it
+// evenly: full within 14 m of the camera, thinning to a quarter by 45 m, gone past 70 m.
+const CHUNK = 6
+const rand = random(11)
+const chunks = new Map()
+function chunk(x, z) {
+  const key = `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`
+  return chunks.get(key) ?? chunks.set(key, { grass: [], low: [], tall: [], centre: new THREE.Vector3((Math.floor(x / CHUNK) + 0.5) * CHUNK, 0, (Math.floor(z / CHUNK) + 0.5) * CHUNK) }).get(key)
+}
+const stones = placed.filter(p => p.model === 'stone_path')
+const open = (x, z) => !bare(x, z) && pathDistance(x, z) > meadow.pathWidth / 2 && !stones.some(({ pos }) => Math.hypot(x - pos[0], z - pos[2]) < 0.4)
+const upright = (yaw, lean = 0.15) => new THREE.Quaternion().setFromEuler(new THREE.Euler((rand() - 0.5) * lean, yaw, (rand() - 0.5) * lean, 'YXZ'))
+const tint = (h, s, l) => new THREE.Color().setHSL(h, s, l)
+const leafTint = () => new THREE.Color(0.8, 0.95, 0.7).multiplyScalar(0.8 + 0.3 * rand())
 
-// Somewhere on open lawn: inside the garden, off the bare areas and away from the stone path.
-const stones = placed.filter(p => p.model === 'stone_path').map(p => p.pos)
-const [x0, z0, x1, z1] = grass.area
-function lawnSpot() {
-  for (;;) {
-    const x = x0 + Math.random() * (x1 - x0), z = z0 + Math.random() * (z1 - z0)
-    if (grass.bare.some(([a, b, c, d]) => x > a && x < c && z > b && z < d)) continue
-    if (stones.some(([sx, , sz]) => Math.hypot(x - sx, z - sz) < 0.55)) continue
-    return [x, z]
+const [x0, z0, x1, z1] = meadow.lawn
+const share = webgpu ? 1 : 0.5
+// Grass: tufts as pairs of crossed cards, taller, deeper and greener where the lawn is lush.
+for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.grassPerSquareMetre * share); n > 0; n--) {
+  const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
+  if (!open(x, z)) continue
+  const l = lush(x, z), height = 0.12 + 0.2 * l * (0.6 + rand() * 0.8), yaw = rand() * Math.PI
+  for (const turn of [0, Math.PI / 2]) {
+    chunk(x, z).grass.push({
+      position: new THREE.Vector3(x, 0, z), quaternion: upright(yaw + turn), scale: new THREE.Vector3(height * 1.3, height, 1),
+      cell: LEAVES.grass, base: [x, 0, z, 6], tint: new THREE.Color(1.1 - 0.3 * l, 1, 0.65 + 0.15 * rand()).multiplyScalar(0.8 + 0.35 * rand()),
+    })
   }
 }
 
-function scatter(geometry, material, count, place) {
-  const mesh = new THREE.InstancedMesh(geometry, material, count)
-  const matrix = new THREE.Matrix4(), turn = new THREE.Quaternion(), size = new THREE.Vector3(), at = new THREE.Vector3()
-  for (let i = 0; i < count; i++) {
-    const [x, y, z, height, tint] = place()
-    turn.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.random() * Math.PI * 2)
-    mesh.setMatrixAt(i, matrix.compose(at.set(x, y, z), turn, size.set(1, height, 1)))
-    mesh.setColorAt(i, tint)
+// Flowers in three heights where the bloom field is high. Low heads (daisies, forget-me-nots, violets) face up
+// among the grass; knee-high clumps (foxgloves, mallows, roses, blossom) stand on stems with leaves at their feet.
+const LOW = [FLOWERS.daisy, FLOWERS.forgetMeNot, FLOWERS.violets, FLOWERS.daisy]
+const TALL = [FLOWERS.foxglove, FLOWERS.mallow, FLOWERS.pinkRose, FLOWERS.blossom, FLOWERS.foxglove]
+const stem = (list, x, z, top) => list.push({
+  position: new THREE.Vector3(x, 0, z), quaternion: upright(rand() * Math.PI, 0.1), scale: new THREE.Vector3(0.012, top, 1),
+  cell: LEAVES.laurel, base: [x, 0, z, 2.5], tint: new THREE.Color(0.7, 0.85, 0.5),
+})
+for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (webgpu ? 1 : 0.5)); n > 0; n--) {
+  const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0), b = bloom(x, z)
+  if (rand() > b || !open(x, z)) continue
+  const kind = species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3), c = chunk(x, z)
+  if (rand() < 0.65) {
+    const height = 0.06 + rand() * 0.12
+    stem(c.low, x, z, height)
+    c.low.push({
+      position: new THREE.Vector3(x, height, z), quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.2 + (rand() - 0.5) * 0.6, rand() * 6.3, 0, 'YXZ')),
+      scale: 0.08 + rand() * 0.06, cell: LOW[Math.floor(kind * LOW.length)], base: [x, 0, z, 2.5], tint: tint(0, 0, 0.85 + rand() * 0.15),
+    })
+  } else {
+    const flower = TALL[Math.floor(kind * TALL.length)], height = 0.35 + rand() * 0.45 * b
+    stem(c.tall, x, z, height)
+    for (let k = 0; k < 3; k++) {
+      c.tall.push({
+        position: new THREE.Vector3(x + (rand() - 0.5) * 0.12, 0, z + (rand() - 0.5) * 0.12), quaternion: upright(rand() * 6.3, 0.9),
+        scale: new THREE.Vector3(0.09, 0.16, 1), cell: LEAVES.laurel, base: [x, 0, z, 2.5], tint: leafTint(),
+      })
+    }
+    const heads = flower === FLOWERS.foxglove ? 5 : 1 + Math.floor(rand() * 3)
+    for (let k = 0; k < heads; k++) {
+      const y = flower === FLOWERS.foxglove ? height * (0.55 + 0.45 * k / heads) : height * (0.85 + rand() * 0.15)
+      const yaw = rand() * 6.3
+      c.tall.push({
+        position: new THREE.Vector3(x + Math.sin(yaw) * 0.03, y - 0.04, z + Math.cos(yaw) * 0.03),
+        quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(flower === FLOWERS.foxglove ? 0.3 : -0.7, yaw, 0, 'YXZ')),
+        scale: flower === FLOWERS.foxglove ? 0.09 : 0.12 + rand() * 0.07, cell: flower, base: [x, 0, z, 2.5], tint: tint(0, 0, 0.9 + rand() * 0.1),
+      })
+    }
   }
-  mesh.receiveShadow = true
-  scene.add(mesh)
 }
 
-// Grass: two crossed blades per instance, dark at the root and light at the tip.
-const blade = new THREE.BufferGeometry()
-const w = 0.012
-blade.setAttribute('position', new THREE.Float32BufferAttribute([-w, 0, 0, w, 0, 0, 0, 1, 0, 0, 0, -w, 0, 0, w, 0, 1, 0], 3))
-blade.setAttribute('color', new THREE.Float32BufferAttribute([0.3, 0.42, 0.2, 0.3, 0.42, 0.2, 0.75, 0.85, 0.45, 0.3, 0.42, 0.2, 0.3, 0.42, 0.2, 0.75, 0.85, 0.45], 3))
-blade.computeVertexNormals()
-const grassMaterial = new THREE.MeshStandardNodeMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 })
-grassMaterial.positionNode = wind
-const area = (x1 - x0) * (z1 - z0)
-const green = new THREE.Color()
-scatter(blade, grassMaterial, Math.round(area * grass.perSquareMetre * (webgpu ? 1 : 0.3)), () => {
-  const [x, z] = lawnSpot()
-  return [x, 0, z, grass.height[0] + Math.random() * (grass.height[1] - grass.height[0]), green.setHSL(0.24 + Math.random() * 0.06, 0.5, 0.45 + Math.random() * 0.15)]
-})
-
-// Patches of small flowers on the lawn.
-const flowerMaterial = new THREE.MeshStandardNodeMaterial({ roughness: 0.7 })
-flowerMaterial.positionNode = wind
-const heads = new THREE.BoxGeometry(0.035, 0.025, 0.035).translate(0, 1, 0)
-let patch, patchLeft = 0
-const petal = new THREE.Color(), palette = [0xffffff, 0xf2d04a, 0xe8a0c8, 0xb8a0f0]
-scatter(heads, flowerMaterial, grass.flowerPatches * grass.flowersPerPatch * (webgpu ? 1 : 0.5), () => {
-  if (patchLeft-- === 0) {
-    patch = [...lawnSpot(), palette[Math.floor(Math.random() * palette.length)]]
-    patchLeft = grass.flowersPerPatch * (webgpu ? 1 : 0.5) - 1
+const grassMaterial = cardMaterial(LEAVES, { translucency: 1.1, flutter: 0.01 })
+const leafMaterial = cardMaterial(LEAVES, { translucency: 0.8, flutter: 0.01 })
+const flowerMaterial = cardMaterial(FLOWERS, { translucency: 0.6, flutter: 0.015, gloss: 0.55 })
+const shuffle = list => {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]]
   }
-  const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * grass.flowerRadius
-  return [patch[0] + Math.cos(a) * r, 0, patch[1] + Math.sin(a) * r, 0.1 + Math.random() * 0.12, petal.set(patch[2])]
-})
+  return list
+}
+const drawn = []
+for (const c of chunks.values()) {
+  const stems = [...c.low, ...c.tall].filter(f => f.cell === LEAVES.laurel), heads = [...c.low, ...c.tall].filter(f => f.cell !== LEAVES.laurel)
+  for (const [material, sheet, list] of [[grassMaterial, LEAVES, c.grass], [leafMaterial, LEAVES, stems], [flowerMaterial, FLOWERS, heads]]) {
+    if (!list.length) continue
+    const mesh = cards(material, sheet, shuffle(list))
+    mesh.castShadow = false
+    scene.add(mesh)
+    drawn.push({ mesh, full: list.length, centre: c.centre })
+  }
+}
+
+export function updateGround() {
+  for (const d of drawn) {
+    const distance = Math.hypot(d.centre.x - camera.position.x, d.centre.z - camera.position.z)
+    const keep = distance < 14 ? 1 : distance > 70 ? 0 : Math.max(0.25, 1 - (distance - 14) / 41)
+    d.mesh.count = Math.ceil(d.full * keep)
+    d.mesh.visible = keep > 0
+  }
+}

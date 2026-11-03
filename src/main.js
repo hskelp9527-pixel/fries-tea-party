@@ -1,7 +1,9 @@
-import { renderer, camera, webgpu, pipeline } from './scene.js'
+import { renderer, camera, webgpu, render, updateSun } from './scene.js'
 import { world } from './physics.js'
-import './ground.js'
+import { updateGround } from './ground.js'
 import { updateGarden } from './garden.js'
+import './foliage.js'
+import { updateMagic } from './magic.js'
 import { player, updatePlayer } from './player.js'
 import { ctx } from './audio.js'
 import { updateTweens } from './tweens.js'
@@ -12,21 +14,28 @@ import { updateSong } from './song.js'
 import { updateCast } from './cast.js'
 import { updateHands } from './hands.js'
 
+const params = new URLSearchParams(location.search)
 // ?anims: buttons to try every character's clips by hand.
-if (new URLSearchParams(location.search).has('anims')) import('./anims.js')
+if (params.has('anims')) import('./anims.js')
 
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
 camera.position.set(-6, 9, 12)
 camera.lookAt(0, 0, -4)
 
+// ?frame=<id> holds one of the visual review's frames (src/frames.js), with no start screen.
 const startScreen = document.getElementById('start')
-startScreen.addEventListener('click', () => {
+if (params.has('frame')) {
   startScreen.remove()
-  ctx.resume()
-  renderer.domElement.requestPointerLock()
-  begin(new URLSearchParams(location.search).get('start'))
-}, { once: true })
+  import('./frames.js').then(f => f.stageFrame(params.get('frame')))
+} else {
+  startScreen.addEventListener('click', () => {
+    startScreen.remove()
+    ctx.resume()
+    renderer.domElement.requestPointerLock()
+    begin(params.get('start'))
+  }, { once: true })
+}
 renderer.domElement.addEventListener('click', () => {
   if (player.control) renderer.domElement.requestPointerLock()
 })
@@ -40,10 +49,13 @@ renderer.setAnimationLoop(now => {
   updatePlayer(dt)
   updateExplore(dt)
   updateGarden(dt, time)
+  updateMagic(dt, time)
+  updateGround()
   updateFloating(dt)
   updateSong()
   updateCast(dt)
   world.step()
   updateHands()
-  pipeline.render()
+  updateSun()
+  render()
 })

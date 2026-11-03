@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { renderer, scene, camera, SKY, hemi, sky, grade } from './scene.js'
+import { renderer, scene, camera, air, pink } from './scene.js'
 import { things, gears, clocks, wake } from './garden.js'
 import { model } from './models.js'
 import { start, song, page as pageStand } from './layout.js'
@@ -16,7 +16,14 @@ import { game } from './state.js'
 
 const DEG = Math.PI / 180
 const v = (...a) => new THREE.Vector3(...a)
-const PINK = new THREE.Color(0xf6c4d4), WHITE = new THREE.Color(1, 1, 1), PINK_GRADE = new THREE.Color(1, 0.86, 0.92)
+const PINK_SKY = { horizon: new THREE.Color(1.1, 0.55, 0.62), zenith: new THREE.Color(0.85, 0.5, 0.72), glow: new THREE.Color(1.7, 0.75, 0.75) }
+const EVENING = Object.fromEntries(Object.keys(PINK_SKY).map(k => [k, air[k].value.clone()]))
+
+// 6:01: the sky and the whole picture turn pink, `t` from 0 to 1.
+export function turnPink(t) {
+  for (const k in PINK_SKY) air[k].value.lerpColors(EVENING[k], PINK_SKY[k], t)
+  pink.value = t
+}
 
 // Starts the chapter. `from` (the ?start= parameter) skips ahead for testing: explore, song or ending.
 export async function begin(from) {
@@ -80,10 +87,13 @@ async function opening() {
     g.object.position.copy(home)
   }
 
-  // Shot 1: the camera glides along the long table to Fries. "No room!"
+  // Shot 1: over Fries's right shoulder, up the long table at the hosts, pushing in slowly. "No room!"
   placePlayer(start.pos, start.rot)
-  const fries = v(...start.pos).setY(1.05)
-  const glide = shot(v(0.9, 1.5, -8.2), fries, v(0, 1.35, 2.2), fries, 7)
+  const facing = start.rot * DEG, feet = v(...start.pos)
+  const ahead = v(Math.sin(facing), 0, Math.cos(facing)), right = v(-Math.cos(facing), 0, Math.sin(facing))
+  const shoulder = back => feet.clone().addScaledVector(ahead, -back).addScaledVector(right, 0.42).setY(feet.y + 1.32)
+  const hosts = things.hatter.position.clone().add(things.hare.position).multiplyScalar(0.5).setY(1.05)
+  const glide = shot(shoulder(1.1), hosts, shoulder(0.6), hosts, 7)
   await wait(0.8)
   await say('OP-01')
   await say('OP-02')
@@ -134,13 +144,7 @@ async function ending() {
   }
   setMusic({ ending: 1 }, 0)
   act('cheer')
-  const hemiSky = hemi.color.clone()
-  tween(3, t => {
-    sky.material.color.lerpColors(WHITE, PINK, t)
-    scene.fog.color.lerpColors(SKY, PINK, t)
-    hemi.color.lerpColors(hemiSky, PINK, t)
-    grade.value.lerpColors(WHITE, PINK_GRADE, t)
-  })
+  tween(3, turnPink)
   await say('ED-01')
 
   // The March Hare grabs the Dormouse and stuffs him into the pink teapot.

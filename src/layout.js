@@ -271,14 +271,6 @@ export const shapes = {
     [0, 1.86, 0, 0.012, 3, 0.012, LANTERN],
   ],
   clock_hand: [[0, 0.11, 0, 0.03, 0.22, 0.012, BLACK]], // pivots at the clock centre, points up
-  bush: [
-    [0, 0.45, 0, 1.2, 0.9, 1.2, LEAF2],
-    [-0.3, 0.95, 0.2, 0.18, 0.12, 0.18, 0xe85a8a],
-    [0.25, 0.97, -0.2, 0.18, 0.12, 0.18, 0xf2d04a],
-    [0.1, 0.93, 0.35, 0.16, 0.1, 0.16, 0xffffff],
-    [-0.2, 0.96, -0.3, 0.16, 0.1, 0.16, 0xb07ae0],
-  ],
-  hedge: [[0, 1.5, 0, 4, 3, 1.2, HEDGE]], // tall enough that a big Fries cannot climb out
   fence: [ // 2 m of picket fence along its x
     [0, 0.3, 0, 2, 0.06, 0.05, FENCE],
     [0, 0.62, 0, 2, 0.06, 0.05, FENCE],
@@ -297,18 +289,6 @@ export const shapes = {
     [0.35, 2.95, 0, 0.3, 0.2, 0.25, BLOSSOM2],
     [0, 3.1, 0, 0.25, 0.2, 0.25, BLOSSOM],
   ],
-  flower_bed: [ // two tiers, tall flowers behind and low ones in front
-    [0, 0.15, 0, 3, 0.3, 1.2, WALLSTONE],
-    [0, 0.4, 0, 2.4, 0.25, 0.8, SOIL],
-    ...[-1, -0.4, 0.3, 0.9].map((x, i) => [x, 0.64, -0.2, 0.32, 0.24 + i % 2 * 0.06, 0.3, FLOWERS[i]]),
-    ...[-1.2, -0.4, 0.4, 1.2].map((x, i) => [x, 0.36, 0.44, 0.26, 0.12, 0.2, FLOWERS[(i + 2) % 5]]),
-  ],
-  cypress: [ // outside the hedge, tall and dark against the evening sky
-    [0, 0.4, 0, 0.3, 0.8, 0.3, BARK],
-    [0, 3.2, 0, 1.3, 5, 1.3, CYPRESS],
-    [0, 6.2, 0, 0.9, 1.4, 0.9, CYPRESS],
-    [0, 7.3, 0, 0.5, 0.9, 0.5, CYPRESS],
-  ],
   stone_path: [[0, 0.01, 0, 0.7, 0.02, 0.5, PATH]],
 }
 
@@ -321,17 +301,23 @@ const row = (model, [x0, z0], [x1, z1], length) => {
   const rot = Math.atan2(z0 - z1, x1 - x0) * 180 / Math.PI
   return Array.from({ length: n }, (_, i) => ({ model, pos: [x0 + (x1 - x0) * (i + 0.5) / n, 0, z0 + (z1 - z0) * (i + 0.5) / n], rot }))
 }
-const bed = (x, z, rot = 0) => ({ model: 'flower_bed', pos: [x, 0, z], rot })
-const cypresses = ([x0, z0], [x1, z1], n) => Array.from({ length: n }, (_, i) => ({
-  model: 'cypress', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], scale: 0.85 + i * 37 % 26 / 100, solid: false, shadow: false,
-}))
-const path = ([x0, z0], [x1, z1], n) => Array.from({ length: n }, (_, i) => ({
-  model: 'stone_path', pos: [x0 + (x1 - x0) * i / (n - 1), 0, z0 + (z1 - z0) * i / (n - 1)], rot: i * 37 % 40 - 20, solid: false,
-}))
+// Stepping stones along a path's centre line, about `spacing` apart.
+const stones = (line, spacing) => line.slice(1).flatMap(([x1, z1], i) => {
+  const [x0, z0] = line[i], n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / spacing))
+  return Array.from({ length: n }, (_, k) => ({
+    model: 'stone_path', pos: [x0 + (x1 - x0) * k / n, 0, z0 + (z1 - z0) * k / n], rot: (i * 7 + k) * 37 % 40 - 20, solid: false,
+  }))
+})
+
+// The paths, as centre lines of [x, z] points. Flowers grow in bands either side of them.
+export const paths = [
+  [[0, 8.4], [0, 2.6]],
+  [[-0.8, 2.4], [-3, 0.6], [-3.2, -1.8], [-3.2, -2.6], [-2.5, -8.6], [-2, -9.2], [-0.6, -9.5]],
+  [[0.8, 2.4], [2.6, 1], [2.8, 0.4], [2.9, -4.6]],
+]
 
 // Every fixed object. `onTable` props dance on the table in the final chorus; `on` names the prop one stands on,
-// which it rides with. `solid: false` leaves it without colliders, `shadow: false` keeps it from casting a
-// shadow (the backdrop cypresses would otherwise darken the whole garden under the low sun); `scale` is uniform.
+// which it rides with. `solid: false` leaves it without colliders; `scale` is uniform.
 export const placed = [
   { model: 'big_tree', pos: [0, 0, -12] },
   { model: 'tree_door', pos: [-0.5, 0.45, -10.24] },
@@ -361,16 +347,6 @@ export const placed = [
   { model: 'cottage', pos: [-11.5, 1.2, -2], rot: 90 }, // on the terrace, porch facing the table
   { model: 'hat_rack', pos: [-7.169, 1.6, -3.205] }, // at the front edge of the porch, by the top of the steps
   { model: 'top_hat', pos: [-7.169, 3.03, -3.205], solid: false }, // its crown under gear 3
-  // The walkable garden, about 30 by 25 m, closed by a tall hedge
-  ...row('hedge', [-17, -16], [12.5, -16], 4),
-  ...row('hedge', [-17, 9], [12.5, 9], 4),
-  ...row('hedge', [-17, -16], [-17, 9], 4),
-  ...row('hedge', [12.5, -16], [12.5, 9], 4),
-  // A row of cypresses beyond the hedge on every side
-  ...cypresses([-19.5, -18.5], [15, -18.5], 15),
-  ...cypresses([-19.5, 11.5], [15, 11.5], 15),
-  ...cypresses([-19.8, -16], [-19.8, 9.5], 11),
-  ...cypresses([15.2, -16], [15.2, 9.5], 11),
   // Fences along the path, and arches over it
   ...row('fence', [-1, 4.6], [-1, 8.6], 2),
   ...row('fence', [1, 4.6], [1, 8.6], 2),
@@ -382,19 +358,13 @@ export const placed = [
   { model: 'rose_arch', pos: [0, 0, 6.2] },
   { model: 'rose_arch', pos: [2.85, 0, -2.4] },
   { model: 'rose_arch', pos: [-2.6, 0, -7.4] },
-  // Layered flower beds, so no open patch is wider than about 6 m
-  bed(-3.4, 5.6, 20), bed(-5.3, 2.6, 90), bed(-9.6, 6.4), bed(-13.4, 6.6),
-  bed(3.6, 5.4, -15), bed(6.6, 3, 10), bed(9.8, 5.8), bed(11.1, 2, 90), bed(11.1, -3, 90),
-  bed(4.6, -8.4), bed(8.6, -8.6), bed(5.6, -12.4, 30), bed(9.8, -12.2, -20),
-  bed(-4.4, -9.6), bed(-8.6, -10.2), bed(-12.8, -10.4), bed(-6.4, -13.6, 15), bed(-10.8, -14, -10), bed(-14.8, -12.4, 90),
-  bed(-4.8, -6.4, 90),
-  ...path([0, 8.4], [0, 2.6], 9),
-  ...path([-0.8, 2.4], [-3, 0.6], 4),
-  ...path([-3, 0.2], [-3.5, -1.8], 3),
-  ...path([0.8, 2.4], [2.6, 1], 4),
-  ...path([2.8, 0.4], [2.9, -4.6], 7),
-  ...path([-3.2, -2.6], [-2.5, -8.6], 9),
-  ...path([-2, -9.2], [-0.6, -9.5], 3),
+  ...paths.flatMap(line => stones(line, 0.75)),
+]
+
+// The walkable garden, about 30 by 25 m, closed by a tall hedge: [x0, z0, x1, z1] along its middle, height and
+// thickness. Hedges and bushes are dense volumes of leaves, solid to walk into.
+export const hedges = [
+  [-17, -16, 12.5, -16, 3, 1.2], [-17, 9, 12.5, 9, 3, 1.2], [-17, -16, -17, 9, 3, 1.2], [12.5, -16, 12.5, 9, 3, 1.2],
 ]
 
 // Flower bushes, [x, z]. They sway and hum once the third layer wakes.
@@ -548,30 +518,20 @@ export const cast = {
   dormouse: {},
 }
 
-// Grass and small flowers on the open lawn: inside `area` [x0, z0, x1, z1], off the `bare` rectangles (terrace,
-// fountain basin, tree) and away from the stone path. The WebGL fallback gets a third of the grass and half the
-// flowers.
-export const grass = {
-  area: [-16.8, -15.8, 12.3, 8.8],
-  bare: [[-16, -8, -6, 4], [4, -6, 10, 0], [-1.8, -13.8, 1.8, -10.2]],
-  perSquareMetre: 45,
-  height: [0.06, 0.18],
-  flowerPatches: 40,
-  flowersPerPatch: 30,
-  flowerRadius: 0.6,
+// The lawn and its flowers (see src/fields.js). Grass grows over `lawn` [x0, z0, x1, z1] except on the `bare`
+// rectangles (terrace, fountain basin, tree, under the table) and the paths (`pathWidth` wide); flowers bloom in
+// bands along the paths, in the `drifts` [x, z, radius] and in loose patches. The land is flat over `plateau` and
+// falls away beyond it. The WebGL fallback gets a third of the grass and half the flowers.
+export const meadow = {
+  plateau: [-36, -31, 36, 29],
+  lawn: [-16.4, -15.4, 11.9, 8.4],
+  bare: [[-16, -8, -6, 4], [4, -6, 10, 0], [-1.8, -13.8, 1.8, -10.2], [-0.85, -8.6, 0.85, 1.6]],
+  pathWidth: 0.8,
+  drifts: [
+    [-3.4, 5.6, 1.6], [-5.3, 2.6, 1.4], [-9.6, 6.4, 1.8], [-13.4, 6.6, 1.8], [3.6, 5.4, 1.6], [6.6, 3, 1.6], [9.8, 5.8, 1.8],
+    [11.1, 2, 1.4], [11.1, -3, 1.4], [4.6, -8.4, 1.6], [8.6, -8.6, 1.6], [5.6, -12.4, 1.8], [9.8, -12.2, 1.8], [-4.4, -9.6, 1.4],
+    [-8.6, -10.2, 1.6], [-12.8, -10.4, 1.6], [-6.4, -13.6, 1.8], [-10.8, -14, 1.8], [-14.8, -12.4, 1.6], [-4.8, -6.4, 1.2],
+  ],
+  grassPerSquareMetre: 30,
+  flowersPerSquareMetre: 22,
 }
-
-// Painted backdrop cards beyond the garden, one entry per card: a flat silhouette for now, `outline` in metres
-// on the card ([x, y], y up from the ground), facing +Z before `rot`. Fog melts them into the evening haze.
-const hills = (width, peaks) => [[-width / 2, 0], ...Array.from({ length: 49 }, (_, i) => {
-  const t = i / 48 * (peaks.length - 1), k = Math.min(Math.floor(t), peaks.length - 2), f = t - k
-  return [-width / 2 + width * i / 48, peaks[k] + (peaks[k + 1] - peaks[k]) * (1 - Math.cos(f * Math.PI)) / 2]
-}), [width / 2, 0]]
-export const backdrop = [
-  { name: 'hills_north', pos: [0, 0, -62], rot: 0, colour: 0x7f8f78, outline: hills(170, [9, 16, 12, 20, 14, 10, 17, 11]) },
-  { name: 'hills_north_far', pos: [-15, 0, -95], rot: 0, colour: 0x9c9fa6, outline: hills(240, [18, 26, 20, 30, 22, 27, 19]) },
-  { name: 'hills_east', pos: [65, 0, -8], rot: -90, colour: 0x86907e, outline: hills(170, [8, 13, 10, 15, 9, 12]) },
-  { name: 'hills_south', pos: [5, 0, 60], rot: 180, colour: 0x8a957f, outline: hills(170, [7, 12, 9, 14, 10, 8]) },
-  { name: 'hills_west', pos: [-65, 0, -5], rot: 90, colour: 0x6f6878, outline: hills(170, [10, 15, 12, 18, 13, 9]) },
-  { name: 'far_cottage', pos: [-24, 0, -52], rot: 25, colour: 0x5f5866, outline: [[-3, 0], [-3, 3], [0, 5.5], [1.6, 4.2], [1.6, 5.6], [2.3, 5.6], [2.3, 3.6], [3, 3], [3, 0]] },
-]
