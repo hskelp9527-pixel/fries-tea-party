@@ -4,7 +4,7 @@ import { RAPIER, world } from './physics.js'
 import { things } from './garden.js'
 import { model } from './models.js'
 import { bushes, hedges, meadow, rosePath } from './layout.js'
-import { LEAVES, cardMaterial, cards, flowerClump } from './plants.js'
+import { LEAVES, cardMaterial, cards, flowerClump, flowerMesh } from './plants.js'
 import { noise, random, ground } from './fields.js'
 
 // Leaves in volumes: the big tree's crown, the ivy on its trunk, the bushes and hedges, and the trees on the far
@@ -163,8 +163,7 @@ for (let d = 0; d < length; d += 0.55) {
     }
   }
 }
-const roseHeadMesh = new THREE.InstancedMesh(roseClump.geometry, roseClump.materials, roseHeads.length)
-roseHeads.forEach((matrix, i) => roseHeadMesh.setMatrixAt(i, matrix))
+const roseHeadMesh = flowerMesh(roseClump, roseHeads)
 const arch = model('heart_arch')
 arch.position.set(rosePath.arch[0], 0, rosePath.arch[1])
 arch.rotation.y = Math.atan2(along.x, along.y)
