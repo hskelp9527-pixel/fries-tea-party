@@ -4,7 +4,7 @@ import { renderer, scene, camera } from './scene.js'
 import { model } from './models.js'
 import { start } from './layout.js'
 import { burst, setVoicePitch, currentSpeaker } from './audio.js'
-import { Animator } from './animation.js'
+import { Animator, Blink } from './animation.js'
 import { tween } from './tweens.js'
 
 const DEG = Math.PI / 180
@@ -43,6 +43,7 @@ scene.add(player.mesh)
 player.mesh.traverse(o => o.layers.set(1))
 camera.layers.enable(1)
 export const anim = new Animator(player.mesh, 'fries')
+const blink = new Blink(player.mesh)
 
 const keys = new Set()
 let jump = false
@@ -221,6 +222,7 @@ function animate(dt, speed, airborne) {
     else anim.play('idle')
   }
   anim.mixer.update(dt)
+  blink.update(dt, anim.current?.getClip().name.includes('sleep'))
 }
 
 // Turns the view toward a point; k below 1 eases part of the way.

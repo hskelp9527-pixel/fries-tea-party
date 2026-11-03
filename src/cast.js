@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { Animator } from './animation.js'
+import { Animator, Blink } from './animation.js'
 import { model } from './models.js'
 import { things, placedAll } from './garden.js'
 import { currentLine } from './audio.js'
@@ -65,7 +65,7 @@ export function rest(name, clip, buttocks, samples = 1, end = false) {
 // touches his plate or the table at every moment, centred over it.
 export const cast = Object.fromEntries(['hatter', 'hare', 'dormouse'].map(name => {
   const object = things[name], anim = new Animator(object, name)
-  const member = { name, object, anim, armature: object.getObjectByName('Armature'), seated: 'seat' in stage[name], rests: {} }
+  const member = { name, object, anim, blink: new Blink(object), armature: object.getObjectByName('Armature'), seated: 'seat' in stage[name], rests: {} }
   if (member.seated && anim.has('sit_idle')) member.rests.sitting = rest(name, 'sit_idle', true)
   if (name === 'dormouse') for (const clip in anim.actions) member.rests[clip] = rest(name, clip, false, 12)
   return [name, member]
@@ -177,6 +177,7 @@ export function updateCast(dt) {
   for (const m of Object.values(cast)) {
     play(m, line)
     m.anim.mixer.update(dt)
+    m.blink.update(dt, m.anim.current?.getClip().name.includes('sleep'))
     if (!m.armature) continue
     const action = m.anim.current, clip = action.getClip(), r = m.rests[clip.name], onSeat = stage[m.name].seat - m.object.position.y - m.rests.sitting?.lows[0]
     // Sitting down the hips lower onto the seat through the clip; standing up they rise from it.

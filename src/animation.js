@@ -50,3 +50,32 @@ export class Animator {
     if (action) action.timeScale = speed / (action.getClip().userData.groundSpeed * scale)
   }
 }
+
+// Eyelids use both morphs together so the lid follows the eye.
+export class Blink {
+  constructor(object) {
+    this.lids = object.getObjectByName('Eyelids')
+    this.timer = 2 + Math.random() * 4
+    this.phase = -1
+  }
+
+  update(dt, sleeping = false) {
+    if (!this.lids) return
+    let amount = 0
+    if (sleeping) {
+      amount = 1
+      this.phase = -1
+      this.timer = 2 + Math.random() * 4
+    } else if (this.phase >= 0) {
+      this.phase += dt
+      amount = this.phase < 0.07 ? this.phase / 0.07 : Math.max(0, 1 - (this.phase - 0.07) / 0.1)
+      if (this.phase >= 0.17) {
+        this.phase = -1
+        this.timer = Math.random() < 0.2 ? 0.12 : 2 + Math.random() * 4
+      }
+    } else if ((this.timer -= dt) <= 0) this.phase = 0
+    const { morphTargetDictionary: indices, morphTargetInfluences: weights } = this.lids
+    weights[indices.blink_half] = 1 - Math.abs(2 * amount - 1)
+    weights[indices.blink] = Math.max(0, 2 * amount - 1)
+  }
+}
