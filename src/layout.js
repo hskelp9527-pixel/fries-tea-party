@@ -485,9 +485,42 @@ export const page = { stand: [-1.45, 0, -4.2], rot: 90, grip: [0, 0.05, 0.007] }
 
 // Teacups standing on the long table. They pulse on every beat of the song.
 export const tableCups = [
-  [-0.55, 0.76, -7.6], [0.5, 0.76, -6.9], [-0.55, 0.76, -6.2], [0.5, 0.76, -5.9], [0.45, 0.76, -5],
-  [-0.75, 0.76, -4.2], [0.5, 0.76, -3.9], [-0.5, 0.76, -2.8], [0.45, 0.76, -2.2], [-0.5, 0.76, -1.5],
-  [0.5, 0.76, -0.9], [-0.45, 0.76, -0.1], [0.4, 0.76, 0.6], [-0.4, 0.76, 1.1],
+  [-0.55, 0.782, -7.6], [0.5, 0.782, -6.9], [-0.55, 0.782, -6.2], [0.5, 0.782, -5.9], [0.45, 0.782, -5],
+  [-0.75, 0.782, -4.2], [0.5, 0.782, -3.9], [-0.5, 0.782, -2.8], [0.45, 0.782, -2.2], [-0.5, 0.782, -1.5],
+  [0.5, 0.782, -0.9], [-0.45, 0.782, -0.1], [0.4, 0.782, 0.6], [-0.4, 0.782, 1.1],
+]
+
+// Extra service along the edges, leaving the watch, sleeping Dormouse, size teas and song spot clear.
+// These are instanced separately from the cups addressed by the story and rhythm game.
+export const tableDressing = [
+  ...[-7.65, -6.95, -5.95, -4.65, -3.25, -1.9, -0.65, 0.55].flatMap((z, i) => [
+    { model: 'candelabra', pos: [0.82, 0.778, z], rot: 20 + i * 31, scale: i % 2 ? 0.95 : 1.15 },
+    { model: 'candle', pos: [i < 3 ? 0.62 : -0.88, 0.778, z + 0.28], scale: 0.85 + i % 3 * 0.18 },
+  ]),
+  ...[-7.55, -5.45, -3.7, -2.25, -0.85, 0.65].flatMap((z, i) => [
+    { model: 'cake_stand', pos: [0.35, 0.778, z], scale: 0.9 },
+    { model: 'cupcake', pos: [0.35, 1.183, z], scale: 1.1, rot: i * 47, onPrevious: true },
+    { model: 'fruit_tart', pos: [0.38, 0.778, z + 0.5], rot: i * 23 },
+  ]),
+  ...[-5.7, -3.8, -1.8, 0.4].flatMap((z, i) => [
+    { model: 'teapot', pos: [0.02, 0.778, z], rot: 25 + i * 83, scale: 1.15 },
+    { model: 'milk_jug', pos: [-0.34, 0.778, z + 0.22], rot: i * 61 },
+    { model: 'jam_jar', pos: [0.73, 0.778, z - 0.27], rot: i * 29 },
+    { model: 'sugar_bowl', pos: [-0.32, 0.778, z - 0.24] },
+  ]),
+  ...[-3.1, -1.1].flatMap((z, i) => [
+    { model: 'book_stack', pos: [-0.37, 0.778, z], rot: -15 + i * 36 },
+    { model: 'macarons', pos: [0.05, 0.778, z + 0.35] },
+  ]),
+  { model: 'whole_cake', pos: [-0.3, 0.778, -0.45], rot: 20 },
+  ...[-7.7, -7.2, -6.65, -5.75, -5.05, -4.3, -3.45, -2.75, -2.05, -1.3, -0.5, 0.25].flatMap((z, i) => {
+    const x = i < 6 ? 0.98 : -0.97
+    return [
+      { model: 'saucer', pos: [x, 0.778, z], scale: 1.05 },
+      { model: 'teacup', pos: [x, 0.782, z], rot: i * 53, scale: 1.05, onPrevious: true },
+    ]
+  }),
+  ...tableCups.map(([x, , z]) => ({ model: 'saucer', pos: [x, 0.778, z] })),
 ]
 
 // Clocks stuck at six, hanging from the big tree's branches on chains: [x, y, z] of each clock's foot and the
@@ -497,13 +530,26 @@ export const clocks = [
   { pos: [-1.6, 2.5, -8.8], rot: 60 },
   { pos: [1, 2.6, -8.2], rot: -40 },
   { pos: [-7.5, 2.6, -8.8], rot: 10 },
+  { pos: [-3.8, 3.35, -10.8], rot: 25 },
+  { pos: [-2.3, 3.8, -9.6], rot: -15 },
+  { pos: [0.3, 3.1, -7.3], rot: -55 },
+  { pos: [1.8, 3.6, -6.1], rot: -30 },
+  { pos: [-1.8, 2.8, -5.3], rot: 45 },
+  { pos: [0.1, 3.9, -4.2], rot: 10 },
+  { pos: [-5.7, 3.6, -7.1], rot: 65 },
+  { pos: [-7.2, 3.4, -10.6], rot: -10 },
 ]
 
 // Lanterns hanging from the big tree's branches on chains: [x, y, z] of each lantern's foot.
 export const lanterns = [
   [-1.6, 2.2, -7.6], [1.4, 2.3, -7.2], [0, 2.5, -8.4], [-2.8, 2.4, -6.4], [2.4, 2.4, -8.8], [-3.6, 2.5, -9.6],
   [-6.6, 2.6, -8.4], [-0.6, 2.6, -10.4],
+  [-4.3, 3.1, -10.5], [-2.2, 3.4, -8.1], [0.5, 2.65, -6.3], [2, 3.2, -5.4],
+  [-1.4, 3.3, -4.6], [-3.7, 3.5, -6.8], [-6.2, 3.2, -10.8], [0.6, 3.8, -9.2],
 ]
+
+// Butterflies resting in the beds; the fountain's rim is their other perch.
+export const butterflyBeds = [[6, 0.7, -0.8], [5.5, 0.7, 6.2], [-7, 0.65, 2.5]]
 
 // Floating things drift inside these boxes, at about their real size. Each gear found adds another batch of
 // `perGear` of each kind.

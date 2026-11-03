@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu'
 import { renderer, camera, webgpu, render, updateSun, updateLens } from './scene.js'
 import { world } from './physics.js'
 import { updateGround } from './ground.js'
-import { updateGarden } from './garden.js'
+import { updateGarden, updateDressing } from './garden.js'
 import './foliage.js'
 import { updateMagic } from './magic.js'
 import { updateLiquids } from './liquids.js'
@@ -90,6 +90,7 @@ renderer.setAnimationLoop(now => {
   updateGaze(dt, name => name === 'fries' ? banter.seated : cast[name].seated, name => name !== 'fries' && !cast[name].seated && !cast[name].doing && !cast[name].moving)
   world.step()
   updateHands()
+  updateDressing(time)
   updateSun()
   if (player.cinematic) focusCharacters()
   updateLens(player.cinematic, lensSubject)
