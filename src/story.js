@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { renderer, scene, camera, air, pink } from './scene.js'
+import { renderer, scene, camera, air, pink, lens } from './scene.js'
 import { things, gears, clocks, doors, wake } from './garden.js'
 import { roses } from './foliage.js'
 import { model } from './models.js'
@@ -17,7 +17,7 @@ import { game } from './state.js'
 
 const DEG = Math.PI / 180
 const v = (...a) => new THREE.Vector3(...a)
-const PINK_SKY = { horizon: new THREE.Color(1.1, 0.55, 0.62), zenith: new THREE.Color(0.85, 0.5, 0.72), glow: new THREE.Color(1.7, 0.75, 0.75) }
+const PINK_SKY = { horizon: new THREE.Color(1.12, 0.62, 0.72), zenith: new THREE.Color(0.52, 0.43, 0.82), glow: new THREE.Color(1.35, 0.78, 0.6) }
 const EVENING = Object.fromEntries(Object.keys(PINK_SKY).map(k => [k, air[k].value.clone()]))
 
 // 6:01: the sky and the whole picture turn pink, `t` from 0 to 1.
@@ -67,6 +67,7 @@ function shot(pos0, look0, pos1 = pos0, look1 = look0, seconds = 0) {
     const k = t * t * (3 - 2 * t)
     camera.position.lerpVectors(pos0, pos1, k)
     camera.lookAt(look.lerpVectors(look0, look1, k))
+    lens.target = look // keep the focal plane on this shot's authored subject throughout the glide
   })
 }
 

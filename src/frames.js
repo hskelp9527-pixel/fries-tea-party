@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { camera } from './scene.js'
+import { camera, lens } from './scene.js'
 import { player, placePlayer, setSize, act } from './player.js'
 import { things, gears, cups, doors, wake } from './garden.js'
 import { roses } from './foliage.js'
@@ -95,4 +95,5 @@ export function stageFrame(id) {
   camera.updateProjectionMatrix()
   camera.position.set(...f.pos)
   camera.lookAt(...f.look)
+  lens.target = new THREE.Vector3(...f.look)
 }
