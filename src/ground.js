@@ -131,13 +131,13 @@ const clumps = {}
 const clump = new THREE.Matrix4()
 for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (webgpu ? 1 : 0.5)); n > 0; n--) {
   const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
-  if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.3) continue
+  if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.6) continue
   const kinds = rand() < 0.65 ? LOW : TALL, name = kinds[Math.floor(species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3) * kinds.length)]
   const c = chunk(x, z)
   clumps[name] ??= flowerClump(name)
   ;(c.flowers[name] ??= []).push(clump.compose(
     new THREE.Vector3(x, level(x, z), z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
-    new THREE.Vector3().setScalar(0.8 + rand() * 0.45),
+    new THREE.Vector3().setScalar(1.15 + rand() * 0.65),
   ).clone())
 }
 
