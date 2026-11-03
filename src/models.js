@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { RAPIER, world } from './physics.js'
 import { shapes } from './layout.js'
 import { rimLit } from './scene.js'
@@ -16,7 +17,36 @@ await Promise.all(Object.entries(files).map(async ([path, url]) => {
   stripRootMotion(gltf)
   // The characters (the models with clips) catch the sun on their edges.
   if (gltf.animations.length) gltf.scene.traverse(o => { if (o.isMesh) o.material = rimLit(o.material) })
+  else if (!gltf.scene.getObjectsByProperty('isSkinnedMesh', true).length) mergeStaticMeshes(gltf.scene)
 }))
+
+// Keep independently addressed parts and their descendants in their original frames. Other static leaves can
+// share one draw per material and attribute layout, with their transforms baked into the model's own frame.
+function mergeStaticMeshes(root) {
+  const batches = new Map(), toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert()
+  function collect(node) {
+    if (node.name === 'house_13' || node.name === 'door_hinge' || node.name.includes('_collider') ||
+        node.name.startsWith('dress_') || node.name.startsWith('flame') || !node.visible) return
+    if (node.isMesh && !node.children.length && !node.morphTargetInfluences && !Array.isArray(node.material) && !node.material.transparent) {
+      const geometry = node.geometry
+      const attributes = Object.entries(geometry.attributes).sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, a]) => `${name}:${a.itemSize}:${a.array.constructor.name}:${a.normalized}:${a.gpuType}`).join('|')
+      const key = `${node.material.uuid}:${geometry.index !== null}:${attributes}`
+      if (!batches.has(key)) batches.set(key, [])
+      batches.get(key).push(node)
+    }
+    node.children.forEach(collect)
+  }
+  collect(root)
+  for (const meshes of batches.values()) {
+    if (meshes.length < 2) continue
+    const geometries = meshes.map(mesh => mesh.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(toRoot, mesh.matrixWorld)))
+    const mesh = new THREE.Mesh(mergeGeometries(geometries), meshes[0].material)
+    root.add(mesh)
+    meshes.forEach(source => source.removeFromParent())
+    geometries.forEach(geometry => geometry.dispose())
+  }
+}
 
 // Root motion: the clips carry the hips across the ground, but the game moves the character itself. Every
 // clip keeps the hips' height and loses their horizontal travel, remembering the ground speed that travel
