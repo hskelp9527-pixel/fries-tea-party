@@ -84,14 +84,27 @@ paving.position.set(plaza[0], 0.015, plaza[1])
 paving.receiveShadow = true
 scene.add(paving)
 
-// Grass and flowers grow in 6 m chunks. Each chunk's cards and clumps are shuffled, so drawing fewer of them thins it
-// evenly: full within 14 m of the camera, thinning to a quarter by 45 m, gone past 70 m (flowers past 45 m).
-const CHUNK = 6
+// Grass and flowers grow in square cells; each cell is one InstancedMesh per material (one for the grass, one per
+// flower kind and detail), culled by the camera frustum through its bounding sphere. A cell's cards and clumps are
+// shuffled, so drawing the first few of them thins it evenly. Bigger cells mean fewer draw calls but a coarser
+// frustum cull and coarser steps (a whole cell changes tier at once, so the change can pop); smaller ones do the
+// opposite. Grass is cheap per card, so its cells are big; flowers are heavy, so theirs are small and follow the
+// camera's distance closely.
+const GRASS_CELL = 16, FLOWER_CELL = 8
+// [from, to, share]: the share of a cell drawn while its nearest edge is between `from` and `to` metres from the
+// camera. Past the last `to` nothing is drawn (the ground texture carries the colour): longer or fuller tiers cost
+// triangles, thinner mid tiers show the lawn through the grass sooner.
+const GRASS_TIERS = [[0, 14, 1], [14, 30, 0.5], [30, 50, 0.2]]
+// Flowers are two meshes per cell and kind. The modelled clump (1000 to 2500 triangles) is drawn only close up; out to
+// 40 m a vertex-merged copy (100 to 350 triangles) stands in, thinning as it goes. A shorter near tier saves the
+// most triangles, a longer one keeps the petals crisp further out.
+const NEAR_FLOWERS = [[0, 6, 1]]
+const FAR_FLOWERS = [[6, 25, 0.5], [25, 40, 0.15]]
 const rand = random(11)
-const chunks = new Map()
-function chunk(x, z) {
-  const key = `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`
-  return chunks.get(key) ?? chunks.set(key, { grass: [], flowers: {}, centre: new THREE.Vector3((Math.floor(x / CHUNK) + 0.5) * CHUNK, 0, (Math.floor(z / CHUNK) + 0.5) * CHUNK) }).get(key)
+const grassCells = new Map(), flowerCells = new Map()
+function cell(cells, size, x, z, make) {
+  const i = Math.floor(x / size), j = Math.floor(z / size), key = `${i},${j}`
+  return cells.get(key) ?? cells.set(key, { ...make(), box: [i * size, j * size, (i + 1) * size, (j + 1) * size] }).get(key)
 }
 const onPlaza = (x, z) => Math.hypot(x - plaza[0], z - plaza[1]) < plaza[2]
 const open = (x, z) => !bare(x, z) && !onPlaza(x, z) && pathDistance(x, z) > meadow.pathWidth / 2
@@ -114,7 +127,7 @@ for (let gx = x0; gx < x1; gx += spacing) {
     if (!open(x, z) || rand() > grassShare(x, z)) continue
     const l = lush(x, z), height = 0.14 + 0.2 * l * (0.6 + rand() * 0.8), yaw = rand() * Math.PI, y = level(x, z)
     for (const turn of [0, Math.PI / 2]) {
-      chunk(x, z).grass.push({
+      cell(grassCells, GRASS_CELL, x, z, () => ({ list: [] })).list.push({
         position: new THREE.Vector3(x, y, z), quaternion: upright(yaw + turn), scale: new THREE.Vector3(height * 1.7, height, 1),
         cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l, 1, 0.65 + 0.15 * rand()).multiplyScalar(0.8 + 0.35 * rand()),
       })
@@ -133,9 +146,8 @@ for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (
   const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
   if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.6) continue
   const kinds = rand() < 0.65 ? LOW : TALL, name = kinds[Math.floor(species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3) * kinds.length)]
-  const c = chunk(x, z)
   clumps[name] ??= flowerClump(name)
-  ;(c.flowers[name] ??= []).push(clump.compose(
+  ;(cell(flowerCells, FLOWER_CELL, x, z, () => ({ kinds: {} })).kinds[name] ??= []).push(clump.compose(
     new THREE.Vector3(x, level(x, z), z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
     new THREE.Vector3().setScalar(1.15 + rand() * 0.65),
   ).clone())
@@ -150,17 +162,19 @@ const shuffle = list => {
   return list
 }
 const drawn = []
-for (const c of chunks.values()) {
-  if (c.grass.length) {
-    const mesh = cards(grassMaterial, LEAVES, shuffle(c.grass))
-    mesh.castShadow = false
-    scene.add(mesh)
-    drawn.push({ mesh, full: c.grass.length, centre: c.centre, far: 70 })
-  }
-  for (const [name, list] of Object.entries(c.flowers)) {
-    const mesh = flowerMesh(clumps[name], shuffle(list))
-    scene.add(mesh)
-    drawn.push({ mesh, full: list.length, centre: c.centre, far: 45 })
+for (const c of grassCells.values()) {
+  const mesh = cards(grassMaterial, LEAVES, shuffle(c.list))
+  scene.add(mesh)
+  drawn.push({ mesh, full: c.list.length, box: c.box, tiers: GRASS_TIERS })
+}
+for (const c of flowerCells.values()) {
+  for (const [name, list] of Object.entries(c.kinds)) {
+    const matrices = shuffle(list)
+    for (const [clump, tiers] of [[clumps[name], NEAR_FLOWERS], [{ ...clumps[name], geometry: clumps[name].simple }, FAR_FLOWERS]]) {
+      const mesh = flowerMesh(clump, matrices)
+      scene.add(mesh)
+      drawn.push({ mesh, full: list.length, box: c.box, tiers })
+    }
   }
 }
 
@@ -189,8 +203,9 @@ function updateWalkers() {
 export function updateGround() {
   updateWalkers()
   for (const d of drawn) {
-    const distance = Math.hypot(d.centre.x - camera.position.x, d.centre.z - camera.position.z)
-    const keep = distance < 14 ? 1 : distance > d.far ? 0 : Math.max(0.25, 1 - (distance - 14) / 41)
+    const [bx0, bz0, bx1, bz1] = d.box
+    const distance = Math.hypot(Math.max(bx0 - camera.position.x, 0, camera.position.x - bx1), Math.max(bz0 - camera.position.z, 0, camera.position.z - bz1))
+    const keep = d.tiers.find(([from, to]) => distance >= from && distance < to)?.[2] ?? 0
     d.mesh.count = Math.ceil(d.full * keep)
     d.mesh.visible = keep > 0
   }

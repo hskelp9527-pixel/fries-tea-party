@@ -93,8 +93,9 @@ export function cardMaterial(sheet, { crown = false, translucency = 0.8, flutter
 const quad = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0)
 
 // One instanced mesh of cards: each { position, quaternion, scale (Vector3 or number), cell, base: [x, y, z, w],
-// tint (Color) }.
-export function cards(material, sheet, list) {
+// tint (Color) }. It casts shadows only when asked: a caster is drawn again in every shadow pass, so only a
+// single-draw crown should.
+export function cards(material, sheet, list, casts = false) {
   const geometry = quad.clone()
   const cell = new Float32Array(list.length * 2), base = new Float32Array(list.length * 4)
   const mesh = new THREE.InstancedMesh(geometry, material, list.length)
@@ -108,39 +109,64 @@ export function cards(material, sheet, list) {
   })
   geometry.setAttribute('aCell', new THREE.InstancedBufferAttribute(cell, 2))
   geometry.setAttribute('aBase', new THREE.InstancedBufferAttribute(base, 4))
-  mesh.castShadow = mesh.receiveShadow = true
+  mesh.castShadow = casts
+  mesh.receiveShadow = true
   mesh.computeBoundingSphere()
   return mesh
 }
 
-// A flower clump model (art/models/kit/<name>.glb) as one geometry with a group per material, and a wind material
-// for each. Vertices bend by their height above the clump's foot, so the foot stays put and the heads move: with the
-// breeze, away from the characters, and with the beat near the dancers. Draw it with `flowerMesh`.
+// A flower clump model (art/models/kit/<name>.glb) as one geometry (its parts differ only by vertex colour, so they
+// share one material and the clump is a single draw), and a wind material for it.
+// Vertices bend by their height above the clump's foot, so the foot stays put and the heads move: with the breeze,
+// away from the characters, and with the beat near the dancers. Draw it with `flowerMesh`.
 export function flowerClump(name) {
   const meshes = []
   model(name).traverse(o => { if (o.isMesh) meshes.push(o) })
   const height = positionGeometry.y, { push, near } = touch(attribute('aRoot', 'vec3').xz)
-  const materials = meshes.map(({ material }) => {
-    const flower = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: material.roughness, side: THREE.DoubleSide })
-    const bend = gust(positionLocal.xz).mul(BREEZE).mul(wind.bushes.mul(0.5).add(1)).add(push).mul(height.mul(height).mul(0.8))
-    flower.positionNode = positionLocal.add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
-    return flower
-  })
-  return { geometry: mergeGeometries(meshes.map(m => m.geometry), true), materials }
+  const material = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.62, side: THREE.DoubleSide })
+  const bend = gust(positionLocal.xz).mul(BREEZE).mul(wind.bushes.mul(0.5).add(1)).add(push).mul(height.mul(height).mul(0.8))
+  material.positionNode = positionLocal.add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
+  const geometry = mergeGeometries(meshes.map(m => m.geometry))
+  return { geometry, simple: simplify(geometry, 10), material }
+}
+
+// A cheap copy of a geometry for distance: vertices snapped to a grid of `divisions` cells across its longest side
+// and merged (positions, normals and colours averaged), triangles that collapse dropped. A 1000 to 2500 triangle
+// clump becomes 100 to 350. Fewer divisions are cheaper and blobbier.
+function simplify(geometry, divisions) {
+  geometry.computeBoundingBox()
+  const { min, max } = geometry.boundingBox, q = Math.max(max.x - min.x, max.y - min.y, max.z - min.z) / divisions
+  const names = ['position', 'normal', 'color'], source = names.map(n => geometry.attributes[n]), index = geometry.index.array
+  const cluster = new Map(), of = new Int32Array(source[0].count), sums = []
+  for (let i = 0; i < of.length; i++) {
+    const key = [source[0].getX(i), source[0].getY(i), source[0].getZ(i)].map(v => Math.round(v / q)).join()
+    if (!cluster.has(key)) { cluster.set(key, cluster.size); sums.push([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) }
+    const sum = sums[cluster.get(key)]
+    of[i] = cluster.get(key)
+    source.forEach((a, k) => { sum[k * 3] += a.getX(i); sum[k * 3 + 1] += a.getY(i); sum[k * 3 + 2] += a.getZ(i) })
+    sum[9]++
+  }
+  const out = new THREE.BufferGeometry(), indices = []
+  names.forEach((n, k) => out.setAttribute(n, new THREE.Float32BufferAttribute(sums.flatMap(s => [s[k * 3] / s[9], s[k * 3 + 1] / s[9], s[k * 3 + 2] / s[9]]), 3)))
+  for (let i = 0; i < index.length; i += 3) {
+    const [a, b, c] = [of[index[i]], of[index[i + 1]], of[index[i + 2]]]
+    if (a !== b && b !== c && a !== c) indices.push(a, b, c)
+  }
+  return out.setIndex(indices)
 }
 
 // An instanced mesh of a flower clump at the given matrices. Each instance carries its root, which the wind
 // materials need and the instance matrix does not give them.
-export function flowerMesh({ geometry, materials }, matrices) {
+export function flowerMesh({ geometry, material }, matrices) {
   const own = new THREE.BufferGeometry(), root = new Float32Array(matrices.length * 3)
   own.setIndex(geometry.index)
-  own.groups = geometry.groups
   for (const name in geometry.attributes) own.setAttribute(name, geometry.attributes[name])
-  const mesh = new THREE.InstancedMesh(own, materials, matrices.length)
+  const mesh = new THREE.InstancedMesh(own, material, matrices.length)
   matrices.forEach((matrix, i) => {
     mesh.setMatrixAt(i, matrix)
     root.set(matrix.elements.slice(12, 15), i * 3)
   })
   own.setAttribute('aRoot', new THREE.InstancedBufferAttribute(root, 3))
+  mesh.computeBoundingSphere()
   return mesh
 }

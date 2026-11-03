@@ -170,4 +170,5 @@ arch.rotation.y = Math.atan2(along.x, along.y)
 roses.add(arch, cards(cardMaterial(LEAVES, { crown: true, sway: 0.01 }), LEAVES, roseLeaves), roseHeadMesh)
 
 const leafMaterial = cardMaterial(LEAVES, { crown: true, sway: 0.012 })
-scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves]))
+// The crown, ivy, bushes and hedges are one draw, so they can afford to cast shadows.
+scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves], true))
