@@ -95,9 +95,11 @@ async function drink(d) {
   drank = true
   player.control = false
   if (d.pot) await pour(d)
-  else await use(d, d.object, () => {})
-  release(d.object)
-  await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
+  else await eat(d)
+  if (d.pot) {
+    release(d.object)
+    await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
+  }
   if (d.grow) await walkTo(d.grow, 90)
   setSize(d.becomes)
   if ((d.becomes === 'small' && player.shrinks === 1) || (d.becomes === 'big' && player.grows === 1)) {
@@ -112,6 +114,22 @@ async function drink(d) {
     if (d.becomes !== 'normal') event(d.becomes === 'small' ? 'shrink' : 'grow')
     player.control = true
   }
+}
+
+// The cake stays on the ground while Fries bends over it and takes two bites.
+async function eat(d) {
+  await walkTo(d.stand, d.rot)
+  act('pick_up')
+  await wait(contacts.pick_up.time)
+  anim.hold('pick_up')
+  for (let bite = 0; bite < 2; bite++) {
+    await tween(0.65, t => { player.nod = 0.22 * Math.sin(Math.PI * t) })
+    player.nod = 0
+    d.object.scale.multiplyScalar(0.8)
+    await wait(0.2)
+  }
+  anim.hold('pick_up', false)
+  await wait(contacts.pick_up.duration - contacts.pick_up.time)
 }
 
 // Fries takes up the empty cup and holds it out; the Hatter beckons from his chair and the teapot flies over from

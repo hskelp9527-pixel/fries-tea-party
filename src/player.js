@@ -35,6 +35,7 @@ export const player = {
   mesh: model('fries'),
   shrinks: 0,
   grows: 0,
+  nod: 0,
   still: 0, // seconds since Fries last moved
 }
 scene.add(player.mesh)
@@ -222,6 +223,7 @@ function animate(dt, speed, airborne) {
     else anim.play('idle')
   }
   anim.mixer.update(dt)
+  if (player.nod) player.mesh.getObjectByName('mixamorigHead').rotateX(player.nod)
   blink.update(dt, anim.current?.getClip().name.includes('sleep'))
 }
 
