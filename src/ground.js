@@ -3,7 +3,7 @@ import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_n
 import { scene, camera, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { meadow, terraces, plaza, overlook } from './layout.js'
-import { LEAVES, FLOWERS, cardMaterial, cards } from './plants.js'
+import { LEAVES, cardMaterial, cards, flowerClump } from './plants.js'
 import { lush, bloom, species, bare, pathDistance, ground, level, random } from './fields.js'
 
 // ?view=fields colours the land by its fields instead: green how lush, magenta where flowers bloom, grey the paths.
@@ -75,20 +75,18 @@ paving.position.set(plaza[0], 0.015, plaza[1])
 paving.receiveShadow = true
 scene.add(paving)
 
-// Grass and flowers grow in 6 m chunks. Each chunk's cards are shuffled, so drawing fewer of them thins it
-// evenly: full within 14 m of the camera, thinning to a quarter by 45 m, gone past 70 m.
+// Grass and flowers grow in 6 m chunks. Each chunk's cards and clumps are shuffled, so drawing fewer of them thins it
+// evenly: full within 14 m of the camera, thinning to a quarter by 45 m, gone past 70 m (flowers past 45 m).
 const CHUNK = 6
 const rand = random(11)
 const chunks = new Map()
 function chunk(x, z) {
   const key = `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`
-  return chunks.get(key) ?? chunks.set(key, { grass: [], low: [], tall: [], centre: new THREE.Vector3((Math.floor(x / CHUNK) + 0.5) * CHUNK, 0, (Math.floor(z / CHUNK) + 0.5) * CHUNK) }).get(key)
+  return chunks.get(key) ?? chunks.set(key, { grass: [], flowers: {}, centre: new THREE.Vector3((Math.floor(x / CHUNK) + 0.5) * CHUNK, 0, (Math.floor(z / CHUNK) + 0.5) * CHUNK) }).get(key)
 }
 const onPlaza = (x, z) => Math.hypot(x - plaza[0], z - plaza[1]) < plaza[2]
 const open = (x, z) => !bare(x, z) && !onPlaza(x, z) && pathDistance(x, z) > meadow.pathWidth / 2
 const upright = (yaw, lean = 0.15) => new THREE.Quaternion().setFromEuler(new THREE.Euler((rand() - 0.5) * lean, yaw, (rand() - 0.5) * lean, 'YXZ'))
-const tint = (h, s, l) => new THREE.Color().setHSL(h, s, l)
-const leafTint = () => new THREE.Color(0.8, 0.95, 0.7).multiplyScalar(0.8 + 0.3 * rand())
 
 const [x0, z0, x1, z1] = meadow.lawn
 const share = webgpu ? 1 : 0.5
@@ -115,50 +113,26 @@ for (let gx = x0; gx < x1; gx += spacing) {
   }
 }
 
-// Flowers in three heights where the bloom field is high. Low heads (daisies, forget-me-nots, violets) face up
-// among the grass; knee-high clumps (foxgloves, mallows, roses, blossom) stand on stems with leaves at their feet.
-const LOW = [FLOWERS.daisy, FLOWERS.forgetMeNot, FLOWERS.violets, FLOWERS.daisy]
-const TALL = [FLOWERS.foxglove, FLOWERS.mallow, FLOWERS.pinkRose, FLOWERS.blossom, FLOWERS.foxglove]
-const stem = (list, x, y, z, top) => list.push({
-  position: new THREE.Vector3(x, y, z), quaternion: upright(rand() * Math.PI, 0.1), scale: new THREE.Vector3(0.012, top, 1),
-  cell: LEAVES.laurel, base: [x, y, z, 2.5], tint: new THREE.Color(0.7, 0.85, 0.5),
-})
+// Flowers where the bloom field is high: modelled clumps, one for every few of the cards that once stood here.
+// Low clumps (daisies, forget-me-nots, violets) sit among the grass; tall ones (foxgloves, mallows, roses) rise
+// from it. The white blossom has no model and is gone.
+const LOW = ['flower_daisy', 'flower_forget_me_not', 'flower_violets', 'flower_daisy']
+const TALL = ['flower_foxglove', 'flower_mallow', 'flower_pink_rose', 'flower_red_rose', 'flower_foxglove']
+const clumps = {}
+const clump = new THREE.Matrix4()
 for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (webgpu ? 1 : 0.5)); n > 0; n--) {
-  const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0), b = bloom(x, z)
-  if (rand() > b || !open(x, z)) continue
-  const kind = species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3), c = chunk(x, z), y = level(x, z)
-  if (rand() < 0.65) {
-    const height = 0.06 + rand() * 0.12
-    stem(c.low, x, y, z, height)
-    c.low.push({
-      position: new THREE.Vector3(x, y + height, z), quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.2 + (rand() - 0.5) * 0.6, rand() * 6.3, 0, 'YXZ')),
-      scale: 0.08 + rand() * 0.06, cell: LOW[Math.floor(kind * LOW.length)], base: [x, y, z, 2.5], tint: tint(0, 0, 0.85 + rand() * 0.15),
-    })
-  } else {
-    const flower = TALL[Math.floor(kind * TALL.length)], height = 0.35 + rand() * 0.45 * b
-    stem(c.tall, x, y, z, height)
-    for (let k = 0; k < 3; k++) {
-      c.tall.push({
-        position: new THREE.Vector3(x + (rand() - 0.5) * 0.12, y, z + (rand() - 0.5) * 0.12), quaternion: upright(rand() * 6.3, 0.9),
-        scale: new THREE.Vector3(0.09, 0.16, 1), cell: LEAVES.laurel, base: [x, y, z, 2.5], tint: leafTint(),
-      })
-    }
-    const heads = flower === FLOWERS.foxglove ? 5 : 1 + Math.floor(rand() * 3)
-    for (let k = 0; k < heads; k++) {
-      const up = flower === FLOWERS.foxglove ? height * (0.55 + 0.45 * k / heads) : height * (0.85 + rand() * 0.15)
-      const yaw = rand() * 6.3
-      c.tall.push({
-        position: new THREE.Vector3(x + Math.sin(yaw) * 0.03, y + up - 0.04, z + Math.cos(yaw) * 0.03),
-        quaternion: new THREE.Quaternion().setFromEuler(new THREE.Euler(flower === FLOWERS.foxglove ? 0.3 : -0.7, yaw, 0, 'YXZ')),
-        scale: flower === FLOWERS.foxglove ? 0.09 : 0.12 + rand() * 0.07, cell: flower, base: [x, y, z, 2.5], tint: tint(0, 0, 0.9 + rand() * 0.1),
-      })
-    }
-  }
+  const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
+  if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.3) continue
+  const kinds = rand() < 0.65 ? LOW : TALL, name = kinds[Math.floor(species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3) * kinds.length)]
+  const c = chunk(x, z)
+  clumps[name] ??= flowerClump(name)
+  ;(c.flowers[name] ??= []).push(clump.compose(
+    new THREE.Vector3(x, level(x, z), z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
+    new THREE.Vector3().setScalar(0.8 + rand() * 0.45),
+  ).clone())
 }
 
 const grassMaterial = cardMaterial(LEAVES, { translucency: 1.1, flutter: 0.01 })
-const leafMaterial = cardMaterial(LEAVES, { translucency: 0.8, flutter: 0.01 })
-const flowerMaterial = cardMaterial(FLOWERS, { translucency: 0.6, flutter: 0.015, gloss: 0.55 })
 const shuffle = list => {
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -168,20 +142,24 @@ const shuffle = list => {
 }
 const drawn = []
 for (const c of chunks.values()) {
-  const stems = [...c.low, ...c.tall].filter(f => f.cell === LEAVES.laurel), heads = [...c.low, ...c.tall].filter(f => f.cell !== LEAVES.laurel)
-  for (const [material, sheet, list] of [[grassMaterial, LEAVES, c.grass], [leafMaterial, LEAVES, stems], [flowerMaterial, FLOWERS, heads]]) {
-    if (!list.length) continue
-    const mesh = cards(material, sheet, shuffle(list))
+  if (c.grass.length) {
+    const mesh = cards(grassMaterial, LEAVES, shuffle(c.grass))
     mesh.castShadow = false
     scene.add(mesh)
-    drawn.push({ mesh, full: list.length, centre: c.centre })
+    drawn.push({ mesh, full: c.grass.length, centre: c.centre, far: 70 })
+  }
+  for (const [name, list] of Object.entries(c.flowers)) {
+    const mesh = new THREE.InstancedMesh(clumps[name].geometry, clumps[name].materials, list.length)
+    shuffle(list).forEach((matrix, i) => mesh.setMatrixAt(i, matrix))
+    scene.add(mesh)
+    drawn.push({ mesh, full: list.length, centre: c.centre, far: 45 })
   }
 }
 
 export function updateGround() {
   for (const d of drawn) {
     const distance = Math.hypot(d.centre.x - camera.position.x, d.centre.z - camera.position.z)
-    const keep = distance < 14 ? 1 : distance > 70 ? 0 : Math.max(0.25, 1 - (distance - 14) / 41)
+    const keep = distance < 14 ? 1 : distance > d.far ? 0 : Math.max(0.25, 1 - (distance - 14) / 41)
     d.mesh.count = Math.ceil(d.full * keep)
     d.mesh.visible = keep > 0
   }

@@ -1,13 +1,14 @@
 import * as THREE from 'three/webgpu'
 import {
   uniform, attribute, uv, texture, time, sin, vec2, vec3, vec4, float, mix, pow, dot, smoothstep, positionLocal,
-  positionWorld, cameraPosition, cameraViewMatrix, normalWorld,
+  positionWorld, positionGeometry, cameraPosition, cameraViewMatrix, normalWorld,
 } from 'three/tsl'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { SUN } from './scene.js'
+import { model } from './models.js'
 
-// Everything that grows is drawn as instanced cards cut out of two alpha atlases: leaves.png (2 x 2: round
-// serrated leaf, laurel leaf, ivy leaf, grass tuft) and flowers.png (4 x 2: red rose, pink rose, daisy,
-// forget-me-not, violets, foxglove, pink mallow, white blossom). Without the atlases each card is a plain oval.
+// Leaves and grass are drawn as instanced cards cut out of the alpha atlas leaves.png (2 x 2: round serrated
+// leaf, laurel leaf, ivy leaf, grass tuft); without it each card is a plain oval. Flowers are modelled clumps.
 const images = import.meta.glob('/art/textures/kit/*.png', { eager: true, query: '?url', import: 'default' })
 function atlas(name) {
   const url = images[`/art/textures/kit/${name}.png`]
@@ -19,10 +20,6 @@ function atlas(name) {
 }
 // Cells as [column, row] counted from the bottom left, with the atlas's columns and rows.
 export const LEAVES = { map: atlas('leaves'), grid: [2, 2], round: [0, 1], laurel: [1, 1], ivy: [0, 0], grass: [1, 0] }
-export const FLOWERS = {
-  map: atlas('flowers'), grid: [4, 2],
-  redRose: [0, 1], pinkRose: [1, 1], daisy: [2, 1], forgetMeNot: [3, 1], violets: [0, 0], foxglove: [1, 0], mallow: [2, 0], blossom: [3, 0],
-}
 
 const sun = uniform(SUN)
 
@@ -94,4 +91,20 @@ export function cards(material, sheet, list) {
   mesh.castShadow = mesh.receiveShadow = true
   mesh.computeBoundingSphere()
   return mesh
+}
+
+// A flower clump model (art/models/kit/<name>.glb) as one geometry with a group per material, and a wind material
+// for each. Vertices bend with the gust by their height above the clump's foot, so the foot stays put and the
+// heads sway; they sway harder once the flowers wake, and the pulse stretches them.
+export function flowerClump(name) {
+  const meshes = []
+  model(name).traverse(o => { if (o.isMesh) meshes.push(o) })
+  const height = positionGeometry.y
+  const materials = meshes.map(({ material }) => {
+    const flower = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: material.roughness, side: THREE.DoubleSide })
+    const bend = gust(positionLocal.xz).mul(height.mul(height).mul(0.8)).mul(wind.bushes.mul(0.5).add(1))
+    flower.positionNode = positionLocal.add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(0.12)), bend.y))
+    return flower
+  })
+  return { geometry: mergeGeometries(meshes.map(m => m.geometry), true), materials }
 }
