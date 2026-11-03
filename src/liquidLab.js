@@ -187,6 +187,7 @@ renderer.setAnimationLoop(now => {
     updateLiquids(dt)
   }
   controls.update()
+  renderer.info.reset()
   renderer.render(scene, camera)
   metrics.textContent = `${renderer.backend.isWebGPUBackend ? 'WebGPU' : 'WebGL 2'} | ${renderer.info.render.drawCalls} calls | ${renderer.info.render.triangles} triangles | ${paused ? 'Paused' : 'Running'} | No post`
 })
