@@ -20,9 +20,10 @@ Storyboard frames are in `art/storyboard/` (s01 to s16, plus `fp_small.png` and 
 1. **Opening:** the camera glides along the long table to Fries. The Hatter and the March Hare shout "No room!". Tea hangs in mid-air and petals float, frozen.
 2. **Goal:** a glowing book page is tucked inside the Hatter's pocket watch. Fries reaches for it and the watch is snatched away: "Six o'clock things can't be taken; come back at one minute past six." The Hatter murdered the tune of "Twinkle, Twinkle, Little Bat" and offended Time; then the March Hare "fixed" the watch with butter and its gears scattered everywhere.
 3. **Free exploration:** control passes to the player. The three gears can be collected in any order. There is no map and no quest arrow; the player finds the way by glints, sounds and the Dormouse's sleep-talk.
-   - Gear 1 is under the long table and needs the player to be small. Collecting it makes the tea steam and the petals fall.
-   - Gear 2 is in a gap in the fountain's base and needs the player to be small. Collecting it makes the syrup flow and butterflies take off.
-   - Gear 3 sits on the tallest hat on the hat rack on the porch of the March Hare's cottage and needs the player to be big. Collecting it makes the flower bushes sway and hum.
+   Each gear needs a different size, so every size has a purpose:
+   - Gear 1 (big) glints in a knot-hollow about 6 m up the big tree's trunk, out of reach and out of sight from the ground; only giant Fries can see into it and reach it. Collecting it makes the tea steam and the petals fall.
+   - Gear 2 (small) is in a gap in the fountain's base and needs the player to be small. Collecting it makes the syrup flow and butterflies take off.
+   - Gear 3 (normal) sits on the mantelpiece in the March Hare's cottage hall. The cottage door only opens to normal-sized Fries: the giant cannot fit, the small one cannot push it. Collecting it makes the flower bushes sway and hum.
 4. **Song and dance:** the watch is repaired. The Hatter climbs onto the table and sings, the March Hare and the Dormouse dance along, and Fries taps teacups. The cups light up and jump on the beat, so a player watching the cues still sees the dance. On the final chorus the camera rises and the whole garden moves together.
 5. **Ending:** every clock jumps to 6:01, the sky turns pink, the book page flies into Fries's hand and the door at the foot of the big tree opens. The three ignore Fries completely; they stuff the Dormouse into the pink teapot, shouting about one-minute-past-six tea. Fries walks through the door, sees red roses, and the picture freezes. The roses must not appear before this final shot.
 
@@ -116,33 +117,33 @@ The garden was 30 by 25 m inside a hedge wall: too small, nothing to do in it, a
 | Place | What it is | What happens there |
 |---|---|---|
 | The tea table | Under the big tree, 8.5 m long and 2.2 m wide, the hub | The hosts sit, banter and pour; drinking the size teas; under it the small world (gear 1) |
-| The big tree and its door | A gnarled oak whose roots form a tunnel through the trunk; an arched door at its mouth | The door rattles locked until the ending; then it opens onto the rose path |
+| The big tree and its door | A gnarled oak about 14 m to the crown (1.5x), whose roots form a tunnel through the trunk; an arched door at its mouth; a knot-hollow 6 m up | The door rattles locked until the ending; then it opens onto the rose path |
 | The rose path | Behind the tree, 8-15 m of red roses ending in a heart-shaped arch | Only in the ending; hidden before |
 | The teaware fountain | On a low round plaza, a 2.8 m tower of teacups and teapots; a small arched opening at the bottom of the basin | Gear 2 inside the grotto (small); the syrup wakes up and flows |
-| The March Hare's cottage | High at the back right on three terraces (0.6, 1.2, 1.8 m) with steps and flowered walls; porch with the hat rack; the door opens into a warm hall | Gear 3 on the hat rack (big); the March Hare's things inside |
+| The March Hare's cottage | High at the back right on three terraces (0.6, 1.2, 1.8 m) with steps and flowered walls; porch with the hat rack (decoration); the door opens into a warm hall | Gear 3 on the hall's mantelpiece (normal); the March Hare's things inside |
 | The overlook | A high meadow at the north-east edge | Big Fries sees the whole garden (fp_giant) |
 
 Walking distances matter: the fountain is about 15 m from the table and the cottage about 25 m, so the garden has room between places for flowers, paths and floating things. There is no hedge wall at the edge: the ground carries on and falls away into a valley, with layered hills and trees 40-150 m out. Movement stops at the brow of the slope and at low walls and bushes, not at a green wall.
 
 ### Tasks at each place: see it first, come back able
 
-Every place shows the player something they cannot do yet, so they remember it and come back once they can (ability-gated backtracking): a glint behind the grotto's tiny arch, a gear on a hat far above the porch, a locked door that rattles. The abilities are the two sizes and, later, the watch's repair.
+Every place shows the player something they cannot do yet, so they remember it and come back once they can (ability-gated backtracking): a glint behind the grotto's tiny arch, a glint high in the big tree that the ground cannot reach, the cottage's lit window, a locked door that rattles. The abilities are the two sizes and, later, the watch's repair.
 
 | Place | Seen early | Needs | The task, and what it wakes |
 |---|---|---|---|
-| Under the table | A glint between the table legs, too low to reach | Small (pink tea) | Cross the crumbs and the cloth's fringe; the March Hare's huge hand lays a spoon as a bridge; gear 1. Tea steams, petals fall |
+| Under the table | Where the first shrink lands Fries | Small (pink tea) | The small world, no gear: the Hatter's face from the sky, crumbs and the cloth's fringe, the March Hare's huge hand lays a spoon as a bridge to an "eat me" cake that grows Fries back. It teaches shrinking and growing back |
+| The big tree's hollow | A glint high in the trunk, seen from far off or from the table | Big (blue tea) | Reach into the knot-hollow 6 m up, among hanging watches and lanterns; gear 1. Tea steams, petals fall |
 | The fountain's grotto | A light and a ticking sound behind the tiny arch | Small | Inside: a wet stone floor, syrup dripping, a little valve the gear is jammed in; gear 2. The syrup flows, butterflies rise |
-| The cottage porch | A gear glinting on the top hat of the hat rack, out of reach | Big (blue tea) | Climb the terraces in giant steps, lift the gear off the hat; gear 3. Flowers sway and hum |
-| The cottage hall | The door opens at normal size | Normal | The March Hare's hall: buttered tools, a clock with butter in it, a note; the Dormouse's sleep-talk clue; the March Hare shouts from the table about trespassers |
+| The cottage hall | The lit window; the door opens only at normal size | Normal | The March Hare's warm hall: buttered tools, a clock with butter dripping out of it, a note; gear 3 on the mantelpiece among clocks and jars; the March Hare shouts from the table about trespassers. Flowers sway and hum |
 | The tea table | The Hatter conducting the teapots | Normal | Drinking (the size teas); the tea-service game once the first gear is back |
 | The tree door | Locked; the Hatter: "Not till one minute past six" | The repaired watch | Opens in the ending onto the rose path |
 | The overlook | Too far to see anything from | Big | See the whole garden and the glints of the gears still missing |
 
-What big is for: crossing the garden in a few strides, stepping up terraces and over low walls without stairs, reaching high places (the porch hat rack, the tree's lower branches to straighten a crooked clock), looking over everything for glints. What small is for: going under and into things. Being big inside small places is blocked by size alone, so the player learns to switch.
+What big is for: crossing the garden in a few strides, stepping up terraces and over low walls without stairs, reaching high places (the big tree's hollow, a crooked clock in its branches), looking over everything for glints. What small is for: going under and into things. Being big inside small places is blocked by size alone, so the player learns to switch.
 
 ### Size changes need a purpose
 
-Small (0.18x) opens the places under things: beneath the table, the fountain's grotto, gaps under hedges and roots. Big must be giant enough to matter: about **5x** (6 m tall), so the eye line clears the cottage's eaves and sees the whole table. When big Fries steps up terraces without stairs, reaches the hat rack on the high porch, looks over everything for glints, and the hosts squeak up at him while the cups look like thimbles. Two or three floating cups and spoons drift near the giant's camera for scale.
+Small (0.18x) opens the places under things: beneath the table, the fountain's grotto, gaps under hedges and roots. Big must be giant enough to matter: about **5x** (6 m tall), so the eye line clears the cottage's eaves and sees the whole table. When big Fries steps up terraces without stairs, reaches into the big tree's hollow, looks over everything for glints, and the hosts squeak up at him while the cups look like thimbles. Two or three floating cups and spoons drift near the giant's camera for scale.
 
 ### Characters who are alive
 
