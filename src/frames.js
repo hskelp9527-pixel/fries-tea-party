@@ -26,7 +26,7 @@ export const frames = {
   s07: { pos: [-0.1, 1.03, -3.7], look: [0.05, 1.03, -6.8], fov: 49, feet: [-1.3, 0, -5.9], facing: 20, action: 'reach', cast: { dormouse: [[0.65, 0.76, -6.8], 0] }, gearHand: true, awake: 1 },
   s08: { pos: [17, 0.13, -5.3], look: [18.1, 0.08, -5], fov: 61, feet: [17.7, 0, -5.1], facing: 90, size: 'small' },
   s09: { pos: [20, 1.5, 17], look: [15, 2.2, -5], fov: 65, feet: [14.2, 0, -2.4], facing: 60, awake: 2 },
-  s10: { pos: [13, 2.2, -11], look: [18.6, 4.5, -20.5], fov: 58, feet: [18.243, 1.8, -18.255], facing: 180, size: 'big', action: 'reach' },
+  s10: { pos: [22.9, 2.2, -12.8], look: [28.5, 4.5, -22.4], fov: 58, feet: [28.113, 1.8, -20.125], facing: 180, size: 'big', action: 'reach' },
   s11: { pos: [0.4, 0.55, 14.5], look: [4, 1.6, -5.4], fov: 58, feet: [-0.3, 0, 11], facing: 180, action: 'walk', awake: 3 },
   s12: { pos: [-0.48, 0.96, -6.05], look: [-0.5, 0.83, -6.75], fov: 38, feet: [-1.4, 0, -6.1], facing: 100, action: 'reach', gearHand: true, awake: 3 },
   s13: { pos: [-1.5, 1.28, -3.9], look: [0.3, 1.55, -6.5], fov: 55, feet: [-1.45, 0, -5.15], facing: 90, action: 'clap', cast: { hatter: [[-0.1, 0.76, -6.3], 0], hare: [[2.5, 0, -7.4], 0], dormouse: [[0.3, 0.76, -6.9], 0] }, awake: 3, dance: true },

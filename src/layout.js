@@ -139,7 +139,7 @@ export const shapes = {
     [0, 1.6, 0, 1.2, 0.12, 1.2, STONE],
     [0, 2.4, 0, 0.7, 0.12, 0.7, STONE],
   ],
-  porch: [[0, 1.2, 0, 3.2, 2.4, 2.4, STONE]], // the cottage's high stone porch, 2.4 m above the top terrace
+  porch: [[0, 1.2, 0, 3.4, 2.4, 2.6, STONE]], // the cottage's high stone porch, 3.4 x 2.6 m and 2.4 m above the top terrace
   house: [ // the March Hare's cottage, its door at the top of three steps, 1.1 m up
     [0, 1.5, 0, 6, 3, 5, WALL],
     [0, 3.25, 0, 6.6, 0.5, 5.6, ROOF],
@@ -346,7 +346,8 @@ export const placed = [
   { model: 'fountain', pos: [18.5, 0, -5], rot: 180 }, // on its plaza 18 m east of the table; its grotto opens west, towards the table
   // The cottage, 30 m from the table and high at the back right on its terraces (see `terraces`): flights of step
   // modules up each 0.6 m, staggered, and flowered retaining walls on the terraces' edges. Its high porch, 2.4 m
-  // above the top terrace with no steps up, holds the hat rack with gear 3 on its top hat.
+  // above the top terrace with no steps up, stands at the cottage's side and holds the hat rack with gear 3 on
+  // its top hat.
   { model: 'steps_stone', pos: [10, 0, -14.45], boxes: true },
   { model: 'steps_stone', pos: [13, 0.6, -15.85], boxes: true },
   { model: 'steps_stone', pos: [14.6, 1.2, -17.25], boxes: true },
@@ -354,9 +355,8 @@ export const placed = [
   ...wall([9, -16.5], [12.3, -16.5], 0.6), ...wall([13.7, -16.5], [34, -16.5], 0.6), ...wall([8.9, -16.4], [8.9, -38], 0.6),
   ...wall([11.5, -17.9], [13.9, -17.9], 1.2), ...wall([15.3, -17.9], [32, -17.9], 1.2), ...wall([11.4, -17.8], [11.4, -38], 1.2),
   { model: 'house', pos: [21, 1.8, -27], rot: -20 }, // its door faces south-south-west, down the terraces to the table
-  { model: 'porch', pos: [18.6, 1.8, -21.2] },
-  ...wall([17, -19.82], [20.2, -19.82], 1.8, 4), ...wall([16.82, -20], [16.82, -22.4], 1.8, 4), ...wall([20.38, -20], [20.38, -22.4], 1.8, 4),
-  { model: 'hat_rack', pos: [18.6, 4.2, -20.5], rot: 180 },
+  { model: 'porch', pos: [28.74, 1.8, -23.12], rot: -20 }, // beside the cottage, clear of its door and steps
+  { model: 'hat_rack', pos: [28.47, 4.2, -22.37], rot: 180 },
   // Fences along the paths (one broken where the view from the flowers looks through to the table), arches at
   // the bends, low flowered walls, and the low walls and bushes that close the garden at the brow
   ...row('fence_picket', [-1.2, 9], [-2.3, 5], 1.5),
@@ -447,8 +447,8 @@ export const gears = [
   },
   { // on the crown of the hat rack's top hat on the cottage's high porch, where a big Fries on the top terrace
     // reaches
-    pos: [18.578, 6.206, -20.3], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
-    by: 'big', clip: 'reach', stand: [18.243, 1.8, -18.255], rot: 180, grip: [0, 0.05, 0.007],
+    pos: [28.448, 6.206, -22.17], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
+    by: 'big', clip: 'reach', stand: [28.113, 1.8, -20.125], rot: 180, grip: [0, 0.05, 0.007],
   },
 ]
 
@@ -511,7 +511,7 @@ export const floating = {
   clouds: [
     { center: [0, 2.4, -3.5], size: [4.6, 2, 10] },
     { center: [18.5, 2.4, -5], size: [6, 2, 6] },
-    { center: [18, 5, -22], size: [8, 2, 6] },
+    { center: [26, 5, -22], size: [10, 2, 6] },
     { center: [-3, 3, -10], size: [5, 1.6, 4] },
     { center: [0, 2.2, 5.2], size: [6, 1.4, 4] },
   ],
@@ -523,7 +523,7 @@ export const zones = {
   tray: { pos: [-1.2, -5], r: 1.4 },
   hareChair: { pos: [2.4, -7.4], r: 0.9 },
   dormouse: { pos: [0, -9], r: 1.6 },
-  cottage: { pos: [19, -22], r: 7 },
+  cottage: { pos: [24.5, -23.6], r: 8 },
 }
 
 // Room kept clear of floating things, falling petals and steam: the cast at their seats and song spots and
@@ -588,7 +588,7 @@ export const cast = {
 export const meadow = {
   plateau: [-36, -38, 36, 29],
   lawn: [-35, -37, 35, 28],
-  bare: [[-1.15, -7.8, 1.15, 0.8], [-7, -14.6, -1.6, -9.6], [12.3, -35, 30, -19.6], [16.8, -22.4, 20.4, -19.8]],
+  bare: [[-1.15, -7.8, 1.15, 0.8], [-7, -14.6, -1.6, -9.6], [12.3, -35, 30, -19.6], [26.6, -25, 31, -21.2]],
   pathWidth: 1.2,
   drifts: [
     [-4, 4.2, 2.2], [3.6, 5, 2], [-8, 8, 2.5], [6, 12.6, 2.4], [-3.4, 12, 2.2], [12, 8, 2.5], [-12, 4, 2.2], [16, 2, 2.4],
