@@ -57,15 +57,28 @@ function updateGlints() {
 
 // Under the long table: cross the hanging fringe and crumbs to an upturned cup.
 // The Hare bridges the gap from its saucer down to gear 1 between the legs.
-const crumbs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xc8955a, roughness: 0.9 }), 260)
-const [cx0, cz0, cx1, cz1] = underTable.crumbs, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler()
-for (let i = 0; i < crumbs.count; i++) {
-  const size = 0.004 + rand() ** 3 * 0.014
-  crumbs.setMatrixAt(i, m4.compose(new THREE.Vector3(cx0 + rand() * (cx1 - cx0), size * 0.5, cz0 + rand() * (cz1 - cz0)), q.setFromEuler(e.set(rand() * 6, rand() * 6, rand() * 6)), new THREE.Vector3(size, size * 0.7, size * 1.2)))
-  crumbs.setColorAt(i, new THREE.Color().setHSL(0.08, 0.5, 0.35 + rand() * 0.3))
+const crumbShape = new THREE.SphereGeometry(1, 10, 8)
+const crumbVertices = crumbShape.attributes.position
+for (let i = 0; i < crumbVertices.count; i++) {
+  const x = crumbVertices.getX(i), y = crumbVertices.getY(i), z = crumbVertices.getZ(i)
+  const lobe = 1 + 0.1 * Math.sin(x * 7 + z * 5) * Math.sin(y * 6 - x * 3)
+  crumbVertices.setXYZ(i, x * lobe, y * lobe, z * lobe)
 }
-crumbs.receiveShadow = true
-scene.add(crumbs)
+crumbShape.computeVertexNormals()
+const crumbs = new THREE.InstancedMesh(crumbShape, new THREE.MeshStandardMaterial({ color: 0xfff5df, roughness: 0.94 }), 260)
+const icing = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 5), new THREE.MeshStandardMaterial({ color: 0xffb1c4, roughness: 0.55 }), 52)
+const sponge = [0xf4c97b, 0xffe2a7, 0xe8ba78, 0xf7db9f].map(colour => new THREE.Color(colour))
+const [cx0, cz0, cx1, cz1] = underTable.crumbs, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler()
+const icingPatch = new THREE.Matrix4().compose(new THREE.Vector3(0.15, 0.96, 0.1), new THREE.Quaternion(), new THREE.Vector3(0.46, 0.17, 0.35))
+const icingMatrix = new THREE.Matrix4()
+for (let i = 0; i < crumbs.count; i++) {
+  const size = 0.0025 + rand() ** 3 * 0.011
+  crumbs.setMatrixAt(i, m4.compose(new THREE.Vector3(cx0 + rand() * (cx1 - cx0), size * 0.6, cz0 + rand() * (cz1 - cz0)), q.setFromEuler(e.set(rand() * 0.5, rand() * 6, rand() * 0.5)), new THREE.Vector3(size, size * 0.7, size * 1.2)))
+  crumbs.setColorAt(i, sponge[i % sponge.length])
+  if (i % 5 === 0) icing.setMatrixAt(i / 5, icingMatrix.multiplyMatrices(m4, icingPatch))
+}
+crumbs.receiveShadow = icing.receiveShadow = true
+scene.add(crumbs, icing)
 const [ux, uz] = underTable.cup
 const cup = model('teacup'), saucer = model('saucer')
 cup.position.set(ux, 0.07, uz)
