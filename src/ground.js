@@ -1,29 +1,54 @@
 import * as THREE from 'three/webgpu'
+import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_noise_float } from 'three/tsl'
 import { scene, camera, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
-import { meadow, terraces, plaza } from './layout.js'
+import { meadow, terraces, plaza, overlook } from './layout.js'
 import { LEAVES, FLOWERS, cardMaterial, cards } from './plants.js'
 import { lush, bloom, species, bare, pathDistance, ground, level, random } from './fields.js'
 
 // ?view=fields colours the land by its fields instead: green how lush, magenta where flowers bloom, grey the paths.
 const FIELDS = new URLSearchParams(location.search).get('view') === 'fields'
 
-// The land, out to the far hills, coloured by the lawn's lushness (paths worn to earth).
+// The shared fields over the garden in one small texture, 0.25 m a texel: red the lushness, green how worn the
+// ground is (paths, under the table, tree and cottage), blue the flower bloom, alpha the damp round the fountain's
+// plaza. The ground's material reads it.
+const FIELD = { x0: -40, z0: -42, width: 80, depth: 75, texel: 0.25 }
+const fw = FIELD.width / FIELD.texel, fh = FIELD.depth / FIELD.texel, fieldData = new Uint8Array(fw * fh * 4)
+for (let j = 0; j < fh; j++) {
+  for (let i = 0; i < fw; i++) {
+    const x = FIELD.x0 + (i + 0.5) * FIELD.texel, z = FIELD.z0 + (j + 0.5) * FIELD.texel
+    const worn = bare(x, z) ? 1 : Math.max(0, 1 - pathDistance(x, z) / (meadow.pathWidth * 0.7))
+    const damp = Math.exp(-(((Math.hypot(x - plaza[0], z - plaza[1]) - plaza[2] - 1) / 1.3) ** 2))
+    fieldData.set([lush(x, z), worn, bloom(x, z), damp].map(v => Math.round(v * 255)), (j * fw + i) * 4)
+  }
+}
+const fieldMap = new THREE.DataTexture(fieldData, fw, fh)
+fieldMap.magFilter = fieldMap.minFilter = THREE.LinearFilter
+fieldMap.needsUpdate = true
+
+// The ground: varied greens with dry and lush patches, paths and bare places worn to earth, a darker damp ring
+// round the plaza, and beyond the garden a patchwork valley of fields and woods.
+const field = texture(fieldMap, positionWorld.xz.sub(vec2(FIELD.x0, FIELD.z0)).div(vec2(FIELD.width, FIELD.depth)))
+const here = positionWorld.xz
+const broad = mx_noise_float(here.mul(0.11)), patch = mx_noise_float(here.mul(0.45).add(17)), speckle = mx_noise_float(here.mul(2.6).add(5))
+let grass = mix(color(0x9a9a58), color(0x4f7a3a), field.r)
+grass = mix(grass, color(0x7b9c46), smoothstep(0.05, 0.55, broad).mul(0.55))
+grass = mix(grass, color(0x365a2c), smoothstep(0.05, 0.5, broad.negate()).mul(0.5))
+grass = mix(grass, color(0x9a9a58), smoothstep(0.3, 0.6, patch.add(float(1).sub(field.r).mul(0.5))).mul(0.6))
+let soil = mix(grass, color(0x8a7556).mul(speckle.mul(0.15).add(1)), smoothstep(0.25, 0.75, field.g.add(patch.mul(0.35)).add(speckle.mul(0.15))).mul(0.92))
+soil = soil.mul(float(1).sub(field.a.mul(0.4))).mul(speckle.mul(0.1).add(1))
+const valley = mix(mix(color(0x6d8c3e), color(0xb8a24f), smoothstep(-0.1, 0.4, mx_noise_float(here.mul(0.018).add(41)))), color(0x4a6a3a), smoothstep(0.2, 0.6, mx_noise_float(here.mul(0.03).add(9))))
+const groundMaterial = new THREE.MeshStandardNodeMaterial({ roughness: 1 })
+groundMaterial.colorNode = FIELDS ? vec3(field.g.mul(0.5), field.r, field.b) : mix(soil, valley.mul(speckle.mul(0.1).add(1)), smoothstep(55, 95, here.sub(vec2(0, -4)).length()))
+groundMaterial.roughnessNode = float(1).sub(field.a.mul(0.3))
+
+// The land, out to the far hills.
 const land = new THREE.PlaneGeometry(420, 420, 210, 210)
 land.rotateX(-Math.PI / 2)
-const deep = new THREE.Color(0x4f7a3a), dry = new THREE.Color(0x9a9a58), earth = new THREE.Color(0x8a7556), colour = new THREE.Color(), colours = []
 const position = land.attributes.position
-for (let i = 0; i < position.count; i++) {
-  const x = position.getX(i), z = position.getZ(i)
-  position.setY(i, ground(x, z))
-  const worn = Math.max(0, 1 - pathDistance(x, z) / (meadow.pathWidth * 0.7))
-  if (FIELDS) colour.setRGB(worn * 0.5, lush(x, z), bloom(x, z))
-  else colour.lerpColors(dry, deep, lush(x, z)).lerp(earth, worn * 0.8)
-  colour.toArray(colours, i * 3)
-}
+for (let i = 0; i < position.count; i++) position.setY(i, ground(position.getX(i), position.getZ(i)))
 land.computeVertexNormals()
-land.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3))
-const lawn = new THREE.Mesh(land, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }))
+const lawn = new THREE.Mesh(land, groundMaterial)
 lawn.receiveShadow = true
 scene.add(lawn)
 
@@ -67,16 +92,26 @@ const leafTint = () => new THREE.Color(0.8, 0.95, 0.7).multiplyScalar(0.8 + 0.3 
 
 const [x0, z0, x1, z1] = meadow.lawn
 const share = webgpu ? 1 : 0.5
-// Grass: tufts as pairs of crossed cards, taller, deeper and greener where the lawn is lush.
-for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.grassPerSquareMetre * share); n > 0; n--) {
-  const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
-  if (!open(x, z)) continue
-  const l = lush(x, z), height = 0.12 + 0.2 * l * (0.6 + rand() * 0.8), yaw = rand() * Math.PI, y = level(x, z)
-  for (const turn of [0, Math.PI / 2]) {
-    chunk(x, z).grass.push({
-      position: new THREE.Vector3(x, y, z), quaternion: upright(yaw + turn), scale: new THREE.Vector3(height * 1.3, height, 1),
-      cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l, 1, 0.65 + 0.15 * rand()).multiplyScalar(0.8 + 0.35 * rand()),
-    })
+// How much of the full grass grows here, in [0, 1]: all of it within 12 m of a path (the paths join the places),
+// on the terraces and on the overlook, thinning to a third by 40 m.
+const grassShare = (x, z) => {
+  if (level(x, z) > ground(x, z) || Math.hypot(x - overlook[0], z - overlook[1]) < overlook[2] + 4) return 1
+  return Math.min(1, Math.max(0.35, 1 - (pathDistance(x, z) - 12) / 28 * 0.65))
+}
+// Grass: tufts as pairs of crossed cards, taller, deeper and greener where the lawn is lush. They stand on a
+// jittered grid, so the lawn is covered evenly with no bare patches between them, and wide enough to overlap.
+const spacing = 1 / Math.sqrt(meadow.grassPerSquareMetre * share)
+for (let gx = x0; gx < x1; gx += spacing) {
+  for (let gz = z0; gz < z1; gz += spacing) {
+    const x = gx + rand() * spacing, z = gz + rand() * spacing
+    if (!open(x, z) || rand() > grassShare(x, z)) continue
+    const l = lush(x, z), height = 0.14 + 0.2 * l * (0.6 + rand() * 0.8), yaw = rand() * Math.PI, y = level(x, z)
+    for (const turn of [0, Math.PI / 2]) {
+      chunk(x, z).grass.push({
+        position: new THREE.Vector3(x, y, z), quaternion: upright(yaw + turn), scale: new THREE.Vector3(height * 1.7, height, 1),
+        cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l, 1, 0.65 + 0.15 * rand()).multiplyScalar(0.8 + 0.35 * rand()),
+      })
+    }
   }
 }
 
