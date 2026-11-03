@@ -77,6 +77,8 @@ scene.environmentIntensity = 0.7
 export const sun = new THREE.DirectionalLight(0xffc27a, 3.4)
 sun.castShadow = true
 const SHADOW = { size: 56, map: webgpu ? 4096 : 2048 }
+sun.shadow.autoUpdate = false
+sun.shadow.needsUpdate = true
 sun.shadow.mapSize.setScalar(SHADOW.map)
 Object.assign(sun.shadow.camera, { left: -SHADOW.size / 2, right: SHADOW.size / 2, top: SHADOW.size / 2, bottom: -SHADOW.size / 2, near: 1, far: 160 })
 sun.shadow.bias = -0.0003
@@ -93,11 +95,19 @@ scene.add(bounce)
 const texel = SHADOW.size / SHADOW.map
 const right = new THREE.Vector3().crossVectors(THREE.Object3D.DEFAULT_UP, SUN).normalize(), upward = new THREE.Vector3().crossVectors(SUN, right)
 const focus = new THREE.Vector3(), forward = new THREE.Vector3()
+let shadowX, shadowY, shadowAge = 2
 export function updateSun() {
   focus.copy(camera.getWorldDirection(forward)).multiplyScalar(14).add(camera.position).setY(0)
   const x = Math.round(focus.dot(right) / texel) * texel, y = Math.round(focus.dot(upward) / texel) * texel, z = focus.dot(SUN)
-  sun.target.position.copy(right).multiplyScalar(x).addScaledVector(upward, y).addScaledVector(SUN, z)
-  sun.position.copy(sun.target.position).addScaledVector(SUN, 80)
+  // Commit the light transform only with its map. Refresh moving casters at least every second frame.
+  if (x !== shadowX || y !== shadowY || ++shadowAge >= 2) {
+    sun.target.position.copy(right).multiplyScalar(x).addScaledVector(upward, y).addScaledVector(SUN, z)
+    sun.position.copy(sun.target.position).addScaledVector(SUN, 80)
+    sun.shadow.needsUpdate = true
+    shadowX = x
+    shadowY = y
+    shadowAge = 0
+  }
   bounce.target.position.copy(sun.target.position)
 }
 
