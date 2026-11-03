@@ -334,8 +334,8 @@ export const placed = [
   { model: 'armchair', pos: [1.55, 0, -4.6], rot: -90 },
   { model: 'armchair', pos: [1.55, 0, -2], rot: -90 },
   { model: 'armchair', pos: [1.55, 0, 0.4], rot: -90 },
-  { model: 'plate', pos: [0.1, 0.76, -7.9], scale: 1.3, solid: false }, // the Dormouse's bed
-  { model: 'dormouse', pos: [0.1, 0.785, -7.9], rot: -60, solid: false }, // on the plate's top
+  { model: 'plate', pos: [0.1, 0.78055, -7.15], scale: 1.3, solid: false }, // base on the lace runner at y = 0.777
+  { model: 'dormouse', pos: [0.1, 0.78495, -7.15], rot: -60, solid: false }, // on the plate's inner surface
   { model: 'tea_tray', pos: [-0.45, 0.76, -5], solid: false, onTable: true },
   { model: 'pink_teapot', pos: [-0.45, 0.79, -5.25], rot: 180, solid: false, on: 'tea_tray' }, // spouts toward the teacups
   { model: 'blue_teapot', pos: [-0.45, 0.79, -4.75], rot: 180, solid: false, on: 'tea_tray' },
@@ -525,7 +525,7 @@ export const zones = {
   table: { pos: [0, -3.5], r: 6.5 },
   tray: { pos: [-1.2, -5], r: 1.4 },
   hareChair: { pos: [2.4, -7.4], r: 0.9 },
-  dormouse: { pos: [0, -9], r: 1.6 },
+  dormouse: { pos: [0.1, -7.15], r: 1.6 },
   cottage: { pos: [24.5, -23.6], r: 8 },
 }
 
@@ -536,7 +536,7 @@ export const keepClear = [
   [1.55, -7.4, 0.35, 0, 1.8], // the March Hare in his armchair
   [-0.1, -6.3, 0.3, 0.76, 2.6], // the Hatter on the table in the song
   [2.5, -7.4, 0.35, 0, 1.8], // the March Hare beside his chair in the song
-  [0.1, -7.9, 0.2, 0.76, 1.1], // the Dormouse on its plate
+  [0.1, -7.15, 0.2, 0.777, 1.1], // the Dormouse on its plate, asleep and dancing
   [-1.45, -4.2, 0.3, 0, 1.35], // Fries at his song spot
 ]
 
