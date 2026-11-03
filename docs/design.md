@@ -124,6 +124,22 @@ The garden was 30 by 25 m inside a hedge wall: too small, nothing to do in it, a
 
 Walking distances matter: the fountain is about 15 m from the table and the cottage about 25 m, so the garden has room between places for flowers, paths and floating things. There is no hedge wall at the edge: the ground carries on and falls away into a valley, with layered hills and trees 40-150 m out. Movement stops at the brow of the slope and at low walls and bushes, not at a green wall.
 
+### Tasks at each place: see it first, come back able
+
+Every place shows the player something they cannot do yet, so they remember it and come back once they can (ability-gated backtracking): a glint behind the grotto's tiny arch, a gear on a hat far above the porch, a locked door that rattles. The abilities are the two sizes and, later, the watch's repair.
+
+| Place | Seen early | Needs | The task, and what it wakes |
+|---|---|---|---|
+| Under the table | A glint between the table legs, too low to reach | Small (pink tea) | Cross the crumbs and the cloth's fringe; the March Hare's huge hand lays a spoon as a bridge; gear 1. Tea steams, petals fall |
+| The fountain's grotto | A light and a ticking sound behind the tiny arch | Small | Inside: a wet stone floor, syrup dripping, a little valve the gear is jammed in; gear 2. The syrup flows, butterflies rise |
+| The cottage porch | A gear glinting on the top hat of the hat rack, out of reach | Big (blue tea) | Climb the terraces in giant steps, lift the gear off the hat; gear 3. Flowers sway and hum |
+| The cottage hall | The door opens at normal size | Normal | The March Hare's hall: buttered tools, a clock with butter in it, a note; the Dormouse's sleep-talk clue; the March Hare shouts from the table about trespassers |
+| The tea table | The Hatter conducting the teapots | Normal | Drinking (the size teas); the tea-service game once the first gear is back |
+| The tree door | Locked; the Hatter: "Not till one minute past six" | The repaired watch | Opens in the ending onto the rose path |
+| The overlook | Too far to see anything from | Big | See the whole garden and the glints of the gears still missing |
+
+What big is for: crossing the garden in a few strides, stepping up terraces and over low walls without stairs, reaching high places (the porch hat rack, the tree's lower branches to straighten a crooked clock), looking over everything for glints. What small is for: going under and into things. Being big inside small places is blocked by size alone, so the player learns to switch.
+
 ### Size changes need a purpose
 
 Small (0.18x) opens the places under things: beneath the table, the fountain's grotto, gaps under hedges and roots. Big must be giant enough to matter: about **5x** (6 m tall), so the eye line clears the cottage's eaves and sees the whole table. When big Fries steps up terraces without stairs, reaches the hat rack on the high porch, looks over everything for glints, and the hosts squeak up at him while the cups look like thimbles. Two or three floating cups and spoons drift near the giant's camera for scale.
@@ -133,7 +149,9 @@ Small (0.18x) opens the places under things: beneath the table, the fountain's g
 - **Gaze:** whoever speaks looks at the one addressed; the listeners look at the speaker; when Fries is near, heads turn to him. Head and neck turn (about ±70° side to side, ±30° up and down, eased over 0.3 s); beyond that the body turns, or for seated characters the chest a little.
 - **Banter while the player explores:** the three hosts keep talking among themselves at the table, a short exchange every 15-40 s: bickering, riddles without answers, nonsense about time, and comments set off by what the player does (a gear found, a size change, falling into the fountain, entering the cottage). Lines fade with distance; subtitles only within about 12 m. The new lines will be added to `docs/script.md` with voice files.
 - **Blinking:** everyone blinks, at random every 2-6 s, sometimes twice; eyes closed while asleep.
-- **Sitting down and standing up:** characters walk to the front of a chair, turn, sit (the chair slides back a little and settles), play their seated clips, and stand up the same way in reverse. Fries can sit in any empty armchair; the first time, the hosts shout "No room!".
+- **Who talks to whom:** the banter is a small scheduler, not a script: it picks an exchange whose conditions hold (who is seated, where the player is, which gears are back, what just happened), plays its lines in turn with the speakers' `talk`/`sit_talk` clips and gaze, and waits 15-40 s before the next. An event the player causes interrupts at the end of the current line. The Hatter leads most exchanges; the March Hare heckles; the Dormouse answers in his sleep.
+- **Sitting down and standing up:** characters walk to the front of a chair, turn, sit (the chair slides back a little and settles), play their seated clips, and stand up the same way in reverse. The March Hare changes seats now and then. Fries can sit in any empty armchair at the table (E); the first time, the hosts shout "No room!"; seated, the camera frames the table and the banter turns to him.
+- **Story moments get their own animation:** the Hatter holds up the watch and snatches it back, the March Hare butters the watch, the gears burst out and everyone reacts, Fries holds up a found gear, hands mend the watch together, the Hatter leans over small Fries, the March Hare lays the spoon bridge, the Hatter conducts the teapots, the two stuff the Dormouse into the teapot. Props are bound to hand bones and touch the fingers.
 - **The Dormouse lies on his plate**, never floating above it.
 
 ### Tea, pouring and water
