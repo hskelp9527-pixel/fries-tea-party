@@ -1,10 +1,10 @@
 import * as THREE from 'three/webgpu'
-import { uniform, uv, sin, fract, smoothstep, mix, pow, dot, float, vec2, vec3, texture, normalMap, positionViewDirection } from 'three/tsl'
+import { uniform, uv, sin, fract, smoothstep, mix, pow, dot, float, vec2, vec3, texture, normalMap, positionViewDirection, fwidth } from 'three/tsl'
 import { scene } from './scene.js'
 import { awake, things } from './garden.js'
 import { effects, syrup } from './layout.js'
 
-export const TEA = new THREE.Color(0.5, 0.2, 0.05), SYRUP = new THREE.Color(0.95, 0.5, 0.1)
+export const TEA = new THREE.Color(0.12, 0.028, 0.003), SYRUP = new THREE.Color(0.55, 0.19, 0.018)
 const TAU = Math.PI * 2, fract1 = x => x - Math.floor(x)
 const streams = [], surfaces = [], sheets = []
 const running = s => !s.frozen && (s.layer === 'live' || awake[s.layer])
@@ -35,18 +35,17 @@ function flowNormal(run, coordinates, direction, speed) {
   const phase = fract(run.mul(speed)), other = fract(phase.add(0.5))
   const a = texture(normals, coordinates.sub(direction.mul(phase)))
   const b = texture(normals, coordinates.sub(direction.mul(other)))
-  return mix(a, b, phase.sub(0.5).abs().mul(2))
+  return mix(a.rgb, b.rgb, phase.sub(0.5).abs().mul(2))
 }
 function material(colour, mask = float(1), field = vec3(0.5, 0.5, 1), thickness = 0.01) {
-  const m = new THREE.MeshPhysicalNodeMaterial({ color: colour, roughness: 0.13,
-    clearcoat: 1, clearcoatRoughness: 0.08, transmission: 0.25, thickness,
+  const m = new THREE.MeshPhysicalNodeMaterial({ color: colour, roughness: 0.09, envMapIntensity: 1.3,
+    clearcoat: 0.65, clearcoatRoughness: 0.12, transmission: 0.18, thickness,
     attenuationColor: colour, attenuationDistance: thickness * 5, ior: 1.333,
     transparent: true, depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.015 })
-  m.normalNode = normalMap(field)
+  m.normalNode = normalMap(field, vec2(0.22))
   const fresnel = pow(float(1).sub(dot(m.normalNode, positionViewDirection).abs().saturate()), 5)
   m.opacityNode = mix(0.67, 0.96, fresnel).mul(mask)
-  m.colorNode = mix(vec3(colour), field, liquidDebug.equal(1))
-  m.colorNode = mix(m.colorNode, m.normalNode.mul(0.5).add(0.5), liquidDebug.equal(2))
+  m.colorNode = liquidDebug.equal(1).select(field.rgb, liquidDebug.equal(2).select(m.normalNode.mul(0.5).add(0.5), uniform(colour)))
   return m
 }
 const ringGeometry = new THREE.RingGeometry(0.88, 1, 48).rotateX(-Math.PI / 2)
@@ -140,7 +139,7 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
         const k = fract1(run.value * 1.8 + ring.userData.phase)
         ring.visible = hitting
         ring.position.copy(to); ring.position.y += radius * 0.12
-        ring.scale.setScalar(radius * (2 + k * 12))
+        ring.scale.setScalar(radius * (1.5 + k * 6))
         ring.userData.fade.value = (1 - k) ** 2 * 0.65
       }
       droplets.visible = hitting
@@ -160,13 +159,20 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
 
 // Normal-only flowing ripples: bounded discs stay inside the vessel, with no geometric crest claim.
 export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, layer = 'live', hot = colour !== SYRUP, frozen = false, flowDirection = new THREE.Vector2(1, 0.35), flowSpeed = 0.18 } = {}) {
-  const run = uniform(0), field = flowNormal(run, uv().mul(1.7), uniform(flowDirection), flowSpeed)
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(radius, 64).rotateX(-Math.PI / 2), material(colour, float(1), field, radius * 0.3))
+  const run = uniform(0), flow = flowNormal(run, uv().mul(0.6), uniform(flowDirection), flowSpeed)
+  const radial = uv().sub(0.5), distance = radial.length().max(0.001)
+  const wave = sin(distance.mul(48).sub(run.mul(4))).mul(0.055)
+  const field = vec3(flow.xy.add(radial.div(distance).mul(wave)), flow.z)
+  const surfaceMaterial = material(colour, float(1), field, radius * 0.3)
+  surfaceMaterial.transmission = 0.06
+  surfaceMaterial.clearcoat = 0.35
+  surfaceMaterial.opacityNode = float(0.97)
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(radius, 64).rotateX(-Math.PI / 2), surfaceMaterial)
   parent.add(disc)
   // Soft wisps reuse one pooled mesh. Their age and advection stop with the liquid clock.
   const steamMaterial = new THREE.MeshBasicNodeMaterial({ color: 0xfff5e8, transparent: true, depthWrite: false, side: THREE.DoubleSide })
   const soft = float(1).sub(smoothstep(0.1, 0.5, uv().sub(0.5).length()))
-  steamMaterial.opacityNode = soft.mul(0.085)
+  steamMaterial.opacityNode = soft.mul(0.13)
   const steamGeometry = new THREE.SphereGeometry(1, 10, 8)
   const steam = new THREE.InstancedMesh(steamGeometry, steamMaterial, 9)
   steam.frustumCulled = false
@@ -185,7 +191,7 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
         p.z += radius * Math.sin(angle + age) * 0.45
         p.y += radius * (0.15 + age * 3.4)
         const envelope = Math.sin(age * Math.PI)
-        size.set(1, 1.8, 1).multiplyScalar(radius * (0.16 + age * 0.38) * envelope)
+        size.set(0.55, 2.8, 0.55).multiplyScalar(radius * (0.12 + age * 0.2) * envelope)
         steam.setMatrixAt(i, matrix.compose(p, rotation, size))
       }
       steam.instanceMatrix.needsUpdate = true
@@ -198,10 +204,11 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
 export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'live', parent = scene, frozen = false } = {}) {
   const run = uniform(0), amount = uniform(1)
   const field = flowNormal(run, vec2(uv().x.mul(5), uv().y.mul(0.8)), vec2(0, -1), 1.4)
-  const streak = texture(normals, vec2(uv().x.mul(4), uv().y.mul(0.3).add(run.mul(0.65)))).r
-  const mask = smoothstep(0.39, 0.54, streak).mul(amount)
+  const streak = sin(uv().x.mul(TAU * 36).add(sin(uv().y.mul(12).add(run.mul(5))).mul(0.45))).mul(0.5).add(0.5)
+  const resolvedStreak = mix(streak, 0.5, smoothstep(0.25, 0.5, fwidth(uv().x.mul(36))))
+  const mask = resolvedStreak.mul(0.45).add(0.22).mul(amount)
   const m = material(colour, mask, field, radius * 0.015)
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.1, top - bottom, 128, 1, true), m)
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.06, top - bottom, 128, 24, true), m)
   mesh.position.copy(centre).setY((top + bottom) / 2)
   parent.add(mesh)
   const rings = [0, 0.5].map(phase => {
