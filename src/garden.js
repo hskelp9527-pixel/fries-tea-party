@@ -75,16 +75,17 @@ export const doors = Object.fromEntries(Object.entries(layout.doors).map(([name,
   pivot.add(door)
   things[host].updateMatrixWorld(true)
   // Behind a door that opens onto a dark passage: a black wall past the open door's sweep, its edges buried in the bark,
-  // seen from the door side only. It stands in the scene, not in the host, so the host's bark and wood scans leave it out.
+  // seen from the door side only, and hidden when the roses beyond the tunnel appear. It stands in the scene, not in the host, so the host's bark and wood scans leave it out.
+  let wall
   if (recess) {
     const [[x0, x1], [y0, y1], z] = recess
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshBasicMaterial({ color: 0x0b0705 }))
+    wall = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshBasicMaterial({ color: 0x0b0705 }))
     wall.position.copy(things[host].localToWorld(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, z)))
     wall.rotation.y = things[host].rotation.y
     scene.add(wall)
   }
   const front = door.localToWorld(new THREE.Vector3(0, 0, 0.9))
-  return [name, { pivot, door, colliders: addColliders('tree_door', door), front }]
+  return [name, { pivot, door, colliders: addColliders('tree_door', door), front, wall }]
 }))
 
 // Hands at six o'clock on a face: the minute hand up, the hour hand down. `centre` is the pivot in the face's

@@ -86,7 +86,10 @@ export function stageFrame(id) {
     turnPink(1)
     doors.tree.pivot.rotation.y = 100 * DEG
   }
-  if (f.roses) roses.visible = true
+  if (f.roses) {
+    roses.visible = true
+    doors.tree.wall.visible = false
+  }
   camera.fov = f.fov
   camera.near = f.size === 'small' ? 0.01 : 0.05
   camera.updateProjectionMatrix()
