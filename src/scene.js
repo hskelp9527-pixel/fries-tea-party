@@ -48,6 +48,23 @@ const haze = float(1).sub(exp(distance.sub(HAZE.start).max(0).mul(HAZE.density)
   .mul(exp(positionWorld.y.max(0).div(-HAZE.height))).negate()))
 scene.fogNode = VIEW === 'haze' ? vec4(vec3(haze), 1) : fog(skyRadiance(vec3(along.x, along.y.max(0).add(0.04), along.z).normalize()), haze)
 
+// The painted distance already contains its lighting. A single inward-facing ring keeps it behind the
+// garden's near ridges; the same aerial perspective as the terrain dissolves it into the horizon.
+const backdrops = import.meta.glob('/art/textures/backdrop.png', { eager: true, query: '?url', import: 'default' })
+const backdropUrl = backdrops['/art/textures/backdrop.png']
+if (backdropUrl) {
+  const map = new THREE.TextureLoader().load(backdropUrl)
+  map.colorSpace = THREE.SRGBColorSpace
+  map.wrapS = THREE.RepeatWrapping
+  const backdrop = new THREE.Mesh(
+    new THREE.CylinderGeometry(150, 150, 120, 128, 1, true),
+    new THREE.MeshBasicNodeMaterial({ map, side: THREE.BackSide, transparent: true, depthWrite: false }),
+  )
+  backdrop.name = 'Painted distance'
+  backdrop.position.set(0, 20, -4) // bottom -40 m; the transparent upper half leaves the sky untouched
+  scene.add(backdrop)
+}
+
 // The sky lights everything from every direction (diffuse and reflections), rendered once into an environment map.
 const pmrem = new THREE.PMREMGenerator(renderer)
 const skyOnly = new THREE.Scene()
