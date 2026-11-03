@@ -88,7 +88,7 @@ export function stageFrame(id) {
   }
   if (f.roses) {
     roses.visible = true
-    doors.tree.wall.visible = false
+    doors.tree.unplug()
   }
   camera.fov = f.fov
   camera.near = f.size === 'small' ? 0.01 : 0.05
