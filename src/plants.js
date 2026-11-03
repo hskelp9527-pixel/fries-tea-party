@@ -25,12 +25,33 @@ const sun = uniform(SUN)
 
 // The wind, one field for the whole garden: gust fronts rolling in from the west with quicker chop on top, as a
 // bend direction on the ground. `calm` scales it (the bushes stir harder once the flowers wake).
+// `pulse` is the song's beat in the final dance, felt only by the grass and flowers near the dancers.
 export const wind = { strength: uniform(1), bushes: uniform(0.4), pulse: uniform(0) }
+// Grass and flowers stand almost still: only this much of the wind reaches them.
+const BREEZE = 0.04
+// The characters in the grass (Fries and the three hosts): x, z, the radius they push within, and how much they are
+// moving (0 standing, 1 walking). And Fries's gust while he runs: x, z and the heading scaled by how hard he runs.
+export const walkers = Array.from({ length: 4 }, () => uniform(new THREE.Vector4()))
+export const stir = uniform(new THREE.Vector4())
 const gust = p => {
   const along = p.x.mul(0.8).add(p.y.mul(0.6))
   const front = pow(sin(along.mul(0.33).sub(time.mul(1.3))).mul(0.5).add(0.5), 1.6)
   const chop = sin(along.mul(1.7).sub(time.mul(3.1)).add(p.y.mul(0.9))).mul(0.5).add(0.5)
   return vec2(0.8, 0.6).mul(front.mul(0.75).add(chop.mul(0.25))).mul(wind.strength)
+}
+
+// What the characters do to the plants rooted at `root` (world x, z): `push`, the sideways shove away from every
+// walker within its radius plus the running gust, and `near`, 1 close to a dancer fading to 0 at 5.5 m.
+function touch(root) {
+  let push = vec2(0, 0), near = float(0)
+  for (const w of walkers) {
+    const away = root.sub(w.xy), d = away.length()
+    push = push.add(away.div(d.max(0.05)).mul(float(1).sub(d.div(w.z)).saturate().mul(w.w)))
+    near = near.max(float(1).sub(smoothstep(2.5, 5.5, d)))
+  }
+  const s = root.sub(stir.xy).length()
+  push = push.add(stir.zw.mul(float(1).sub(smoothstep(0.5, 4, s)).mul(sin(time.mul(9).sub(s.mul(2.5))).mul(0.3).add(0.7))))
+  return { push, near }
 }
 
 // A card material. Every card is a unit quad standing on its root (the bottom edge of its atlas cell: a stalk,
@@ -54,13 +75,12 @@ export function cardMaterial(sheet, { crown = false, translucency = 0.8, flutter
   if (crown) {
     const drift = gust(base.xz).mul(base.y.max(0).mul(sway)).mul(float(1).add(wind.bushes.mul(base.y.lessThan(2.5).select(1, 0))))
     material.positionNode = positionLocal.add(vec3(drift.x.add(flap), flap.mul(0.6), drift.y.sub(flap)))
-      .add(positionLocal.sub(base.xyz).mul(wind.pulse.mul(base.y.lessThan(2.5).select(0.12, 0))))
     const outward = positionWorld.sub(base.xyz).normalize()
     material.normalNode = cameraViewMatrix.mul(vec4(outward.add(normalWorld.mul(0.3)).normalize(), 0)).xyz
   } else {
-    const height = positionLocal.y.sub(base.y).max(0)
-    const bend = gust(base.xz).mul(height.mul(height).mul(base.w))
-    material.positionNode = positionLocal.add(vec3(bend.x.add(flap), bend.length().mul(height).mul(-0.3), bend.y))
+    const height = positionLocal.y.sub(base.y).max(0), { push, near } = touch(base.xz)
+    const bend = gust(base.xz).mul(BREEZE).add(push.mul(0.5)).mul(height.mul(height).mul(base.w))
+    material.positionNode = positionLocal.add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.25)), bend.y))
     material.normalNode = cameraViewMatrix.mul(vec4(mix(normalWorld, vec3(0, 1, 0), 0.6).normalize(), 0)).xyz
   }
   const toCamera = cameraPosition.sub(positionWorld).normalize()
@@ -94,17 +114,33 @@ export function cards(material, sheet, list) {
 }
 
 // A flower clump model (art/models/kit/<name>.glb) as one geometry with a group per material, and a wind material
-// for each. Vertices bend with the gust by their height above the clump's foot, so the foot stays put and the
-// heads sway; they sway harder once the flowers wake, and the pulse stretches them.
+// for each. Vertices bend by their height above the clump's foot, so the foot stays put and the heads move: with the
+// breeze, away from the characters, and with the beat near the dancers. Draw it with `flowerMesh`.
 export function flowerClump(name) {
   const meshes = []
   model(name).traverse(o => { if (o.isMesh) meshes.push(o) })
-  const height = positionGeometry.y
+  const height = positionGeometry.y, { push, near } = touch(attribute('aRoot', 'vec3').xz)
   const materials = meshes.map(({ material }) => {
     const flower = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: material.roughness, side: THREE.DoubleSide })
-    const bend = gust(positionLocal.xz).mul(height.mul(height).mul(0.8)).mul(wind.bushes.mul(0.5).add(1))
-    flower.positionNode = positionLocal.add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(0.12)), bend.y))
+    const bend = gust(positionLocal.xz).mul(BREEZE).mul(wind.bushes.mul(0.5).add(1)).add(push).mul(height.mul(height).mul(0.8))
+    flower.positionNode = positionLocal.add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
     return flower
   })
   return { geometry: mergeGeometries(meshes.map(m => m.geometry), true), materials }
+}
+
+// An instanced mesh of a flower clump at the given matrices. Each instance carries its root, which the wind
+// materials need and the instance matrix does not give them.
+export function flowerMesh({ geometry, materials }, matrices) {
+  const own = new THREE.BufferGeometry(), root = new Float32Array(matrices.length * 3)
+  own.setIndex(geometry.index)
+  own.groups = geometry.groups
+  for (const name in geometry.attributes) own.setAttribute(name, geometry.attributes[name])
+  const mesh = new THREE.InstancedMesh(own, materials, matrices.length)
+  matrices.forEach((matrix, i) => {
+    mesh.setMatrixAt(i, matrix)
+    root.set(matrix.elements.slice(12, 15), i * 3)
+  })
+  own.setAttribute('aRoot', new THREE.InstancedBufferAttribute(root, 3))
+  return mesh
 }

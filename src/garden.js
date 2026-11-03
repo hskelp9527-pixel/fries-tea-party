@@ -8,8 +8,13 @@ import { wind } from './plants.js'
 
 const DEG = Math.PI / 180
 
+// The armchair model is built 38.5 degrees off square (its back runs diagonally across the model's frame). Its
+// meshes are turned back inside the object, so the object's own turn, which the seated cast follows, squares it.
+const ARMCHAIR_YAW = 38.5 * DEG
+
 function place({ model: name, pos, rot = 0, scale = 1, solid = true, boxes = false, hidden = false }) {
   const object = model(name)
+  if (name === 'armchair') object.children.forEach(mesh => { mesh.rotation.y = -ARMCHAIR_YAW })
   object.position.set(...pos)
   object.rotation.y = rot * DEG
   object.scale.setScalar(scale)
@@ -39,6 +44,13 @@ export function keepOut(p, margin) {
     }
   }
 }
+
+// The cottage's doorway lining lies exactly on the arch's reveals (and the house's feet on the terrace lawn), and from
+// far away the depth buffer cannot tell such faces apart, so they flicker. The house is pushed back in depth, and the
+// lining and the lawn win.
+things.house.traverse(o => {
+  if (o.name === 'house_13') Object.assign(o.material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 })
+})
 
 // The hosts' end of the dressed table (beyond 2.6 m along it) is kept empty for the game's own cups, teapots and
 // the watch; the few pieces of dressing that stray into it stay hidden.
@@ -189,5 +201,5 @@ export function updateGarden(dt, time) {
   })
 
   wind.bushes.value = awake.flowers ? 2.5 : 0.4
-  wind.pulse.value = game.pulse
+  wind.pulse.value = game.pass >= 1 ? game.pulse : 0
 }

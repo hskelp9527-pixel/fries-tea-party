@@ -3,7 +3,9 @@ import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_n
 import { scene, camera, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { meadow, terraces, plaza, overlook } from './layout.js'
-import { LEAVES, cardMaterial, cards, flowerClump } from './plants.js'
+import { LEAVES, cardMaterial, cards, flowerClump, flowerMesh, walkers, stir } from './plants.js'
+import { player } from './player.js'
+import { cast } from './cast.js'
 import { lush, bloom, species, bare, pathDistance, ground, level, random } from './fields.js'
 
 // ?view=fields colours the land by its fields instead: green how lush, magenta where flowers bloom, grey the paths.
@@ -42,11 +44,18 @@ const groundMaterial = new THREE.MeshStandardNodeMaterial({ roughness: 1 })
 groundMaterial.colorNode = FIELDS ? vec3(field.g.mul(0.5), field.r, field.b) : mix(soil, valley.mul(speckle.mul(0.1).add(1)), smoothstep(55, 95, here.sub(vec2(0, -4)).length()))
 groundMaterial.roughnessNode = float(1).sub(field.a.mul(0.3))
 
-// The land, out to the far hills.
-const land = new THREE.PlaneGeometry(420, 420, 210, 210)
-land.rotateX(-Math.PI / 2)
+// The land, out to the far hills. Its cells are 0.5 m over the garden, as fine as the walkable height field, so the
+// plants rooted on the true height lie on the mesh (the overlook's slope is only a few metres across); beyond 40 m
+// they widen by 8% a step.
+const edges = [0]
+for (let step = 0.5; edges.at(-1) < 210; edges.push(edges.at(-1) + step)) if (edges.at(-1) >= 40) step *= 1.08
+const coords = [...edges.slice(1).reverse().map(e => -e), ...edges], count = coords.length
+const land = new THREE.PlaneGeometry(1, 1, count - 1, count - 1).rotateX(-Math.PI / 2)
 const position = land.attributes.position
-for (let i = 0; i < position.count; i++) position.setY(i, ground(position.getX(i), position.getZ(i)))
+for (let i = 0; i < position.count; i++) {
+  const x = coords[i % count], z = coords[Math.floor(i / count)]
+  position.setXYZ(i, x, ground(x, z), z)
+}
 land.computeVertexNormals()
 const lawn = new THREE.Mesh(land, groundMaterial)
 lawn.receiveShadow = true
@@ -122,13 +131,13 @@ const clumps = {}
 const clump = new THREE.Matrix4()
 for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (webgpu ? 1 : 0.5)); n > 0; n--) {
   const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
-  if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.3) continue
+  if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.6) continue
   const kinds = rand() < 0.65 ? LOW : TALL, name = kinds[Math.floor(species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3) * kinds.length)]
   const c = chunk(x, z)
   clumps[name] ??= flowerClump(name)
   ;(c.flowers[name] ??= []).push(clump.compose(
     new THREE.Vector3(x, level(x, z), z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
-    new THREE.Vector3().setScalar(0.8 + rand() * 0.45),
+    new THREE.Vector3().setScalar(1.15 + rand() * 0.65),
   ).clone())
 }
 
@@ -149,14 +158,36 @@ for (const c of chunks.values()) {
     drawn.push({ mesh, full: c.grass.length, centre: c.centre, far: 70 })
   }
   for (const [name, list] of Object.entries(c.flowers)) {
-    const mesh = new THREE.InstancedMesh(clumps[name].geometry, clumps[name].materials, list.length)
-    shuffle(list).forEach((matrix, i) => mesh.setMatrixAt(i, matrix))
+    const mesh = flowerMesh(clumps[name], shuffle(list))
     scene.add(mesh)
     drawn.push({ mesh, full: list.length, centre: c.centre, far: 45 })
   }
 }
 
+// The characters push the grass and flowers round them while they move, and spring back as they pass. Each is
+// [position, radius, speed]; Fries's radius grows with his size. While he runs, a gust follows him.
+const people = [[player.feet, () => player.p.scale], ...['hatter', 'hare', 'dormouse'].map(name => [cast[name].object.position, () => 1])]
+  .map(([position, size]) => ({ position, size, last: position.clone(), speed: 0 }))
+const heading = new THREE.Vector2(), want = new THREE.Vector2()
+let run = 0, before = performance.now()
+function updateWalkers() {
+  const now = performance.now(), dt = Math.max((now - before) / 1000, 1e-3)
+  before = now
+  people.forEach((c, i) => {
+    const size = c.size(), vx = (c.position.x - c.last.x) / dt, vz = (c.position.z - c.last.z) / dt
+    c.speed += (Math.hypot(vx, vz) - c.speed) * Math.min(1, dt * 6)
+    c.last.copy(c.position)
+    walkers[i].value.set(c.position.x, c.position.z, size * (i === 3 ? 0.4 : 1), Math.min(1, c.speed / (0.5 * size)))
+    if (i === 0) {
+      run += ((c.speed > 1.5 * player.p.speed ? 1 : 0) - run) * Math.min(1, dt * 3)
+      if (vx || vz) heading.lerp(want.set(vx, vz).normalize(), Math.min(1, dt * 4))
+      stir.value.set(c.position.x, c.position.z, heading.x * run * size, heading.y * run * size)
+    }
+  })
+}
+
 export function updateGround() {
+  updateWalkers()
   for (const d of drawn) {
     const distance = Math.hypot(d.centre.x - camera.position.x, d.centre.z - camera.position.z)
     const keep = distance < 14 ? 1 : distance > d.far ? 0 : Math.max(0.25, 1 - (distance - 14) / 41)
