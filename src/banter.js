@@ -27,12 +27,29 @@ const EXCHANGES = [
   { lines: ['SZ-07', 'SZ-03'], to: 'fries', when: c => c.size === 'big' && c.near('table') },
   { lines: ['SZ-08', 'SZ-04'], to: 'fries', when: c => c.size === 'big' && c.near('cottage') },
 ]
+const lines = (first, last) => Array.from({ length: last - first + 1 }, (_, i) => `BT-${String(first + i).padStart(2, '0')}`)
+const played = new Set()
+const hostsSeated = () => cast.hatter.seated && cast.hare.seated
+EXCHANGES.push(
+  ...[[1, 5], [6, 9], [10, 13], [14, 17]].map(([a, b]) => ({ lines: lines(a, b), when: hostsSeated })),
+  { lines: lines(18, 20), when: () => hostsSeated() && cast.dormouse.anim.current === cast.dormouse.anim.actions.sleep },
+  { id: 'B06', lines: lines(21, 24), when: hostsSeated },
+  { lines: lines(25, 28), when: () => hostsSeated() && played.has('B06') },
+  { lines: lines(29, 32), when: hostsSeated },
+  { lines: lines(33, 34), when: c => c.tableDistance > 25, shout: true },
+  { lines: lines(35, 37), when: c => c.gears >= 1 },
+  { lines: lines(38, 41), when: c => c.gears >= 2 },
+  { lines: lines(54, 56), to: 'fries', when: c => c.seated },
+  { id: 'B18', lines: lines(57, 60), to: 'fries', when: c => c.seated },
+  { lines: lines(61, 66), to: 'fries', when: c => c.seated && played.has('B18') },
+)
 // What Fries does: a gear back, a size change, a fall into the fountain, the cottage's hall, a chair.
 export const EVENTS = {
-  shrink: { lines: ['BK-10', 'BK-11'], to: 'fries' },
-  grow: { lines: ['BK-12', 'BK-13'], to: 'fries' },
-  fountain: { lines: ['BK-02', 'BK-06'], to: 'fries' },
-  cottage: { lines: ['BK-04', 'SZ-08'], to: 'fries' },
+  gear: [{ lines: lines(42, 44), to: 'fries', about: true }],
+  shrink: [{ lines: ['BK-10', 'BK-11'], to: 'fries' }, { lines: lines(45, 46), to: 'fries', about: true }],
+  grow: [{ lines: ['BK-12', 'BK-13'], to: 'fries' }, { lines: lines(47, 48), to: 'fries', about: true }],
+  fountain: [{ lines: ['BK-02', 'BK-06'], to: 'fries' }, { lines: lines(49, 51), to: 'fries', about: true }],
+  cottage: [{ lines: ['BK-04', 'SZ-08'], to: 'fries' }, { lines: lines(52, 53), to: 'fries', about: true }],
   firstSit: { lines: ['OP-01', 'OP-02', 'OP-03'], to: 'fries' },
   sit: { lines: ['BK-06', 'BK-04'], to: 'fries' },
   standUp: { lines: ['BK-05'], to: 'fries' },
@@ -42,15 +59,17 @@ const where = name => name === 'fries' ? player.feet : cast[name].object.positio
 const distance = name => where(name).distanceTo(player.feet)
 let talk = null, queued = null, busy = false, gap = 12, idle = 0
 const recent = []
+let eventOrder = 0, observedGears = game.gears
 
 // Plays an exchange's lines in turn; `talk` tells gaze who says the current one to whom.
 async function run(exchange) {
   busy = true
   const { lines, to } = exchange
+  if (exchange.id) played.add(exchange.id)
   for (let i = 0; i < lines.length; i++) {
     if (queued) break
-    talk = { speaker: speakers[lines[i]], to: to ?? speakers[lines[i + 1]] ?? speakers[lines[i - 1]] }
-    await say(lines[i], distance(talk.speaker))
+    talk = { speaker: speakers[lines[i]], to: exchange.about ? (i % 3 === 2 ? 'fries' : speakers[lines[i + 1]] ?? speakers[lines[i - 1]]) : to ?? speakers[lines[i + 1]] ?? speakers[lines[i - 1]] }
+    await say(lines[i], distance(talk.speaker) * (exchange.shout ? 0.35 : 1))
     await new Promise(resolve => setTimeout(resolve, 400))
   }
   talk = null
@@ -65,10 +84,13 @@ async function run(exchange) {
 
 // Something Fries did: its exchange plays once the current line ends.
 export function event(name) {
-  queued = EVENTS[name]
+  const choices = Array.isArray(EVENTS[name]) ? EVENTS[name] : [EVENTS[name]]
+  const next = choices.sort((a, b) => (a.last ?? -1) - (b.last ?? -1))[0]
+  next.last = ++eventOrder
+  queued = next
   if (!busy && !speaking()) {
     queued = null
-    run(EVENTS[name])
+    run(next)
   }
 }
 
@@ -77,12 +99,17 @@ export const banter = { seated: false }
 
 function context() {
   const near = zone => Math.hypot(player.feet.x - zones[zone].pos[0], player.feet.z - zones[zone].pos[1]) < zones[zone].r * player.p.scale ** 0.5
-  return { size: player.size, gears: game.gears, near, seated: banter.seated }
+  return { size: player.size, gears: game.gears, near, seated: banter.seated, tableDistance: Math.hypot(player.feet.x - zones.table.pos[0], player.feet.z - zones.table.pos[1]) }
 }
 
 // Each frame while Fries explores: the next exchange when it is due, now and then the March Hare changing seats.
 export function updateBanter(dt) {
+  if (game.gears > observedGears) {
+    observedGears = game.gears
+    event('gear')
+  }
   if (busy || speaking()) return
+  if (queued) { const next = queued; queued = null; run(next); return }
   gap -= dt
   if (gap > 0) return
   const c = context(), open = EXCHANGES.filter(e => !recent.includes(e) && (!e.when || e.when(c)))
