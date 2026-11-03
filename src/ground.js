@@ -70,10 +70,11 @@ for (const [x, z, w, d] of [[px0, (pz0 + pz1) / 2, 0.5, (pz1 - pz0) / 2], [px1, 
   world.createCollider(RAPIER.ColliderDesc.cuboid(w, 4, d).setTranslation(x, 2, z))
 }
 
-// The terraces: lawn on top (their faces are behind the retaining walls), and the fountain's paved plaza.
-const lawnTop = new THREE.MeshStandardMaterial({ color: 0x6f8f4c, roughness: 1 }), stone = new THREE.MeshStandardMaterial({ color: 0x9d9283, roughness: 0.9 })
+// The terraces: their tops take the lawn's own ground material (it reads world x, z, so it matches the lawn
+// beside them; their faces are behind the retaining walls), and the fountain's paved plaza.
+const stone = new THREE.MeshStandardMaterial({ color: 0x9d9283, roughness: 0.9 })
 for (const [x0, z0, x1, z1, height] of terraces) {
-  const block = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, height, z1 - z0), [stone, stone, lawnTop, stone, stone, stone])
+  const block = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, height, z1 - z0), [stone, stone, groundMaterial, stone, stone, stone])
   block.position.set((x0 + x1) / 2, height / 2, (z0 + z1) / 2)
   block.receiveShadow = true
   scene.add(block)
