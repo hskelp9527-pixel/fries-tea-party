@@ -6,8 +6,9 @@ import { shapes } from './layout.js'
 import { rimLit } from './scene.js'
 
 // Every art/models/<name>.glb on disk at build time, the garden kit in art/models/kit/ included, named by file.
-// Dropping a file in replaces that model's boxes.
-const files = import.meta.glob('/art/models/**/*.glb', { eager: true, query: '?url', import: 'default' })
+// Dropping a file in replaces that model's boxes. art/models/blender/ holds modelling work files, some with the same
+// names as the finished models, so it is left out.
+const files = import.meta.glob(['/art/models/**/*.glb', '!/art/models/blender/**'], { eager: true, query: '?url', import: 'default' })
 const loader = new GLTFLoader()
 const gltfs = {}
 await Promise.all(Object.entries(files).map(async ([path, url]) => {
