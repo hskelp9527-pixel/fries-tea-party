@@ -435,21 +435,19 @@ export const bushes = [
 // docs/fries_hand_contacts.json: stand = prop - palm offset in the clip, turned to `rot` and scaled to his size
 // (small 0.18, big 5). `grip` (metres at scale 1, in the hand bone's frame) sets the prop in the palm.
 
-// Each gear rests at the pickup palm above the floor of its small route.
-// Gear 3 meets the giant reach from the top terrace.
+// `in` puts a gear's position in a model's frame; stands are world points unless `standIn` names their frame.
 export const gears = [
-  { // under the long table
-    pos: [0.1, 0.022, -2.2], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
-    by: 'small', clip: 'pick_up', stand: [0.055, 0, -2.203], rot: 90, grip: [-0.004, -0.03, 0.072],
+  { // above the door, on the trunk's table-facing surface; refine against the modelled knot-hollow
+    in: 'big_tree', pos: [0, 4.3, 2.12], layer: 'tea', line: 'GR-01', hints: ['EX-01', 'EX-02', 'EX-03'],
+    by: 'big', clip: 'reach', stand: [-7.1, 0, -7.85], rot: 150, grip: [0, 0.05, 0.007],
   },
   { // in the grotto under the fountain's basin
     pos: [18.2, 0.022, -5], layer: 'syrup', line: 'GR-02', hints: ['EX-04', 'EX-05', 'EX-06'],
     by: 'small', clip: 'pick_up', stand: [18.155, 0, -5.003], rot: 90, grip: [-0.004, -0.03, 0.072],
   },
-  { // on the crown of the hat rack's top hat on the cottage's high porch, where a big Fries on the top terrace
-    // reaches
-    pos: [28.448, 6.206, -22.17], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
-    by: 'big', clip: 'reach', stand: [28.113, 1.8, -20.125], rot: 180, grip: [0, 0.05, 0.007],
+  { // on the hall's mantelpiece, beside the buttered clock; position and stand are in the house's frame
+    in: 'house', pos: [1.25, 1.989, 1.88], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
+    by: 'normal', clip: 'reach', standIn: 'house', stand: [1.183, 1.1, 2.289], rot: 180, grip: [0, 0.05, 0.007],
   },
 ]
 
@@ -467,8 +465,8 @@ export const drinks = [
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [-2.8, 0, 2.2], becomes: 'normal', label: 'Eat the cake',
-    by: 'small', clip: 'drink', stand: [-2.8, 0, 2.08], rot: 0, grip: [-0.008, 0.045, 0.003],
+    model: 'cake', pos: [0.1, 0, -2.2], becomes: 'normal', grow: [-1.45, 0, -2.2], label: 'Eat the cake',
+    by: 'small', clip: 'drink', stand: [0.103, 0, -2.155], rot: 180, grip: [-0.008, 0.045, 0.003],
   },
   {
     model: 'cake', pos: [3.4, 0, -1.2], becomes: 'normal', label: 'Eat the cake',
@@ -660,8 +658,9 @@ export const meadow = {
 
 // Small routes use the existing table and fountain openings; their low ceilings exclude larger bodies.
 export const underTable = {
+  landing: [0.1, 0.09, -1.65],
   crumbs: [-0.6, -2.8, 0.7, -1.3],
-  cup: [gears[0].pos[0], gears[0].pos[2] + 0.55],
+  cup: [0.1, -1.65],
   spoon: [[0.1, 0.09, -1.65], [0.1, 0.008, -2.12]],
   hare: [1.45, 0, -1.65],
 }
@@ -670,13 +669,14 @@ export const grotto = { valve: [gears[1].pos[0], gears[1].pos[2]] }
 // In the house's own frame, behind its door_hinge at (0.5, 1.1, 2.877).
 export const hall = {
   centre: [1.28, 1.1, 2.2], halfWidth: 0.72, depth: 0.6,
+  mantel: { pos: [1.28, 1.955, 1.9], size: [1.25, 0.05, 0.3] },
   note: [1.28, 1.65, 1.76],
   props: [
-    { model: 'saucer', at: [1.55, 1.12, 2.05], scale: 1.7 },
-    { model: 'spoon', at: [1.52, 1.14, 2.05], rot: 35, scale: 1.6 },
-    { model: 'spoon', at: [1.65, 1.14, 2.08], rot: -25, scale: 1.4 },
-    { model: 'butter', at: [1.55, 1.15, 2.05], scale: 0.6 },
-    { model: 'pocket_watch', at: [0.86, 1.12, 2.05], scale: 3 },
-    { model: 'butter', at: [0.86, 1.2, 2.05], scale: 0.7 },
+    { model: 'saucer', at: [1.7, 1.98, 1.9], scale: 1.7 },
+    { model: 'spoon', at: [1.67, 2, 1.9], rot: 35, scale: 1.6 },
+    { model: 'spoon', at: [1.8, 2, 1.93], rot: -25, scale: 1.4 },
+    { model: 'butter', at: [1.7, 2.01, 1.9], scale: 0.6 },
+    { model: 'pocket_watch', at: [0.86, 1.98, 1.9], scale: 3 },
+    { model: 'butter', at: [0.86, 2.06, 1.9], scale: 0.7 },
   ],
 }

@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { player, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
+import { player, placePlayer, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
 import { camera } from './scene.js'
 import { cast, chairs, rest, standUp, walk, sitDown, moveChair, PULL } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
@@ -13,6 +13,7 @@ import { tween, wait } from './tweens.js'
 import { game } from './state.js'
 import { teaService, hallNote, insideHall } from './tasks.js'
 import { setFloatingLevel } from './floating.js'
+import { underTable } from './layout.js'
 
 const FIRST_HINT = 45 // seconds without finding a gear before the Dormouse sleep-talks a hint
 const NEXT_HINT = 35
@@ -25,7 +26,7 @@ const head = (character, height) => character.localToWorld(new THREE.Vector3(0, 
 const uses = drinks.map(d => ({ ...d, can: () => nearProp(d, d.pos), use: () => drink(d) }))
 for (const gear of gears) uses.push({
   pos: gear.pos, label: 'Pick up the gear',
-  can: () => !gear.found && nearProp(gear, gear.pos), use: () => pickUp(gear),
+  can: () => !gear.found && nearProp(gear, gear.pos) && (gear.in !== 'house' || insideHall()), use: () => pickUp(gear),
 })
 uses.push(teaService, hallNote)
 let target, toldAboutTea = false, drank = false
@@ -93,6 +94,7 @@ export function startExplore(mended) {
   exploring = true
   player.control = true
   player.cinematic = false
+  document.getElementById('controls').textContent = 'WASD move  |  Shift run  |  Space jump  |  E interact  |  V change view  |  Blue tea: big tree  |  Pink tea: fountain grotto  |  Cake: normal size for the hall'
   setMusic({ frozen: 1 - game.gears / 3, awake: game.gears / 3 })
 }
 
@@ -209,8 +211,8 @@ async function pickUp(gear) {
   gear.object.visible = false
 }
 
-// The first shrink: the Hatter gets up, comes over and bends down over small Fries, his huge face filling the sky;
-// then he goes back to his chair.
+// The first shrink: the Hatter comes over, his huge face filling the sky;
+// then he returns to his chair and Fries lands on the upturned cup under the table.
 async function firstShrink() {
   player.control = false
   const hatter = cast.hatter, chair = hatter.chair, p = player.feet
@@ -227,6 +229,7 @@ async function firstShrink() {
   await look
   hatter.doing = null
   await sitDown('hatter', chair)
+  placePlayer(underTable.landing, 180)
   player.control = true
 }
 
@@ -313,12 +316,16 @@ function happenings() {
 let quiet = 0
 export function updateExplore(dt) {
   if (!exploring) return
-  const smallGears = !gears[0].found || !gears[1].found
-  document.getElementById('objective').textContent = game.gears === 3 ? "Bring the gears back to the Hatter's watch"
-    : player.size === 'small' ? (smallGears ? 'Find the gears under the table and in the fountain' : 'Eat a cake to grow back, then drink the blue tea')
-    : player.size === 'big' ? (!gears[2].found ? 'Find the gear on the hat rack' : 'Eat a cake to grow back')
-    : smallGears ? 'Drink the pink tea to shrink, then look under the table and in the fountain'
-    : 'Drink the blue tea to grow tall and reach the hat rack'
+  document.getElementById('objective').textContent = game.gears === 3
+    ? (player.size === 'normal' ? "Bring the gears back to the Hatter's watch" : "Eat a cake to grow back, then return to the Hatter's watch")
+    : player.size === 'small'
+      ? (Math.hypot(player.feet.x - underTable.cup[0], player.feet.z - underTable.cup[1]) < 1
+        ? 'Cross the spoon bridge to the "eat me" cake to grow back'
+        : !gears[1].found ? "Slip into the fountain's grotto and find the gear" : 'Eat a cake to grow back')
+    : player.size === 'big' ? (!gears[0].found ? "Reach into the hollow high in the big tree's trunk" : 'Eat a cake to grow back')
+    : !gears[0].found ? 'Drink the blue tea to grow tall: something glints high in the big tree'
+    : !gears[2].found ? "Only an ordinary-sized boy can open the March Hare's door: look on the hall's mantelpiece"
+    : "Drink the pink tea to shrink and slip into the fountain's grotto"
   target = undefined
   prompt.textContent = ''
   if (banter.seated) updateBanter(dt)

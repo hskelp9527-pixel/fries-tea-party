@@ -313,9 +313,19 @@ const candleLights = [-6.6, -3.9, -0.6].map(z => {
 })
 
 export const gears = layout.gears.map(g => {
-  const object = place({ model: 'gear', pos: g.pos, solid: false })
+  const pos = new THREE.Vector3(...g.pos), stand = new THREE.Vector3(...g.stand)
+  let rot = g.rot
+  if (g.in) {
+    things[g.in].updateMatrixWorld(true)
+    things[g.in].localToWorld(pos)
+  }
+  if (g.standIn) {
+    things[g.standIn].localToWorld(stand)
+    rot += things[g.standIn].rotation.y / DEG
+  }
+  const object = place({ model: 'gear', pos: pos.toArray(), solid: false })
   glow(object, 0xffb030, 0.06)
-  return { ...g, object, pos: new THREE.Vector3(...g.pos), found: false }
+  return { ...g, object, pos, stand: stand.toArray(), rot, found: false }
 })
 
 
@@ -325,7 +335,9 @@ const p = uv().sub(0.5).mul(2)
 const rays = max(smoothstep(0.12, 0, abs(p.x)).mul(smoothstep(1, 0, abs(p.y))), smoothstep(0.12, 0, abs(p.y)).mul(smoothstep(1, 0, abs(p.x))))
 glintMaterial.colorNode = vec3(1, 0.85, 0.5).mul(rays.add(smoothstep(0.35, 0, p.length()))).mul(sin(time.mul(4)).mul(0.15).add(0.65))
 export const glints = gears.map(g => {
-  const sprite = new THREE.Sprite(glintMaterial)
+  const material = g.in === 'big_tree' ? glintMaterial.clone() : glintMaterial
+  if (g.in === 'big_tree') material.depthTest = false
+  const sprite = new THREE.Sprite(material)
   sprite.position.copy(g.pos).add(new THREE.Vector3(0, 0.035, 0))
   sprite.scale.setScalar(0.09)
   scene.add(sprite)
