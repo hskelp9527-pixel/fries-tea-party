@@ -4,7 +4,7 @@ import { RAPIER, world } from './physics.js'
 import { things } from './garden.js'
 import { model } from './models.js'
 import { bushes, hedges, meadow, rosePath } from './layout.js'
-import { LEAVES, FLOWERS, cardMaterial, cards } from './plants.js'
+import { LEAVES, cardMaterial, cards, flowerClump } from './plants.js'
 import { noise, random, ground } from './fields.js'
 
 // Leaves in volumes: the big tree's crown, the ivy on its trunk, the bushes and hedges, and the trees on the far
@@ -143,6 +143,7 @@ export const roses = new THREE.Group()
 roses.visible = false
 scene.add(roses)
 const roseLeaves = [], roseHeads = []
+const roseClump = flowerClump('flower_red_rose'), head = new THREE.Matrix4()
 const [rx0, rz0] = rosePath.from, [rx1, rz1] = rosePath.to, length = Math.hypot(rx1 - rx0, rz1 - rz0)
 const along = new THREE.Vector2(rx1 - rx0, rz1 - rz0).normalize(), across = new THREE.Vector2(-along.y, along.x)
 for (let d = 0; d < length; d += 0.55) {
@@ -153,20 +154,21 @@ for (let d = 0; d < length; d += 0.55) {
   for (const side of [-1, 1]) {
     const centre = new THREE.Vector3(rx0 + along.x * d + across.x * side * 1.05, 0.5, rz0 + along.y * d + across.y * side * 1.05)
     crown(roseLeaves, { centre, radii: new THREE.Vector3(0.55, 0.5, 0.55), cell: LEAVES.round, size: 0.16, light: 0.8 })
-    for (let k = 0; k < 7; k++) {
+    for (let k = 0; k < 2; k++) {
       const out = new THREE.Vector3(rand() - 0.5, rand() * 0.8, rand() - 0.5).normalize()
-      roseHeads.push({
-        position: centre.clone().add(out.clone().multiply(new THREE.Vector3(0.55, 0.5, 0.55))),
-        quaternion: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), out), scale: 0.13 + rand() * 0.05,
-        cell: FLOWERS.redRose, base: [centre.x, centre.y, centre.z, 0.6], tint: new THREE.Color(1, 1, 1),
-      })
+      roseHeads.push(head.compose(
+        centre.clone().add(out.clone().multiply(new THREE.Vector3(0.55, 0.5, 0.55))), new THREE.Quaternion().setFromUnitVectors(UP, out),
+        new THREE.Vector3().setScalar(0.4 + rand() * 0.2),
+      ).clone())
     }
   }
 }
+const roseHeadMesh = new THREE.InstancedMesh(roseClump.geometry, roseClump.materials, roseHeads.length)
+roseHeads.forEach((matrix, i) => roseHeadMesh.setMatrixAt(i, matrix))
 const arch = model('heart_arch')
 arch.position.set(rosePath.arch[0], 0, rosePath.arch[1])
 arch.rotation.y = Math.atan2(along.x, along.y)
-roses.add(arch, cards(cardMaterial(LEAVES, { crown: true, sway: 0.01 }), LEAVES, roseLeaves), cards(cardMaterial(FLOWERS, { crown: true, sway: 0.01, gloss: 0.5 }), FLOWERS, roseHeads))
+roses.add(arch, cards(cardMaterial(LEAVES, { crown: true, sway: 0.01 }), LEAVES, roseLeaves), roseHeadMesh)
 
 const leafMaterial = cardMaterial(LEAVES, { crown: true, sway: 0.012 })
 scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves]))
