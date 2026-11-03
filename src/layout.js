@@ -32,6 +32,19 @@ const teapot = colour => [
   [-0.12, 0.1, 0, 0.03, 0.1, 0.03, colour],
 ]
 
+// 8.57 m long along its x, top at 0.76 m; the cloth hangs to 0.35 m, so only a small Fries gets under it
+const longTable = [
+  [0, 0.74, 0, 8.57, 0.04, 2.27, CLOTH],
+  [0, 0.545, -1.125, 8.57, 0.39, 0.02, FRINGE],
+  [0, 0.545, 1.125, 8.57, 0.39, 0.02, FRINGE],
+  [-4.275, 0.545, 0, 0.02, 0.39, 2.27, FRINGE],
+  [4.275, 0.545, 0, 0.02, 0.39, 2.27, FRINGE],
+  [-4.1, 0.36, -1, 0.08, 0.72, 0.08, WOOD],
+  [-4.1, 0.36, 1, 0.08, 0.72, 0.08, WOOD],
+  [4.1, 0.36, -1, 0.08, 0.72, 0.08, WOOD],
+  [4.1, 0.36, 1, 0.08, 0.72, 0.08, WOOD],
+]
+
 export const shapes = {
   big_tree: [ // a thick hollow trunk at the head of the table; the door in its base is up three steps
     [0, 3, -1.55, 3.6, 6, 0.5, BARK],
@@ -72,17 +85,8 @@ export const shapes = {
     [0.5, 1, 0, 1, 2, 0.08, DOOR],
     [0.85, 1, 0.06, 0.08, 0.08, 0.06, BRASS],
   ],
-  long_table: [ // 8.57 m long along its x, top at 0.76 m; the cloth hangs to 0.35 m, so only a small Fries gets under it
-    [0, 0.74, 0, 8.57, 0.04, 2.27, CLOTH],
-    [0, 0.545, -1.125, 8.57, 0.39, 0.02, FRINGE],
-    [0, 0.545, 1.125, 8.57, 0.39, 0.02, FRINGE],
-    [-4.275, 0.545, 0, 0.02, 0.39, 2.27, FRINGE],
-    [4.275, 0.545, 0, 0.02, 0.39, 2.27, FRINGE],
-    [-4.1, 0.36, -1, 0.08, 0.72, 0.08, WOOD],
-    [-4.1, 0.36, 1, 0.08, 0.72, 0.08, WOOD],
-    [4.1, 0.36, -1, 0.08, 0.72, 0.08, WOOD],
-    [4.1, 0.36, 1, 0.08, 0.72, 0.08, WOOD],
-  ],
+  long_table: longTable,
+  long_table_dressed: longTable,
   armchair: [ // seat at 0.48 m
     [0, 0.24, 0, 0.75, 0.48, 0.7, CHAIR],
     [0, 0.85, -0.3, 0.75, 0.9, 0.12, CHAIR],
@@ -316,10 +320,12 @@ export const trails = [[[22.6, -5.5], [26.5, -7], [30, -8.2]]]
 
 // Every fixed object. `onTable` props dance on the table in the final chorus; `on` names the prop one stands on,
 // which it rides with. `solid: false` leaves it without colliders, `boxes` makes its placeholder boxes its colliders
-// (the step modules: their flower planters would block the steps); `scale` is uniform.
+// (the step modules: their flower planters would block the steps), `hidden` keeps it out of the scene (only its
+// colliders and its place in `things` count); `scale` is uniform.
 export const placed = [
   { model: 'big_tree', pos: [-4.2, 0, -12.2], rot: -30 }, // its long branches reach south-east over the head of the table; the tunnel through its roots runs north-north-east from the door
-  { model: 'long_table', pos: [0, 0, -3.5], rot: 90 },
+  { model: 'long_table_dressed', pos: [0, 0, -3.5], rot: 90, solid: false },
+  { model: 'long_table', pos: [0, 0, -3.5], rot: 90, hidden: true }, // the dressed table collides as the plain one, so its crockery cannot make the top unwalkable
   { model: 'armchair', pos: [-1.55, 0, -6.8], rot: 90 },
   { model: 'hatter', pos: [-1.55, 0, -6.8], rot: 90, solid: false },
   { model: 'armchair', pos: [1.55, 0, -7.4], rot: -90 },
@@ -334,15 +340,10 @@ export const placed = [
   { model: 'tea_tray', pos: [-0.45, 0.76, -5], solid: false, onTable: true },
   { model: 'pink_teapot', pos: [-0.45, 0.79, -5.25], rot: 180, solid: false, on: 'tea_tray' }, // spouts toward the teacups
   { model: 'blue_teapot', pos: [-0.45, 0.79, -4.75], rot: 180, solid: false, on: 'tea_tray' },
-  { model: 'cake_stand', pos: [0.2, 0.76, -3.4], solid: false, onTable: true },
   { model: 'teapot', pos: [0.3, 0.76, -2.6], solid: false, onTable: true },
   { model: 'teapot', pos: [-0.2, 0.76, 0.2], rot: 180, solid: false, onTable: true },
   { model: 'pocket_watch', pos: [-0.5, 0.76, -6.75], rot: 90, solid: false, onTable: true },
   { model: 'book_page', pos: [-0.5, 0.76, -6.75], rot: 90, solid: false, on: 'pocket_watch' },
-  { model: 'milk_jug', pos: [0.45, 0.76, -4.4], rot: -90, solid: false, onTable: true },
-  { model: 'candelabra', pos: [0, 0.76, -5.9], rot: 90, solid: false, onTable: true },
-  { model: 'candle', pos: [0.15, 0.76, -1.6], solid: false, onTable: true },
-  { model: 'candle', pos: [-0.2, 0.76, -0.6], solid: false, onTable: true },
   { model: 'fountain', pos: [18.5, 0, -5], rot: 180 }, // on its plaza 18 m east of the table; its grotto opens west, towards the table
   // The cottage, 30 m from the table and high at the back right on its terraces (see `terraces`): flights of step
   // modules up each 0.6 m, staggered, and flowered retaining walls on the terraces' edges. Its high porch, 2.4 m
