@@ -95,23 +95,35 @@ async function drink(d) {
   drank = true
   player.control = false
   if (d.pot) await pour(d)
-  else await use(d, d.object, () => {})
-  release(d.object)
-  await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
+  else await eat(d)
+  if (d.pot) {
+    release(d.object)
+    await fly(d.object, end => end.copy(d.home), 0.6, 0.08)
+  }
   if (d.grow) await walkTo(d.grow, 90)
   setSize(d.becomes)
-  if ((d.becomes === 'small' && player.shrinks === 1) || (d.becomes === 'big' && player.grows === 1)) {
-    const hint = document.getElementById('size-hint')
-    hint.textContent = 'Eat a cake to change back'
-    hint.getAnimations().forEach(animation => animation.cancel())
-    hint.animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: 6000 })
-  }
   if (d.becomes === 'small' && player.shrinks === 1) await firstShrink()
   else if (d.becomes === 'big' && player.grows === 1) await firstGrow()
   else {
     if (d.becomes !== 'normal') event(d.becomes === 'small' ? 'shrink' : 'grow')
     player.control = true
   }
+}
+
+// The cake stays on the ground while Fries bends over it and takes two bites.
+async function eat(d) {
+  await walkTo(d.stand, d.rot)
+  act('pick_up')
+  await wait(contacts.pick_up.time)
+  anim.hold('pick_up')
+  for (let bite = 0; bite < 2; bite++) {
+    await tween(0.65, t => { player.nod = 0.22 * Math.sin(Math.PI * t) })
+    player.nod = 0
+    d.object.scale.multiplyScalar(0.8)
+    await wait(0.2)
+  }
+  anim.hold('pick_up', false)
+  await wait(contacts.pick_up.duration - contacts.pick_up.time)
 }
 
 // Fries takes up the empty cup and holds it out; the Hatter beckons from his chair and the teapot flies over from
@@ -121,12 +133,12 @@ const SPOUT = new THREE.Vector3(0, 0.2, 0.172), TILT = 0.8
 async function pour(d) {
   const pot = things[d.pot], home = pot.position.clone(), turn = pot.rotation.y
   await walkTo(d.stand, d.rot)
-  const yaw = d.rot * DEG, side = yaw + 0.7, f = player.feet
+  const yaw = d.rot * DEG, side = yaw + 1.1, f = player.feet
   player.cinematic = true
   camera.fov = 45
   camera.updateProjectionMatrix()
-  camera.position.set(f.x + Math.sin(side) * 1.7, f.y + 1.05, f.z + Math.cos(side) * 1.7)
-  camera.lookAt(f.x, f.y + 0.9, f.z)
+  camera.position.set(f.x + Math.sin(side) * 1.35, f.y + 1.12, f.z + Math.cos(side) * 1.35)
+  camera.lookAt(f.x, f.y + 0.88, f.z)
 
   act('drink')
   await toHand(d.object, d)
@@ -254,6 +266,7 @@ function mend() {
   player.control = false
   prompt.textContent = ''
   hud.textContent = ''
+  document.getElementById('objective').textContent = ''
   onMended()
 }
 
@@ -272,6 +285,12 @@ function happenings() {
 let quiet = 0
 export function updateExplore(dt) {
   if (!exploring) return
+  const smallGears = !gears[0].found || !gears[1].found
+  document.getElementById('objective').textContent = game.gears === 3 ? 'Bring the gears back to the Hatter¡¯s watch'
+    : player.size === 'small' ? (smallGears ? 'Find the gears under the table and in the fountain' : 'Eat a cake to grow back, then drink the blue tea')
+    : player.size === 'big' ? (!gears[2].found ? 'Find the gear on the hat rack' : 'Eat a cake to grow back')
+    : smallGears ? 'Drink the pink tea to shrink, then look under the table and in the fountain'
+    : 'Drink the blue tea to grow tall and reach the hat rack'
   target = undefined
   prompt.textContent = ''
   if (banter.seated) updateBanter(dt)

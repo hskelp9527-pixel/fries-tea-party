@@ -18,6 +18,7 @@ export function lookAt(name, target) {
   lookers[name].target = target
 }
 
+const poses = new Map()
 const q = new THREE.Quaternion(), turn = new THREE.Quaternion(), parent = new THREE.Quaternion(), local = new THREE.Vector3()
 const up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3()
 
@@ -37,7 +38,12 @@ export function updateGaze(dt, seated, free) {
   const ease = 1 - Math.exp(-dt * 10) // about 95% of the way in 0.3 s
   for (const [name, l] of Object.entries(lookers)) {
     if (!l.head) continue
+    for (const b of [l.chest, l.neck, l.head]) {
+      const pose = poses.get(b)
+      if (pose && b.quaternion.angleTo(pose.result) < 0.00001) b.quaternion.copy(pose.base)
+    }
     l.object.updateMatrixWorld(true)
+    for (const b of [l.chest, l.neck, l.head]) if (b) poses.set(b, { base: b.quaternion.clone() })
     let yaw = 0, pitch = 0
     const facing = l.object.rotation.y
     if (l.target) {
@@ -47,11 +53,12 @@ export function updateGaze(dt, seated, free) {
     }
     // Past the neck's reach: a standing character turns towards the target, a seated one turns its chest.
     const beyond = Math.sign(yaw) * Math.max(0, Math.abs(yaw) - YAW)
-    if (beyond && free(name)) l.object.rotation.y += beyond * ease * 0.5
+    if (beyond && !seated(name) && free(name)) l.object.rotation.y += beyond * ease * 0.5
     l.yaw += (Math.max(-YAW, Math.min(YAW, yaw)) - l.yaw) * ease
     l.pitch += (Math.max(-PITCH, Math.min(PITCH, pitch)) - l.pitch) * ease
     if (seated(name) && l.chest) twist(l.chest, Math.sign(beyond) * Math.min(CHEST, Math.abs(beyond)) * 0.8, 0, facing)
     if (l.neck) twist(l.neck, l.yaw * 0.4, l.pitch * 0.4, facing)
     twist(l.head, l.yaw * 0.6, l.pitch * 0.6, facing)
+    for (const b of [l.chest, l.neck, l.head]) if (b) poses.get(b).result = b.quaternion.clone()
   }
 }

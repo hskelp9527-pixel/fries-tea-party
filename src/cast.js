@@ -91,6 +91,22 @@ export async function walk(name, points) {
   const m = cast[name]
   m.moving = true
   for (const [x, z] of points) {
+    const start = m.object.position
+    if (start.y < 0.1 && Math.abs(start.x) > 1.1 && Math.abs(x) > 1.1 && start.z > -8.8 && start.z < 1.8 && z > -8.8 && z < 1.8) {
+      const a = Math.sign(start.x) * 2.5, b = Math.sign(x) * 2.5
+      const route = [[a, start.z]]
+      if (a !== b) {
+        const end = start.z + z < -7 ? -8.8 : 1.8
+        route.push([a, end], [b, end])
+      }
+      route.push([b, z])
+      for (const [rx, rz] of route) {
+        const from = m.object.position.clone(), to = new THREE.Vector3(rx, from.y, rz)
+        if (from.distanceTo(to) < 0.01) continue
+        m.object.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
+        await tween(from.distanceTo(to) / 0.9, t => m.object.position.lerpVectors(from, to, t))
+      }
+    }
     const from = m.object.position.clone(), to = new THREE.Vector3(x, from.y, z)
     m.object.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
     await tween(from.distanceTo(to) / 0.9, t => m.object.position.lerpVectors(from, to, t))
@@ -134,9 +150,8 @@ export async function standUp(name) {
 // The March Hare changes seats: up, round the head of the table if he crosses it, and down in an empty chair.
 export async function changeSeats(name) {
   const m = cast[name], free = chairs.filter(c => !c.by)
-  const chair = free[Math.floor(Math.random() * free.length)], from = m.chair.front
+  const chair = free[Math.floor(Math.random() * free.length)]
   await standUp(name)
-  if (Math.sign(from.x) !== Math.sign(chair.front.x)) await walk(name, [[from.x, -8.6], [chair.front.x, -8.6]])
   await sitDown(name, chair)
 }
 
@@ -190,7 +205,15 @@ export function updateCast(dt) {
     } else if (m.seated && (clip.name.startsWith('sit_') || ['show_watch', 'mend', 'butter', 'dunk_watch', 'stuff', 'lean_over'].includes(clip.name))) lift.set(0, onSeat, 0)
     else if (r) lift.set(-r.middle.x, -r.lows[Math.floor(action.time / clip.duration * r.lows.length) % r.lows.length], -r.middle.z)
     else lift.set(0, 0, 0)
-    m.armature.position.lerp(lift, Math.min(1, dt * 10))
+    if (m.name === 'dormouse') {
+      m.armature.position.copy(lift)
+      m.object.updateMatrixWorld(true)
+      const bubble = m.object.children.find(o => o.geometry?.type === 'SphereGeometry')
+      const head = m.object.getObjectByName('mixamorigHead')
+      head.getWorldPosition(bubble.position)
+      m.object.worldToLocal(bubble.position)
+      bubble.position.z += 0.05
+    } else m.armature.position.lerp(lift, Math.min(1, dt * 10))
   }
 }
 

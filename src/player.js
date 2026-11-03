@@ -35,6 +35,7 @@ export const player = {
   mesh: model('fries'),
   shrinks: 0,
   grows: 0,
+  nod: 0,
   still: 0, // seconds since Fries last moved
 }
 scene.add(player.mesh)
@@ -175,10 +176,9 @@ function updateCamera(dt) {
     dir.set(Math.sin(player.yaw) * cp, -Math.sin(player.pitch), Math.cos(player.yaw) * cp)
     ball.radius = 0.1 * s
     const far = 3.2 * s
-    const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, undefined, undefined, collider)
-    const distance = hit ? hit.time_of_impact : far
+    const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, collider)
+    const distance = hit ? Math.max(0, hit.timeOfImpact - 0.02 * s) : far
     camera.position.copy(eye).addScaledVector(dir, distance)
-    if (distance < 0.6 * s) camera.layers.disable(1)
   }
   camera.position.x += (Math.random() - 0.5) * shake
   camera.position.y += (Math.random() - 0.5) * shake
@@ -222,6 +222,7 @@ function animate(dt, speed, airborne) {
     else anim.play('idle')
   }
   anim.mixer.update(dt)
+  if (player.nod) player.mesh.getObjectByName('mixamorigHead').rotateX(player.nod)
   blink.update(dt, anim.current?.getClip().name.includes('sleep'))
 }
 

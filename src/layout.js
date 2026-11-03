@@ -467,12 +467,12 @@ export const drinks = [
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [1.6, 0, 2.6], becomes: 'normal', label: 'Eat the cake',
-    by: 'small', clip: 'drink', stand: [1.6, 0, 2.5], rot: 0, grip: [-0.008, 0.045, 0.003],
+    model: 'cake', pos: [-2.8, 0, 2.2], becomes: 'normal', label: 'Eat the cake',
+    by: 'small', clip: 'drink', stand: [-2.8, 0, 2.08], rot: 0, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [3.4, 0, -1.6], becomes: 'normal', label: 'Eat the cake',
-    by: 'small', clip: 'drink', stand: [3.3, 0, -1.6], rot: 90, grip: [-0.008, 0.045, 0.003],
+    model: 'cake', pos: [3.4, 0, -1.2], becomes: 'normal', label: 'Eat the cake',
+    by: 'small', clip: 'drink', stand: [3.3, 0, -1.2], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
     model: 'cake', pos: [24, 1.8, -19.4], becomes: 'normal', label: 'Eat the cake',
