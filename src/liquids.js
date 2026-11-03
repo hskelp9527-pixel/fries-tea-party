@@ -157,8 +157,19 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
   return s
 }
 
+// Measured inner porcelain rings, shared by teacup.glb and both coloured game cups.
+// Heights are in the cup's frame; the radius uses each scalloped ring's narrowest wall.
+export const CUP_PROFILE = [[0.012, 0.0186], [0.018, 0.0275], [0.03, 0.0373],
+  [0.045, 0.0421], [0.06, 0.0439], [0.0685, 0.0464]]
+function innerRadius(profile, height) {
+  let i = 1
+  while (i < profile.length - 1 && height > profile[i][0]) i++
+  const [low, r0] = profile[i - 1], [high, r1] = profile[i]
+  return THREE.MathUtils.lerp(r0, r1, THREE.MathUtils.clamp((height - low) / (high - low), 0, 1))
+}
+
 // Normal-only flowing ripples: bounded discs stay inside the vessel, with no geometric crest claim.
-export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, layer = 'live', hot = colour !== SYRUP, frozen = false, flowDirection = new THREE.Vector2(1, 0.35), flowSpeed = 0.18 } = {}) {
+export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, layer = 'live', hot = colour !== SYRUP, frozen = false, flowDirection = new THREE.Vector2(1, 0.35), flowSpeed = 0.18, profile } = {}) {
   const run = uniform(0), flow = flowNormal(run, uv().mul(0.6), uniform(flowDirection), flowSpeed)
   const radial = uv().sub(0.5), distance = radial.length().max(0.001)
   const wave = sin(distance.mul(48).sub(run.mul(4))).mul(0.055)
@@ -179,7 +190,13 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
   parent.add(steam)
   const matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion(), p = new THREE.Vector3(), size = new THREE.Vector3()
   const s = { disc, steam, layer, frozen, run, fill,
-    set(f) { s.fill = THREE.MathUtils.clamp(f, 0, 1); disc.position.copy(centre).setY(centre.y + (top - centre.y) * s.fill); disc.visible = s.fill > 0 },
+    set(f) {
+      s.fill = THREE.MathUtils.clamp(f, 0, 1)
+      const floor = profile ? profile[0][0] : centre.y, height = THREE.MathUtils.lerp(floor, top, s.fill)
+      disc.position.copy(centre).setY(height)
+      disc.scale.setScalar(profile ? innerRadius(profile, height) / radius : 1)
+      disc.visible = s.fill > 0
+    },
     remove() { disc.removeFromParent(); steam.removeFromParent(); disc.geometry.dispose(); disc.material.dispose(); steam.dispose(); steamGeometry.dispose(); steamMaterial.dispose(); surfaces.splice(surfaces.indexOf(s), 1) },
     update(dt) {
       if (running(s)) run.value += dt
@@ -315,6 +332,19 @@ export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'li
   return s
 }
 
+// Horizontal GLB sections: basin, lower bowl, middle bowl and upper cup.
+// The reconstructed fountain has shallow inner floors and offset tier centres.
+const fountainBowls = [
+  { x: 0, z: 0, top: 0.49, lip: 0.52, radius: 1.24,
+    profile: [[0.412, 0.5], [0.416, 1.04], [0.425, 1.207], [0.43, 1.225], [0.47, 1.218], [0.49, 1.218]] },
+  { x: 0, z: 0.025, top: 0.975, lip: 0.98, radius: 0.99,
+    profile: [[0.927, 0.45], [0.934, 0.803], [0.94, 0.8], [0.95, 0.883], [0.96, 0.89], [0.975, 0.899]] },
+  { x: -0.17, z: 0.085, top: 1.643, lip: 1.65, radius: 0.55,
+    profile: [[1.594, 0.15], [1.602, 0.471], [1.61, 0.474], [1.62, 0.478], [1.63, 0.482], [1.643, 0.49]] },
+  { x: -0.176, z: 0.064, top: 2.052, lip: 2.06, radius: 0.355,
+    profile: [[1.977, 0.08], [1.985, 0.298], [2, 0.302], [2.02, 0.311], [2.04, 0.318], [2.052, 0.322]] },
+]
+
 // Story effects use exactly the same local-frame pieces as the lab and live pours.
 let pools = [], hanging, drips, D
 const dripMatrix = new THREE.Matrix4(), dripRotation = new THREE.Quaternion(), dripSize = new THREE.Vector3(0.022, 0.03, 0.022)
@@ -328,7 +358,7 @@ if (!new URLSearchParams(location.search).has('liquid')) {
   const at = ([r, y, a]) => new THREE.Vector3(Math.sin(a * Math.PI / 180) * r, y, Math.cos(a * Math.PI / 180) * r)
   for (const s of syrup.streams) stream(at(s.from), at(s.to), { height: s.height, radius: 0.02, colour: SYRUP, layer: 'syrup', parent: fountain })
   for (const [radius, top, bottom] of syrup.sheets) sheet(new THREE.Vector3(), radius, top, bottom, { parent: fountain, layer: 'syrup' })
-  pools = syrup.pools.map(([radius, low, high]) => surface(fountain, new THREE.Vector3(0, low, 0), radius, high, { colour: SYRUP, fill: 0.1, layer: 'syrup' }))
+  pools = fountainBowls.map(b => surface(fountain, new THREE.Vector3(b.x, b.profile[0][0], b.z), b.radius, b.top, { colour: SYRUP, fill: 0.1, layer: 'syrup', profile: b.profile }))
   D = syrup.drops
   hanging = new THREE.InstancedMesh(dropGeometry, material(SYRUP), D.count)
   drips = Array.from({ length: D.count }, (_, i) => new THREE.Vector3(...D.center.map((c, axis) => c + (fract1(Math.sin(i * 71.7 + axis * 39.1) * 43758.5453) - 0.5) * D.size[axis])))

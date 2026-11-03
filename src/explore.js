@@ -3,7 +3,7 @@ import { player, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from
 import { camera } from './scene.js'
 import { cast, chairs, rest, standUp, walk, sitDown, moveChair, PULL } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
-import { stream, surface } from './liquids.js'
+import { stream, surface, CUP_PROFILE } from './liquids.js'
 import { use, release, fly, toHand } from './hands.js'
 import contacts from '../docs/fries_hand_contacts.json'
 import { things, drinks, gears, doors, wake } from './garden.js'
@@ -150,7 +150,7 @@ async function pour(d) {
   act('drink')
   await toHand(d.object, d)
   anim.hold('drink')
-  const tea = surface(d.object, new THREE.Vector3(0, 0.025, 0), 0.032, 0.055, { colour: new THREE.Color(d.tea), fill: 0 })
+  const tea = surface(d.object, new THREE.Vector3(0, 0.012, 0), 0.044, 0.065, { colour: new THREE.Color(d.tea), fill: 0, profile: CUP_PROFILE })
 
   cast.hatter.doing = 'sit_beckon'
   const cup = d.object.getWorldPosition(new THREE.Vector3())

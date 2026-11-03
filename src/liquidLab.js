@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { renderer } from './scene.js'
-import { stream, surface, sheet, updateLiquids, liquidDebug, TEA, SYRUP } from './liquids.js'
+import { stream, surface, sheet, updateLiquids, liquidDebug, TEA, SYRUP, CUP_PROFILE } from './liquids.js'
 import potURL from '/art/models/pink_teapot.glb?url'
 import cupURL from '/art/models/teacup.glb?url'
 
@@ -65,7 +65,7 @@ function pouringDemo(x, z, scale) {
   scene.add(root)
   const pot = asset(potAsset, root), cup = asset(cupAsset, root)
   cup.position.set(0, 0, 0.21)
-  const tea = surface(cup, new THREE.Vector3(0, 0.012, 0), 0.042, 0.061, { fill: 0, hot: true })
+  const tea = surface(cup, new THREE.Vector3(0, 0.012, 0), 0.042, 0.061, { fill: 0, hot: true, profile: CUP_PROFILE })
   const from = new THREE.Vector3(), to = new THREE.Vector3()
   // Positive X tips the +Z spout down. The mouth remains over the cup centre.
   function pose(tilt, track = true) {
@@ -107,18 +107,20 @@ const small = pouringDemo(-0.15, 0.2, 0.18)
 function bowl(parent, radius, height) {
   const points = [[0, 0], [0.45, 0], [0.8, 0.3], [1, 1], [0.94, 1], [0.74, 0.35], [0.4, 0.12], [0, 0.12]]
     .map(([x, y]) => new THREE.Vector2(x * radius, y * height))
-  return solid(new THREE.LatheGeometry(points, 96), 0xe6ddd0, parent)
+  const mesh = solid(new THREE.LatheGeometry(points, 96), 0xe6ddd0, parent)
+  mesh.userData.innerProfile = [[0.12, 0.4], [0.35, 0.74], [1, 0.94]].map(([y, r]) => [y * height, r * radius - 0.0004])
+  return mesh
 }
 const fountain = new THREE.Group()
 fountain.position.set(0.39, 0, -0.03)
 scene.add(fountain)
-bowl(fountain, 0.25, 0.09)
+const basin = bowl(fountain, 0.25, 0.09)
 const pedestal = solid(new THREE.CylinderGeometry(0.035, 0.055, 0.19, 32), 0xc7b7aa, fountain)
 pedestal.position.y = 0.18
 const upper = bowl(fountain, 0.135, 0.09)
 upper.position.y = 0.23
-const upperTea = surface(upper, new THREE.Vector3(0, 0.016, 0), 0.126, 0.092, { colour: SYRUP, fill: 1 })
-const lowerTea = surface(fountain, new THREE.Vector3(0, 0.02, 0), 0.214, 0.065, { colour: SYRUP, fill: 1 })
+const upperTea = surface(upper, new THREE.Vector3(0, 0.016, 0), 0.126, 0.09, { colour: SYRUP, fill: 1, profile: upper.userData.innerProfile })
+const lowerTea = surface(fountain, new THREE.Vector3(0, 0.02, 0), 0.214, 0.065, { colour: SYRUP, fill: 1, profile: basin.userData.innerProfile })
 const curtain = sheet(new THREE.Vector3(), 0.13, 0.32, 0.065, { parent: fountain, colour: SYRUP })
 const feed = stream(new THREE.Vector3(-0.06, 0.47, -0.045), new THREE.Vector3(0, 0.323, 0), { parent: fountain, radius: 0.006, height: 0.005, colour: SYRUP })
 const overflow = { time: 0,
