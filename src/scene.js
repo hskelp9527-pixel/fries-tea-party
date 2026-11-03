@@ -57,7 +57,7 @@ scene.backgroundNode = skyRadiance(normalWorldGeometry).add(vec3(1, 0.85, 0.6).m
 
 // Haze: clear near, warm far, thicker low down. Its colour is the sky's along the line of sight, just above the
 // horizon, so distant hills melt into the sky behind them, golden towards the sun.
-const HAZE = { start: 14, density: 0.011, height: 30 }
+const HAZE = { start: 22, density: 0.011, height: 24 }
 const sightline = positionWorld.sub(cameraPosition)
 const distance = sightline.length()
 const along = sightline.div(distance)
