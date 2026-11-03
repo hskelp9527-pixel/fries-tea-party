@@ -65,7 +65,7 @@ Models are produced separately and arrive over time; code must run with placehol
 
 Model conventions: metres, +Y up, GLB. A collider mesh in the same file is named `<name>_collider`.
 
-The scene is one continuous garden with no separate areas: the long table stands under the big tree, and the fountain and the cottage are a few steps away. Objects are reused many times, each copy offset in timing and randomly varied in size and colour; flower bushes, teacups, chairs and lanterns all move as groups this way. The only optional "musicians" are humming flowers and a snoring chimney.
+The scene is one continuous garden with no separate areas (its size and places are set in "Round two" below). Objects are reused many times, each copy offset in timing and randomly varied in size and colour; flower bushes, teacups, chairs and lanterns all move as groups this way. The only optional "musicians" are humming flowers and a snoring chimney.
 
 ## Keeping the space alive
 
@@ -104,6 +104,51 @@ Dialogue is in `docs/script.md`: 59 voiced lines and 12 prop sound cues. Each vo
 | Can a mid-range laptop hold 60 fps? | Less grass and flowers, fewer shadows, low-poly models in the distance |
 | Can the Hatter's face hold up in a first-person close-up? | Keep a larger distance with depth of field, or repaint the face texture |
 | How dense can grass and flowers be on the web? | Lower density, rely on ground textures and close-up detail |
+
+## Round two (2026-11-03): a real garden with places to be
+
+The review (`docs/review-2026-11-03.md`) scored the grey box 1.9 out of 10 against the concept art. This round replaces the boxes with the real models and rebuilds the garden; when it is done the scene should be about half finished, and only then do we tune the game.
+
+### A bigger garden made of places
+
+The garden was 30 by 25 m inside a hedge wall: too small, nothing to do in it, and big Fries could cross it in a few steps. It becomes about **70 by 60 m**, still one continuous space with no loading. Each landmark is a **place**: somewhere characters can stand and act, where a short scene and a small task happen.
+
+| Place | What it is | What happens there |
+|---|---|---|
+| The tea table | Under the big tree, 8.5 m long and 2.2 m wide, the hub | The hosts sit, banter and pour; drinking the size teas; under it the small world (gear 1) |
+| The big tree and its door | A gnarled oak whose roots form a tunnel through the trunk; an arched door at its mouth | The door rattles locked until the ending; then it opens onto the rose path |
+| The rose path | Behind the tree, 8-15 m of red roses ending in a heart-shaped arch | Only in the ending; hidden before |
+| The teaware fountain | On a low round plaza, a 2.8 m tower of teacups and teapots; a small arched opening at the bottom of the basin | Gear 2 inside the grotto (small); the syrup wakes up and flows |
+| The March Hare's cottage | High at the back right on three terraces (0.6, 1.2, 1.8 m) with steps and flowered walls; porch with the hat rack; the door opens into a warm hall | Gear 3 on the hat rack (big); the March Hare's things inside |
+| The overlook | A high meadow at the north-east edge | Big Fries sees the whole garden (fp_giant) |
+
+Walking distances matter: the fountain is about 15 m from the table and the cottage about 25 m, so the garden has room between places for flowers, paths and floating things. There is no hedge wall at the edge: the ground carries on and falls away into a valley, with layered hills and trees 40-150 m out. Movement stops at the brow of the slope and at low walls and bushes, not at a green wall.
+
+### Size changes need a purpose
+
+Small (0.18x) opens the places under things: beneath the table, the fountain's grotto, gaps under hedges and roots. Big must be giant enough to matter: about **5x** (6 m tall), so the eye line clears the cottage's eaves and sees the whole table. When big Fries steps up terraces without stairs, reaches the hat rack on the high porch, looks over everything for glints, and the hosts squeak up at him while the cups look like thimbles. Two or three floating cups and spoons drift near the giant's camera for scale.
+
+### Characters who are alive
+
+- **Gaze:** whoever speaks looks at the one addressed; the listeners look at the speaker; when Fries is near, heads turn to him. Head and neck turn (about ±70° side to side, ±30° up and down, eased over 0.3 s); beyond that the body turns, or for seated characters the chest a little.
+- **Banter while the player explores:** the three hosts keep talking among themselves at the table, a short exchange every 15-40 s: bickering, riddles without answers, nonsense about time, and comments set off by what the player does (a gear found, a size change, falling into the fountain, entering the cottage). Lines fade with distance; subtitles only within about 12 m. The new lines will be added to `docs/script.md` with voice files.
+- **Blinking:** everyone blinks, at random every 2-6 s, sometimes twice; eyes closed while asleep.
+- **Sitting down and standing up:** characters walk to the front of a chair, turn, sit (the chair slides back a little and settles), play their seated clips, and stand up the same way in reverse. Fries can sit in any empty armchair; the first time, the hosts shout "No room!".
+- **The Dormouse lies on his plate**, never floating above it.
+
+### Tea, pouring and water
+
+One liquid system serves the fountain, the teapots and the cups: a stream from a spout follows a falling arc, glossy, translucent and amber, thinning as it falls and breaking into drops at the end; a splash ring and droplets where it lands; a liquid surface inside each cup, bowl and basin that rises as it fills; steam over hot tea. Before gear 2 the fountain's syrup hangs frozen in the air like glass; after it, syrup pours from each teapot spout and spills over each tier's scalloped lip in thin sheets.
+
+**The Hatter conducts the floating teapots.** He waves like a conductor and the teapots float over, tilt and pour. This is how Fries drinks: at the table Fries holds out a cup, the Hatter calls a teapot ("Pink for the little one!"), the pink or blue teapot flies over and pours into his cup, and a fixed camera from the front three-quarters shows Fries lift the cup to his mouth with both hands, drink and lower it, then the size change. The cup stays in his hands and never passes through his face or glasses. Later, as a small task at the table, the Hatter conducts several teapots at once to the music and Fries moves his cup under the right stream; a miss splashes.
+
+### Doors and steps
+
+Doors open. The tree door rattles and stays locked, with a line from the Hatter, until the ending. The cottage door swings open into a warm hall. Steps up to 0.25 m are climbed by walking, never by jumping.
+
+### Code, not models, for everything that grows or flows
+
+Not everything should be a model. Grass, flower fields, ivy, the tree's leaves, petals, water and syrup, sky, clouds, haze, terrain and distant hills are made in code; people building three.js worlds with no downloaded assets do this with TSL node materials on the WebGPU renderer, GPU-instanced vegetation and analytic fields. The models are for what must be recognisable at a glance (characters, the cottage, the fountain, the tree's trunk, teapots, chairs, clocks).
 
 ## Order of work
 

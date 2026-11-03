@@ -7,6 +7,7 @@ audio/*
 # Local-only: written in Chinese or owned by OhMyGame
 TEA_PARTY.md
 TEA_PARTY_SCRIPT.md
+CHARACTER_CHECKLIST.md
 canvas/
 
 node_modules/

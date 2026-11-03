@@ -1,0 +1,442 @@
+{
+  "staging": {
+    "id": "s05",
+    "pos": [
+      -0.95,
+      0.86,
+      -5.25
+    ],
+    "look": [
+      0,
+      1.04,
+      -6.8
+    ],
+    "fov": 46,
+    "feet": [
+      -0.3,
+      0.75,
+      -6.05
+    ],
+    "facing": 35,
+    "size": "small",
+    "cast": {
+      "hatter": [
+        [
+          0,
+          0,
+          -7.1
+        ],
+        0
+      ]
+    },
+    "props": {
+      "teacup": [
+        [
+          0.15,
+          0.75,
+          -6.25
+        ],
+        0
+      ],
+      "pink_teapot": [
+        [
+          0.65,
+          0.77,
+          -6.1
+        ],
+        0
+      ]
+    },
+    "lean": true
+  },
+  "observed": {
+    "camera": {
+      "fov": 46,
+      "near": 0.015,
+      "position": [
+        -0.95,
+        0.86,
+        -5.25
+      ],
+      "rotation": [
+        0.09869009997165276,
+        -0.5498531826765849,
+        1.0459234619185988e-17,
+        "YXZ"
+      ]
+    },
+    "music": {
+      "awake": 12.88,
+      "frozen": 12.88
+    },
+    "player": {
+      "feet": [
+        -0.3,
+        0.75,
+        -6.05
+      ],
+      "scale": 0.17999999999999994,
+      "size": "small"
+    },
+    "subtitle": "",
+    "things": {
+      "armchair": {
+        "position": [
+          -1.35,
+          0,
+          -6.8
+        ],
+        "rotation": [
+          0,
+          1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "big_tree": {
+        "position": [
+          0,
+          0,
+          -12
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "blue_teapot": {
+        "position": [
+          -0.45,
+          0.77,
+          -4.75
+        ],
+        "rotation": [
+          0,
+          3.141592653589793,
+          0,
+          "YXZ"
+        ]
+      },
+      "book_page": {
+        "position": [
+          -0.5,
+          0.75,
+          -6.75
+        ],
+        "rotation": [
+          0,
+          1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "cake_stand": {
+        "position": [
+          0.2,
+          0.75,
+          -3.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "cottage": {
+        "position": [
+          -11.5,
+          1.2,
+          -2
+        ],
+        "rotation": [
+          0,
+          1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "cypress": {
+        "position": [
+          -19.5,
+          0,
+          -18.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "dormouse": {
+        "position": [
+          0.1,
+          0.76,
+          -7.9
+        ],
+        "rotation": [
+          0,
+          -1.0471975511965976,
+          0,
+          "YXZ"
+        ]
+      },
+      "fence": {
+        "position": [
+          -1,
+          0,
+          5.6
+        ],
+        "rotation": [
+          0,
+          -1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "flower_bed": {
+        "position": [
+          -3.4,
+          0,
+          5.6
+        ],
+        "rotation": [
+          0,
+          0.3490658503988659,
+          0,
+          "YXZ"
+        ]
+      },
+      "fountain": {
+        "position": [
+          7,
+          0,
+          -3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "hare": {
+        "position": [
+          1.35,
+          0,
+          -7.4
+        ],
+        "rotation": [
+          0,
+          -1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "hat_rack": {
+        "position": [
+          -7.169,
+          1.6,
+          -3.205
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "hatter": {
+        "position": [
+          0,
+          0,
+          -7.1
+        ],
+        "rotation": [
+          0.65,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "hedge": {
+        "position": [
+          -14.892857142857142,
+          0,
+          -16
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "long_table": {
+        "position": [
+          0,
+          0,
+          -3.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "pink_teapot": {
+        "position": [
+          0.65,
+          0.77,
+          -6.1
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "plate": {
+        "position": [
+          0.1,
+          0.75,
+          -7.9
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "pocket_watch": {
+        "position": [
+          -0.5,
+          0.75,
+          -6.75
+        ],
+        "rotation": [
+          0,
+          1.5707963267948966,
+          0,
+          "YXZ"
+        ]
+      },
+      "rose_arch": {
+        "position": [
+          0,
+          0,
+          6.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "roses": {
+        "position": [
+          0,
+          0.45,
+          -12
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "stone_path": {
+        "position": [
+          0,
+          0,
+          8.4
+        ],
+        "rotation": [
+          0,
+          -0.3490658503988659,
+          0,
+          "YXZ"
+        ]
+      },
+      "tea_tray": {
+        "position": [
+          -0.45,
+          0.75,
+          -5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "teapot": {
+        "position": [
+          0.3,
+          0.75,
+          -2.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "terrace": {
+        "position": [
+          -11,
+          0,
+          -2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "top_hat": {
+        "position": [
+          -7.169,
+          3.03,
+          -3.205
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      },
+      "tree_door": {
+        "position": [
+          -0.5,
+          0.45,
+          -10.24
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          "YXZ"
+        ]
+      }
+    },
+    "url": "http://localhost:5173/?start=explore",
+    "viewport": [
+      1672,
+      941
+    ],
+    "webgpu": true
+  }
+}
