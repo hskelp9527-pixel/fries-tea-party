@@ -249,7 +249,6 @@ export const shapes = {
     [0.9, 1.3, 0, 0.12, 2.6, 0.12, ARCH],
     [0, 2.5, 0, 1.9, 0.14, 0.14, ROSE],
   ],
-  far_tree: [[0, 3, 0, 0.9, 6, 0.9, BARK], [0, 8, 0, 6, 4, 6, LEAF], [0, 10.8, 0, 3.6, 2.4, 3.6, LEAF2]], // 12 m tall, on the hills beyond the garden
   candle: [[0, 0.1, 0, 0.05, 0.2, 0.05, CHINA], [0, 0.22, 0, 0.015, 0.04, 0.015, LANTERN]],
   candelabra: [[0, 0.2, 0, 0.26, 0.4, 0.06, BRASS]],
   milk_jug: [[0, 0.055, 0, 0.1, 0.11, 0.07, CHINA]],

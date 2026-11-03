@@ -3,12 +3,12 @@ import { scene, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { things } from './garden.js'
 import { model } from './models.js'
-import { bushes, hedges, meadow, rosePath } from './layout.js'
+import { bushes, hedges, rosePath } from './layout.js'
 import { LEAVES, cardMaterial, cards, flowerClump, flowerMesh } from './plants.js'
 import { noise, random, ground } from './fields.js'
 
-// Leaves in volumes: the big tree's crown, the ivy on its trunk, the bushes and hedges, and the trees on the far
-// hills. All are leaf cards; none has a solid core.
+// Leaves in volumes: the big tree's crown, the ivy on its trunk, the bushes and hedges.
+// All are leaf cards; none has a solid core.
 const rand = random(7)
 const UP = new THREE.Vector3(0, 1, 0)
 // A tint over the atlas's own colour: `light` about 1, warmer or cooler leaf to leaf.
@@ -171,44 +171,3 @@ roses.add(arch, cards(cardMaterial(LEAVES, { crown: true, sway: 0.01 }), LEAVES,
 
 const leafMaterial = cardMaterial(LEAVES, { crown: true, sway: 0.012 })
 scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves]))
-
-// Trees on the slopes and hills beyond the garden, in five layers from 40 to 150 m out: groves, a few lines of small
-// trees like hedgerows, and single trees, each standing on the height field. The `far_tree` model is drawn
-// instanced, one batch per mesh in it; the farther layers are tinted paler, and the haze does the rest.
-const [px0, pz0, px1, pz1] = meadow.plateau
-const farTrees = []
-const farTree = (x, z, scale, layer) => {
-  if (x > px0 - 4 && x < px1 + 4 && z > pz0 - 4 && z < pz1 + 4) return
-  const pale = layer / 4, k = 0.9 + rand() * 0.2
-  farTrees.push({ x, z, scale, yaw: rand() * Math.PI * 2, tint: new THREE.Color(k * (1 + 0.5 * pale), k * (1 + 0.5 * pale), k * (1 + 0.8 * pale)) })
-}
-const around = (near, far) => {
-  const angle = rand() * Math.PI * 2, distance = near + (far - near) * rand()
-  return [Math.sin(angle) * distance, -Math.cos(angle) * distance]
-}
-const LAYERS = [[40, 65, 10], [65, 90, 12], [90, 110, 14], [110, 130, 14], [130, 150, 16]]
-LAYERS.forEach(([near, far, groves], layer) => {
-  for (let g = 0; g < Math.round(groves * share); g++) {
-    const [cx, cz] = around(near, far), radius = 5 + rand() * 7
-    for (let i = 5 + Math.floor(rand() * 8); i > 0; i--) {
-      const angle = rand() * Math.PI * 2, r = radius * Math.sqrt(rand())
-      farTree(cx + Math.cos(angle) * r, cz + Math.sin(angle) * r, 0.7 + rand() * 0.7, layer)
-    }
-  }
-  for (let i = 0; i < Math.round(12 * share); i++) farTree(...around(near, far), 0.8 + rand() * 0.6, layer)
-  // A hedgerow: small trees in a line along the slope.
-  const [hx, hz] = around(near, far), heading = rand() * Math.PI
-  for (let i = 0; i < 16 * share; i++) farTree(hx + Math.cos(heading) * i * 2.2, hz + Math.sin(heading) * i * 2.2, 0.28 + rand() * 0.08, layer)
-})
-const proto = model('far_tree'), placement = new THREE.Matrix4(), spin = new THREE.Quaternion()
-proto.updateMatrixWorld(true)
-proto.traverse(part => {
-  if (!part.isMesh) return
-  const mesh = new THREE.InstancedMesh(part.geometry, part.material, farTrees.length)
-  farTrees.forEach(({ x, z, scale, yaw, tint }, i) => {
-    mesh.setMatrixAt(i, placement.compose(new THREE.Vector3(x, ground(x, z), z), spin.setFromAxisAngle(UP, yaw), new THREE.Vector3().setScalar(scale)).multiply(part.matrixWorld))
-    mesh.setColorAt(i, tint)
-  })
-  mesh.frustumCulled = false
-  scene.add(mesh)
-})
