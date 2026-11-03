@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
-import { uv, vec3, smoothstep, max, abs, time, sin } from 'three/tsl'
+import { uv, vec3, smoothstep, max, abs, time, sin, attribute, texture, mix, positionLocal } from 'three/tsl'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { scene } from './scene.js'
 import { model, glow, addColliders } from './models.js'
 import * as layout from './layout.js'
@@ -64,6 +65,72 @@ dressed.traverse(o => {
 // The mean of an object's width, height and depth.
 export const meanSize = object => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).toArray().reduce((a, b) => a + b) / 3
 glow(things.book_page, 0xfff0b0, 2)
+
+// One draw per dressed model: retain floral maps and bake the other material identities into vertex data.
+// Empty transform objects let the existing song choreography address individual instances.
+const dressBatches = [], dressSizes = new Map(), flameAnchors = [], haloAnchors = []
+function instanceModel(name, objects) {
+  const source = model(name), pieces = []
+  let mapped
+  source.updateMatrixWorld(true)
+  source.traverse(mesh => {
+    if (!mesh.isMesh) return
+    if (mesh.name.startsWith('flame')) {
+      mesh.geometry.computeBoundingBox()
+      const local = mesh.geometry.boundingBox.getCenter(new THREE.Vector3())
+      local.y = mesh.geometry.boundingBox.min.y
+      local.applyMatrix4(mesh.matrixWorld)
+      for (const object of objects) flameAnchors.push({ object, local })
+      return
+    }
+    const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone()
+    geometry.applyMatrix4(mesh.matrixWorld)
+    const count = geometry.attributes.position.count, material = mesh.material
+    const tint = new Float32Array(count * 3), surface = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      material.color.toArray(tint, i * 3)
+      surface.set([material.roughness, material.metalness, material.map ? 1 : 0], i * 3)
+    }
+    for (const key of Object.keys(geometry.attributes)) if (!['position', 'normal', 'uv'].includes(key)) geometry.deleteAttribute(key)
+    geometry.setAttribute('dressTint', new THREE.BufferAttribute(tint, 3))
+    geometry.setAttribute('dressSurface', new THREE.BufferAttribute(surface, 3))
+    geometry.clearGroups()
+    pieces.push(geometry)
+    if (material.map) mapped = material
+  })
+  const geometry = mergeGeometries(pieces), surface = attribute('dressSurface', 'vec3')
+  pieces.forEach(piece => piece.dispose())
+  const material = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide })
+  material.colorNode = attribute('dressTint', 'vec3')
+  if (mapped) {
+    material.colorNode = material.colorNode.mul(mix(vec3(1), texture(mapped.map).rgb, surface.z))
+    material.normalMap = mapped.normalMap
+  }
+  material.roughnessNode = surface.x
+  material.metalnessNode = surface.y
+  if (mapped?.roughnessMap) material.roughnessNode = surface.x.mul(mix(1, texture(mapped.roughnessMap).g, surface.z))
+  if (mapped?.metalnessMap) material.metalnessNode = surface.y.mul(mix(1, texture(mapped.metalnessMap).b, surface.z))
+  const mesh = new THREE.InstancedMesh(geometry, material, objects.length)
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  mesh.receiveShadow = true
+  mesh.frustumCulled = false
+  scene.add(mesh)
+  geometry.computeBoundingBox()
+  const size = geometry.boundingBox.getSize(new THREE.Vector3())
+  objects.forEach(object => dressSizes.set(object, (size.x + size.y + size.z) / 3 * object.scale.x))
+  dressBatches.push({ mesh, objects })
+}
+const extraTable = layout.tableDressing.map(({ pos, rot = 0, scale = 1 }) => {
+  const object = new THREE.Object3D()
+  object.position.set(...pos)
+  object.rotation.y = rot * DEG
+  object.scale.setScalar(scale)
+  scene.add(object)
+  return object
+})
+for (const name of new Set(layout.tableDressing.map(entry => entry.model))) {
+  instanceModel(name, extraTable.filter((_, i) => layout.tableDressing[i].model === name))
+}
 
 // Doors on their hinges: `pivot` turns about the hinge, positive inwards; `colliders` keep a closed door solid.
 // `front` is a point a step in front of the closed door.
@@ -167,10 +234,50 @@ for (const pos of layout.lanterns) {
   hang(lantern, 0.4)
 }
 
-// Candle flames, flickering.
-const flames = []
-scene.traverse(o => { if (o.isMesh && o.name.startsWith('flame')) flames.push(o) })
-for (const flame of flames) glow(flame, 0xffa040, 4)
+// Reuse the actual wick positions in the dressed table, including its three-armed candelabras.
+const oldFlames = []
+dressed.traverseVisible(o => { if (o.isMesh && o.name.startsWith('flame')) oldFlames.push(o) })
+for (const flame of oldFlames) {
+  flame.geometry.computeBoundingBox()
+  const local = flame.geometry.boundingBox.getCenter(new THREE.Vector3())
+  local.y = flame.geometry.boundingBox.min.y
+  flameAnchors.push({ object: flame, local })
+  flame.visible = false
+}
+const flameMaterial = new THREE.MeshBasicNodeMaterial()
+const flicker = sin(time.mul(7).add(attribute('flamePhase'))).mul(0.09).add(sin(time.mul(13).add(attribute('flamePhase').mul(2))).mul(0.04)).add(1)
+flameMaterial.positionNode = vec3(positionLocal.x.add(sin(time.mul(5).add(attribute('flamePhase'))).mul(positionLocal.y.pow(2)).mul(0.08)), positionLocal.y.mul(flicker), positionLocal.z)
+// HDR hierarchy: flame cores 5, lantern cores 2.6, halos below 0.25, ordinary brass below 0.1.
+flameMaterial.colorNode = mix(vec3(1, 0.86, 0.46), vec3(1, 0.32, 0.035), positionLocal.y.mul(0.5)).mul(5).mul(flicker)
+const flameGeometry = new THREE.SphereGeometry(1, 8, 8).translate(0, 1, 0)
+flameGeometry.setAttribute('flamePhase', new THREE.InstancedBufferAttribute(Float32Array.from(flameAnchors, (_, i) => i * 2.399), 1))
+const candleFlames = new THREE.InstancedMesh(flameGeometry, flameMaterial, flameAnchors.length)
+candleFlames.frustumCulled = false
+candleFlames.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+scene.add(candleFlames)
+for (const { object, local } of flameAnchors) haloAnchors.push({ object, local: local.clone().add(new THREE.Vector3(0, 0.018, 0)), size: 0.18, gain: 0.22 })
+
+// One instanced billboard draw for the soft light surrounding all the wicks.
+const haloGeometry = new THREE.InstancedBufferGeometry().copy(new THREE.PlaneGeometry(1, 1))
+const haloPosition = new THREE.InstancedBufferAttribute(new Float32Array(haloAnchors.length * 4), 4).setUsage(THREE.DynamicDrawUsage)
+haloGeometry.setAttribute('haloPosition', haloPosition)
+haloGeometry.setAttribute('haloGain', new THREE.InstancedBufferAttribute(Float32Array.from(haloAnchors, a => a.gain), 1))
+haloGeometry.instanceCount = haloAnchors.length
+const haloMaterial = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+haloMaterial.positionNode = attribute('haloPosition', 'vec4').xyz
+haloMaterial.scaleNode = attribute('haloPosition', 'vec4').w
+haloMaterial.colorNode = vec3(1, 0.52, 0.12).mul(attribute('haloGain')).mul(smoothstep(0.5, 0, uv().sub(0.5).length()).pow(2))
+const candleHalos = new THREE.Mesh(haloGeometry, haloMaterial)
+candleHalos.frustumCulled = false
+scene.add(candleHalos)
+
+// Shared pools of candlelight; no individual candle casts a light or a shadow.
+const candleLights = [-6.6, -3.9, -0.6].map(z => {
+  const light = new THREE.PointLight(0xffb75c, 0.55, 3.2, 2)
+  light.position.set(0.15, 1.28, z)
+  scene.add(light)
+  return light
+})
 
 export const gears = layout.gears.map(g => {
   const object = place({ model: 'gear', pos: g.pos, solid: false })
@@ -199,12 +306,17 @@ export const drinks = layout.drinks.map(d => {
 
 // Everything standing on the table, which dances in the final chorus: { object, home, turn, seed, size, on }, where
 // `on` is the prop it stands on.
-const tableObjects = [...cups, ...onTable.values(), ...drinks.filter(d => d.onTable).map(d => d.object)]
+const tableObjects = [...cups, ...onTable.values(), ...drinks.filter(d => d.onTable).map(d => d.object), ...extraTable]
 export const tableProps = tableObjects.map(object => ({
-  object, home: object.position.clone(), turn: object.rotation.y, seed: Math.random() * 100, size: meanSize(object),
+  object, home: object.position.clone(), turn: object.rotation.y, seed: Math.random() * 100, size: dressSizes.get(object) ?? meanSize(object),
 }))
 const tableProp = object => tableProps.find(p => p.object === object)
 for (const [entry, object] of onTable) if (entry.on) tableProp(object).on = tableProp(things[entry.on])
+extraTable.forEach((object, i) => {
+  if (layout.tableDressing[i].onPrevious) tableProp(object).on = tableProp(extraTable[i - 1])
+})
+const saucers = extraTable.slice(-cups.length)
+cups.forEach((cup, i) => { tableProp(cup).on = tableProp(saucers[i]) })
 
 // Layers of the world that each gear wakes: 'tea', 'syrup', 'flowers'.
 export const awake = {}
@@ -227,11 +339,35 @@ export function updateGarden(dt, time) {
   const breath = (time / 3) % 1
   bubble.scale.setScalar(breath < 0.9 ? 0.02 + breath * 0.1 : 0.001)
 
-  flames.forEach((flame, i) => {
-    flame.material.emissiveIntensity = 3.5 + Math.sin(time * 13 + i * 2.1) * 0.6 + Math.sin(time * 31 + i) * 0.4
-    flame.scale.y = 1 + 0.12 * Math.sin(time * 17 + i * 3)
-  })
+  candleLights.forEach((light, i) => { light.intensity = 0.55 + 0.025 * Math.sin(time * 4 + i * 2) })
 
   wind.bushes.value = awake.flowers ? 2.5 : 0.4
   wind.pulse.value = game.pass >= 1 ? game.pulse : 0
+}
+
+// After the song and hand poses: instances, flames and halos follow the same final prop transforms.
+const dressTransform = new THREE.Object3D(), dressPoint = new THREE.Vector3(), dressScale = new THREE.Vector3()
+export function updateDressing() {
+  for (const { mesh, objects } of dressBatches) {
+    objects.forEach((object, i) => {
+      object.updateWorldMatrix(true, false)
+      mesh.setMatrixAt(i, object.matrixWorld)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+  }
+  flameAnchors.forEach(({ object, local }, i) => {
+    object.updateWorldMatrix(true, false)
+    dressTransform.position.copy(local).applyMatrix4(object.matrixWorld)
+    object.getWorldScale(dressScale)
+    dressTransform.scale.set(0.007 * dressScale.x, 0.018 * dressScale.y, 0.007 * dressScale.z)
+    object.getWorldQuaternion(dressTransform.quaternion)
+    dressTransform.updateMatrix()
+    candleFlames.setMatrixAt(i, dressTransform.matrix)
+  })
+  candleFlames.instanceMatrix.needsUpdate = true
+  haloAnchors.forEach(({ object, local, size }, i) => {
+    dressPoint.copy(local).applyMatrix4(object.matrixWorld)
+    haloPosition.setXYZW(i, dressPoint.x, dressPoint.y, dressPoint.z, size)
+  })
+  haloPosition.needsUpdate = true
 }
