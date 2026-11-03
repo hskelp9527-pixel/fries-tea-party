@@ -48,7 +48,7 @@ export async function begin(from) {
 
 async function finale() {
   const hatter = cast.hatter, watch = things.pocket_watch
-  await walkTo([hatter.object.position.x + 0.8, 0, hatter.object.position.z + 0.7], 220)
+  await walkTo([hatter.object.position.x - 0.3, 0, hatter.object.position.z + 0.75], 160)
   hatter.doing = 'mend'
   act('mend')
   holdCast(watch, hatter.object, 'RightHand', [0, 0.025, 0])

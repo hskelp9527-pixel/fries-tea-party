@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { player, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
 import { camera } from './scene.js'
-import { cast, chairs, rest } from './cast.js'
+import { cast, chairs, rest, standUp, walk, sitDown } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
 import { stream, surface } from './liquids.js'
 import { use, release, fly, toHand } from './hands.js'
@@ -151,25 +151,24 @@ async function pickUp(gear) {
   gear.object.visible = false
 }
 
-// The first shrink: the Hatter's huge face presses down from the sky.
+// The first shrink: the Hatter gets up, comes over and bends down over small Fries, his huge face filling the sky;
+// then he goes back to his chair.
 async function firstShrink() {
   player.control = false
-  const hatter = things.hatter
-  const seat = hatter.position.clone(), seatYaw = hatter.rotation.y
-  const over = seat.clone().lerp(player.feet, 0.5)
-  const turn = Math.atan2(player.feet.x - seat.x, player.feet.z - seat.z) - seatYaw
-  const lean = t => {
-    hatter.position.lerpVectors(seat, over, t)
-    hatter.rotation.y = seatYaw + Math.atan2(Math.sin(turn), Math.cos(turn)) * t
-    hatter.rotation.x = 0.9 * t
-    facePoint(head(hatter, 1.3), 0.2)
-  }
-  await wait(1.2)
+  const hatter = cast.hatter, chair = hatter.chair, p = player.feet
+  await wait(0.6)
   act('surprised')
-  await tween(1.6, t => lean(t * t * (3 - 2 * t)))
+  await standUp('hatter')
+  const from = hatter.object.position, away = new THREE.Vector3(from.x - p.x, 0, from.z - p.z).normalize()
+  await walk('hatter', [[p.x + away.x * 0.55, p.z + away.z * 0.55]])
+  hatter.object.rotation.y = Math.atan2(-away.x, -away.z)
+  hatter.doing = 'lean_over'
+  const look = tween(hatter.anim.actions.lean_over.getClip().duration, () => facePoint(head(hatter.object, 1.1), 0.15))
   await say('SZ-01')
   await say('SZ-02')
-  await tween(1.2, t => lean(1 - t))
+  await look
+  hatter.doing = null
+  await sitDown('hatter', chair)
   player.control = true
 }
 

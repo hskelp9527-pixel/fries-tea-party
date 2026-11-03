@@ -159,9 +159,6 @@ function play(m, line) {
   if (m.doing) {
     if (m.anim.current !== m.anim.actions[m.doing]) m.anim.play(m.doing, ONCE.has(m.doing))
   }
-  else if (m.name === 'hatter' && line === 'SZ-01') {
-    if (m.anim.current !== m.anim.actions.lean_over) m.anim.play('lean_over', true)
-  }
   else if (m.moving) m.anim.play('walk')
   else if (game.pass >= 1) m.anim.play(game.pass === 1 ? 'dance_swing' : 'dance_silly')
   else if (game.pass === 0 && m.name === 'hatter') m.anim.play('sing')

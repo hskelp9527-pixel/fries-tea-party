@@ -52,16 +52,17 @@ export class Animator {
   }
 }
 
-// Eyelids use both morphs together so the lid follows the eye.
+// Eyelids use both morphs together so the lid follows the eye. The lids are a group of two meshes (skin and lash
+// line), each carrying the morph targets.
 export class Blink {
   constructor(object) {
-    this.lids = object.getObjectByName('Eyelids')
+    this.lids = []
+    object.getObjectByName('Eyelids').traverse(o => { if (o.morphTargetDictionary) this.lids.push(o) })
     this.timer = 2 + Math.random() * 4
     this.phase = -1
   }
 
   update(dt, sleeping = false) {
-    if (!this.lids) return
     let amount = 0
     if (sleeping) {
       amount = 1
@@ -75,8 +76,9 @@ export class Blink {
         this.timer = Math.random() < 0.2 ? 0.12 : 2 + Math.random() * 4
       }
     } else if ((this.timer -= dt) <= 0) this.phase = 0
-    const { morphTargetDictionary: indices, morphTargetInfluences: weights } = this.lids
-    weights[indices.blink_half] = 1 - Math.abs(2 * amount - 1)
-    weights[indices.blink] = Math.max(0, 2 * amount - 1)
+    for (const { morphTargetDictionary: indices, morphTargetInfluences: weights } of this.lids) {
+      weights[indices.blink_half] = 1 - Math.abs(2 * amount - 1)
+      weights[indices.blink] = Math.max(0, 2 * amount - 1)
+    }
   }
 }
