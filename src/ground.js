@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu'
 import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_noise_float } from 'three/tsl'
 import { scene, camera, webgpu } from './scene.js'
 import { RAPIER, world } from './physics.js'
-import { meadow, terraces, plaza, overlook } from './layout.js'
+import { meadow, paths, terraces, plaza, overlook } from './layout.js'
 import { LEAVES, cardMaterial, cards, flowerClump, flowerMaterial, flowerMesh, shareAt, drawCount, walkers, stir } from './plants.js'
 import { player } from './player.js'
 import { cast } from './cast.js'
@@ -37,7 +37,8 @@ let grass = mix(color(0x9a9a58), color(0x4f7a3a), field.r)
 grass = mix(grass, color(0x7b9c46), smoothstep(0.05, 0.55, broad).mul(0.55))
 grass = mix(grass, color(0x365a2c), smoothstep(0.05, 0.5, broad.negate()).mul(0.5))
 grass = mix(grass, color(0x9a9a58), smoothstep(0.3, 0.6, patch.add(float(1).sub(field.r).mul(0.5))).mul(0.6))
-let soil = mix(grass, color(0x8a7556).mul(speckle.mul(0.15).add(1)), smoothstep(0.25, 0.75, field.g.add(patch.mul(0.35)).add(speckle.mul(0.15))).mul(0.92))
+// Worn ground is sun-baked sand, warmer and lighter in patches with a fine grain: paths read as pale ribbons across the green.
+let soil = mix(grass, mix(color(0xcfae78), color(0xe6cc98), smoothstep(-0.3, 0.4, patch)).mul(speckle.mul(0.12).add(1)), smoothstep(0.25, 0.75, field.g.add(patch.mul(0.35)).add(speckle.mul(0.15))).mul(0.92))
 // Moss and damp: a soft deep green that mottles with the patch noise, kept off the worn paths.
 const mossy = smoothstep(0.15, 0.6, field.a.add(patch.mul(0.2))).mul(float(1).sub(field.g))
 soil = mix(soil, mix(color(0x4f8a3a), color(0x7aa848), smoothstep(-0.2, 0.5, patch)).mul(speckle.mul(0.12).add(1)), mossy.mul(0.9))
@@ -117,6 +118,17 @@ const onPlaza = (x, z) => Math.hypot(x - plaza[0], z - plaza[1]) < plaza[2]
 const open = (x, z) => !bare(x, z) && !onPlaza(x, z) && pathDistance(x, z) > meadow.pathWidth / 2
 const upright = (yaw, lean = 0.15) => new THREE.Quaternion().setFromEuler(new THREE.Euler((rand() - 0.5) * lean, yaw, (rand() - 0.5) * lean, 'YXZ'))
 
+// The rotation that tips a tuft at (x, z) towards the nearest path, or null beyond 1.8 m. LEAN is the tilt at the path's
+// edge in radians: more reads as grass flopping over the sand but flattens the tufts' tips into the ground.
+const LEAN = 0.7, REACH = 1.8
+function leanToPath(x, z) {
+  const d = pathDistance(x, z)
+  if (d > REACH) return null
+  const gx = pathDistance(x + 0.1, z) - d, gz = pathDistance(x, z + 0.1) - d, g = Math.hypot(gx, gz) || 1
+  // up x (towards the path) is the axis that tips the blade's top that way
+  return new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(gz / g, 0, -gx / g).negate(), LEAN * (1 - (d - meadow.pathWidth / 2) / (REACH - meadow.pathWidth / 2)))
+}
+
 const [x0, z0, x1, z1] = meadow.lawn
 const share = webgpu ? 1 : 0.5
 // How much of the full grass grows here, in [0, 1]: all of it within 12 m of a path (the paths join the places),
@@ -146,9 +158,11 @@ for (let gx = x0; gx < x1; gx += spacing) {
         scale: new THREE.Vector3(s, s, 1), cell: LEAVES.round, base: [x, y, z, 0], tint: new THREE.Color(0.7 + 0.2 * rand(), 1, 0.55).multiplyScalar(0.9 + 0.3 * rand()),
       })
     }
+    // Within 1.8 m of a path the tufts lean towards it, more the closer they stand (a soft fringe over the edge).
+    const lean = leanToPath(x, z)
     for (const turn of [0, Math.PI / 2]) {
       cell(grassCells, GRASS_CELL, x, z, () => ({ list: [] })).list.push({
-        position: new THREE.Vector3(x, y, z), quaternion: upright(yaw + turn), scale: new THREE.Vector3(height * 1.7, height, 1),
+        position: new THREE.Vector3(x, y, z), quaternion: lean ? lean.clone().multiply(upright(yaw + turn)) : upright(yaw + turn), scale: new THREE.Vector3(height * 1.7, height, 1),
         cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l + 0.25 * sun, 1, 0.65 + 0.15 * rand() - 0.2 * sun).multiplyScalar((m ? 0.9 : 0.6 + 0.6 * sun) + 0.3 * rand()),
       })
     }
@@ -183,6 +197,30 @@ for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (
   if (name === 'flower_daisy' && dye < 0.45) matrix.tint = dye < 0.28 ? YELLOW : PINK
   ;(cell(flowerCells, FLOWER_CELL, x, z, () => ({ kinds: {} })).kinds[name] ??= []).push(matrix)
 }
+
+// Fallen petals along the paths: small flat five-sided petals in drifts of a few, in one mesh (one draw, 5 triangles each).
+// More petals read as a carpet and cost a little; the drifts keep them looking blown rather than sprinkled.
+const PETAL_DRIFTS = 110, PETALS_PER_DRIFT = 5
+const PETAL_COLOURS = [0xf4a0b5, 0xc2283a, 0xfff0e0, 0xf8b890, 0xe8607a].map(c => new THREE.Color(c))
+const lines = paths.flatMap(line => line.slice(1).map((p, i) => [line[i], p])), lengths = lines.map(([[ax, az], [bx, bz]]) => Math.hypot(bx - ax, bz - az))
+const petals = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 5).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 0.55, side: THREE.DoubleSide }), PETAL_DRIFTS * PETALS_PER_DRIFT)
+for (let n = 0; n < PETAL_DRIFTS; n++) {
+  let pick = rand() * lengths.reduce((a, b) => a + b), k = 0
+  while (pick > lengths[k]) pick -= lengths[k++]
+  const [[ax, az], [bx, bz]] = lines[k], t = pick / lengths[k], side = (rand() - 0.5) * 1.8
+  const cx = ax + (bx - ax) * t - (bz - az) / lengths[k] * side, cz = az + (bz - az) * t + (bx - ax) / lengths[k] * side
+  const colour = PETAL_COLOURS[Math.floor(rand() * PETAL_COLOURS.length)]
+  for (let i = 0; i < PETALS_PER_DRIFT; i++) {
+    const x = cx + (rand() - 0.5) * 0.7, z = cz + (rand() - 0.5) * 0.7, id = n * PETALS_PER_DRIFT + i
+    petals.setMatrixAt(id, clump.compose(
+      new THREE.Vector3(x, ground(x, z) + 0.025, z), new THREE.Quaternion().setFromEuler(new THREE.Euler((rand() - 0.5) * 0.3, rand() * Math.PI * 2, (rand() - 0.5) * 0.3)),
+      new THREE.Vector3(0.035 + 0.03 * rand(), 1, 0.02 + 0.02 * rand()),
+    ))
+    petals.setColorAt(id, colour)
+  }
+}
+petals.computeBoundingSphere()
+scene.add(petals)
 
 const grassMaterial = cardMaterial(LEAVES, { translucency: 1.1, flutter: 0.01, thin: GRASS_FADE })
 const nearFlowerMaterial = flowerMaterial(NEAR_FLOWERS), farFlowerMaterial = flowerMaterial(FAR_FLOWERS)
