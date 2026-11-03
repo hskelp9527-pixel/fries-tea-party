@@ -530,12 +530,22 @@ export const clocks = [
   { pos: [-1.6, 2.5, -8.8], rot: 60 },
   { pos: [1, 2.6, -8.2], rot: -40 },
   { pos: [-7.5, 2.6, -8.8], rot: 10 },
+  { pos: [-3.8, 3.35, -10.8], rot: 25 },
+  { pos: [-2.3, 3.8, -9.6], rot: -15 },
+  { pos: [0.3, 3.1, -7.3], rot: -55 },
+  { pos: [1.8, 3.6, -6.1], rot: -30 },
+  { pos: [-1.8, 2.8, -5.3], rot: 45 },
+  { pos: [0.1, 3.9, -4.2], rot: 10 },
+  { pos: [-5.7, 3.6, -7.1], rot: 65 },
+  { pos: [-7.2, 3.4, -10.6], rot: -10 },
 ]
 
 // Lanterns hanging from the big tree's branches on chains: [x, y, z] of each lantern's foot.
 export const lanterns = [
   [-1.6, 2.2, -7.6], [1.4, 2.3, -7.2], [0, 2.5, -8.4], [-2.8, 2.4, -6.4], [2.4, 2.4, -8.8], [-3.6, 2.5, -9.6],
   [-6.6, 2.6, -8.4], [-0.6, 2.6, -10.4],
+  [-4.3, 3.1, -10.5], [-2.2, 3.4, -8.1], [0.5, 2.65, -6.3], [2, 3.2, -5.4],
+  [-1.4, 3.3, -4.6], [-3.7, 3.5, -6.8], [-6.2, 3.2, -10.8], [0.6, 3.8, -9.2],
 ]
 
 // Floating things drift inside these boxes, at about their real size. Each gear found adds another batch of

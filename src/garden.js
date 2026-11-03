@@ -119,6 +119,7 @@ function instanceModel(name, objects) {
   const size = geometry.boundingBox.getSize(new THREE.Vector3())
   objects.forEach(object => dressSizes.set(object, (size.x + size.y + size.z) / 3 * object.scale.x))
   dressBatches.push({ mesh, objects })
+  return mesh
 }
 const extraTable = layout.tableDressing.map(({ pos, rot = 0, scale = 1 }) => {
   const object = new THREE.Object3D()
@@ -194,7 +195,8 @@ hands(things.pocket_watch, [0, 0.026, 0.014], 0.02)
 
 // Hung from the big tree on a chain from the ring on top (`ring` metres up) to the nearest point of a branch
 // above it, the object moved under that point.
-const chain = new THREE.MeshStandardMaterial({ color: 0x3a3028, metalness: 0.6, roughness: 0.5 })
+const chain = new THREE.MeshStandardMaterial({ color: 0x78603a, metalness: 0.65, roughness: 0.48 })
+const hanging = [], chainTransforms = []
 const wood = []
 things.big_tree.updateMatrixWorld(true)
 things.big_tree.traverse(o => {
@@ -212,27 +214,56 @@ function hang(object, ring) {
     const d = Math.hypot(p.x - object.position.x, p.z - object.position.z)
     if (p.y > top + 0.3 && d < best) { best = d; branch = p }
   }
-  object.position.x = branch.x
-  object.position.z = branch.z
   const length = branch.y - top
-  const link = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, length, 4).translate(0, ring + length / 2, 0), chain)
-  link.castShadow = true
-  object.add(link)
+  // The pivot is an actual branch vertex: chain and object sway together about their attachment.
+  const pivot = new THREE.Group(), link = new THREE.Object3D()
+  pivot.position.copy(branch)
+  object.position.set(0, -length - ring, 0)
+  link.position.y = -length / 2
+  link.scale.set(1, length, 1)
+  pivot.add(object, link)
+  scene.add(pivot)
+  hanging.push({ pivot, phase: hanging.length * 2.399 })
+  chainTransforms.push(link)
 }
 
 export const cups = layout.tableCups.map(pos => place({ model: 'teacup', pos, solid: false }))
 
-export const clocks = layout.clocks.map(({ pos, rot }) => {
-  const clock = place({ model: 'hanging_clock', pos, rot, solid: false })
+const clockFaces = layout.clocks.map(({ pos, rot }) => {
+  const clock = new THREE.Object3D()
+  clock.position.set(...pos)
+  clock.rotation.y = rot * DEG
   hang(clock, 0.7)
-  return hands(clock, [0, 0.26, 0.066], 0.13)
+  return clock
 })
+instanceModel('hanging_clock', clockFaces)
+export const clocks = clockFaces.map(clock => {
+  const minute = new THREE.Object3D(), hour = new THREE.Object3D()
+  minute.position.set(0, 0.26, 0.066)
+  hour.position.copy(minute.position)
+  minute.scale.setScalar(0.13 / 0.18)
+  hour.scale.setScalar(0.13 * 0.65 / 0.18)
+  hour.rotation.z = Math.PI
+  clock.add(minute, hour)
+  return { minute, hour }
+})
+instanceModel('clock_hand', clocks.flatMap(({ minute, hour }) => [minute, hour]))
 
-for (const pos of layout.lanterns) {
-  const lantern = place({ model: 'lantern', pos, solid: false })
-  glow(lantern, 0xffb050, 3)
+const lanterns = layout.lanterns.map(pos => {
+  const lantern = new THREE.Object3D()
+  lantern.position.set(...pos)
   hang(lantern, 0.4)
-}
+  haloAnchors.push({ object: lantern, local: new THREE.Vector3(0, 0.19, 0), size: 0.85, gain: 0.19 })
+  return lantern
+})
+const lanternBatch = instanceModel('lantern', lanterns)
+// Keep the brass cage dark; the luminous chamber is the small, bounded source.
+const chamber = smoothstep(0.07, 0.12, positionLocal.y).mul(smoothstep(0.31, 0.26, positionLocal.y))
+lanternBatch.material.emissiveNode = vec3(1, 0.57, 0.16).mul(chamber).mul(2.6)
+const chains = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.006, 0.006, 1, 5), chain, chainTransforms.length)
+chains.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+chains.frustumCulled = false
+scene.add(chains)
 
 // Reuse the actual wick positions in the dressed table, including its three-armed candelabras.
 const oldFlames = []
@@ -330,6 +361,10 @@ bubble.position.set(0, 0.07, 0.18)
 things.dormouse.add(bubble)
 
 export function updateGarden(dt, time) {
+  hanging.forEach(({ pivot, phase }) => {
+    pivot.rotation.z = Math.sin(time * 0.38 + phase) * 0.025
+    pivot.rotation.x = Math.sin(time * 0.29 + phase * 0.7) * 0.018
+  })
   glints.forEach((sprite, i) => { sprite.visible = !gears[i].found })
   gears.forEach((g, i) => {
     if (!g.found) g.object.rotation.y += dt * 1.5
@@ -355,6 +390,11 @@ export function updateDressing() {
     })
     mesh.instanceMatrix.needsUpdate = true
   }
+  chainTransforms.forEach((object, i) => {
+    object.updateWorldMatrix(true, false)
+    chains.setMatrixAt(i, object.matrixWorld)
+  })
+  chains.instanceMatrix.needsUpdate = true
   flameAnchors.forEach(({ object, local }, i) => {
     object.updateWorldMatrix(true, false)
     dressTransform.position.copy(local).applyMatrix4(object.matrixWorld)
