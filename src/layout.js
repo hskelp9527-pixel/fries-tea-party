@@ -364,7 +364,8 @@ export const placed = [
   ...row('fence_picket', [-4.2, 2.2], [-4.5, -2.6], 1.5),
   ...row('fence_picket', [4.2, 12.2], [7.5, 9.2], 1.5),
   ...row('fence_picket', [5, 2.5], [8.6, 1.7], 1.5),
-  ...row('fence_picket', [15.4, -7.8], [13.2, -10], 1.5),
+  ...row('fence_picket', [14.69, -8.51], [12.4, -10.8], 1.5), // both sides of the path leaving the plaza south-west,
+  ...row('fence_picket', [16.29, -10.11], [14, -12.4], 1.5), // starting clear of the plaza's rim
   ...row('fence_picket', [-9, 1.8], [-12, 0.6], 1.5),
   ...row('fence_picket', [-14, 17.2], [-17, 18.8], 1.5),
   ...wall([8, -6.5], [11.5, -7.6], 0), ...wall([21, 14], [24, 17.5], 0),
