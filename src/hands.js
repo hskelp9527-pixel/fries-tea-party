@@ -57,6 +57,7 @@ export function updateHands() {
     if (!how.clearOfFace || !bones.head) continue
     const s = player.p.scale
     bones.head.getWorldPosition(face).add(ahead.set(Math.sin(player.mesh.rotation.y), 0, Math.cos(player.mesh.rotation.y)).multiplyScalar(0.03 * s))
+    object.position.y = Math.min(object.position.y, face.y - 0.14 * s)
     away.subVectors(object.position, face)
     if (away.length() < 0.13 * s) object.position.copy(face).add(away.setY(Math.min(away.y, -0.02 * s)).setLength(0.13 * s))
   }

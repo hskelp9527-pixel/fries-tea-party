@@ -121,12 +121,12 @@ const SPOUT = new THREE.Vector3(0, 0.2, 0.172), TILT = 0.8
 async function pour(d) {
   const pot = things[d.pot], home = pot.position.clone(), turn = pot.rotation.y
   await walkTo(d.stand, d.rot)
-  const yaw = d.rot * DEG, side = yaw + 0.7, f = player.feet
+  const yaw = d.rot * DEG, side = yaw + 1.1, f = player.feet
   player.cinematic = true
   camera.fov = 45
   camera.updateProjectionMatrix()
-  camera.position.set(f.x + Math.sin(side) * 1.7, f.y + 1.05, f.z + Math.cos(side) * 1.7)
-  camera.lookAt(f.x, f.y + 0.9, f.z)
+  camera.position.set(f.x + Math.sin(side) * 1.35, f.y + 1.12, f.z + Math.cos(side) * 1.35)
+  camera.lookAt(f.x, f.y + 0.88, f.z)
 
   act('drink')
   await toHand(d.object, d)
