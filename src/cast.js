@@ -84,7 +84,7 @@ export const cast = Object.fromEntries(['hatter', 'hare', 'dormouse'].map(name =
 // at home), `front` (where a sitter comes to: beside the chair, in the aisle, since the chairs are pulled in under
 // the table), `step` (between the pulled-out chair and the table, where a sitter backs onto the seat from), the way
 // a sitter faces (`forward`, `rot`, radians, toward the table) and who sits in it (`by`). The hosts start in theirs.
-export const PULL = 0.9
+export const PULL = 0.55
 const CHAIR_TIME = 0.8
 export const chairs = placedAll.armchair.map(object => {
   const forward = new THREE.Vector3(Math.sin(object.rotation.y), 0, Math.cos(object.rotation.y)), side = new THREE.Vector3(forward.z, 0, -forward.x)
@@ -95,7 +95,7 @@ export const chairs = placedAll.armchair.map(object => {
   sparkle.visible = false
   object.add(sparkle)
   return {
-    object, seat, forward, front: object.position.clone().addScaledVector(side, 0.8), step: seat.clone().addScaledVector(forward, 0.7 - PULL).setY(0),
+    object, seat, forward, front: object.position.clone().addScaledVector(side, 0.8), step: seat.clone().addScaledVector(forward, 0.55 - PULL).setY(0),
     rot: object.rotation.y, home: object.position.clone(), sparkle, by: null,
   }
 })

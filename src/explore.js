@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { player, placePlayer, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
-import { camera } from './scene.js'
+import { camera, lens } from './scene.js'
+import { lookAt, headOf } from './gaze.js'
 import { cast, chairs, rest, standUp, walk, sitDown, moveChair, PULL } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
 import { stream, surface } from './liquids.js'
@@ -31,21 +32,23 @@ for (const gear of gears) uses.push({
 uses.push(teaService, hallNote)
 let target, toldAboutTea = false, drank = false
 
-// Any empty armchair at the table: Fries walks to its side, the chair slides out, he steps in, sits down and the
-// chair carries him back in to the table; E or a step gets him up again, the same way in reverse.
-// Seated, the camera frames the table and the banter turns to him; the first time, the hosts shout "No room!".
+// Any empty armchair at the table, from either side: Fries walks to that side, the chair slides out, he steps in,
+// sits down and the chair carries him in to the table. A two-shot finds him and the Hatter, who shouts "No room!",
+// and the chair slides out again and he gets up by himself.
+const otherSide = chair => chair.home.clone().multiplyScalar(2).sub(chair.front).setY(0)
+const nearSide = chair => [chair.front, otherSide(chair)].reduce((a, b) => (a.distanceTo(player.feet) < b.distanceTo(player.feet) ? a : b))
 const SITTING = rest('fries', 'sit_down', true, 1, true).lows[0]
-let seat = null, sits = 0
 for (const chair of chairs) {
   uses.push({
     pos: chair.seat, label: 'Sit down', use: () => sit(chair),
-    can: () => !chair.by && player.size === 'normal' && Math.hypot(chair.front.x - player.feet.x, chair.front.z - player.feet.z) < 0.9,
+    can: () => !chair.by && player.size === 'normal' && Math.hypot(nearSide(chair).x - player.feet.x, nearSide(chair).z - player.feet.z) < 0.9,
   })
 }
 async function sit(chair) {
   player.control = false
   chair.by = 'fries'
-  await walkTo([chair.front.x, 0, chair.front.z], chair.rot / DEG)
+  const side = nearSide(chair)
+  await walkTo([side.x, 0, side.z], chair.rot / DEG)
   await moveChair(chair, PULL)
   await walkTo([chair.step.x, 0, chair.step.z], chair.rot / DEG)
   act('sit_down')
@@ -53,23 +56,27 @@ async function sit(chair) {
   await tween(anim.actions.sit_down.getClip().duration, t => player.feet.lerpVectors(from, to, Math.min(1, t * 1.25)))
   anim.hold('sit_down')
   await moveChair(chair, 0, player.feet)
-  seat = chair
   banter.seated = true
+  // A two-shot from the open side of Fries's chair, across the table at the Hatter.
   player.cinematic = true
-  const behind = new THREE.Vector3(Math.sin(chair.rot), 0, Math.cos(chair.rot)).multiplyScalar(-1.3)
-  camera.position.copy(chair.seat).add(behind).setY(1.55)
-  camera.lookAt(things.long_table.position.x, 0.85, -7)
-  event(sits++ ? 'sit' : 'firstSit')
+  const fries = headOf('fries'), hatter = headOf('hatter'), middle = fries.clone().lerp(hatter, 0.5)
+  const across = new THREE.Vector3(hatter.z - fries.z, 0, fries.x - hatter.x).normalize()
+  if (across.dot(chair.forward) > 0) across.negate()
+  camera.position.copy(middle).addScaledVector(across, Math.max(2.2, fries.distanceTo(hatter) * 0.75)).setY(middle.y + 0.35)
+  camera.lookAt(middle)
+  lens.target = middle
+  lookAt('hatter', fries)
+  await say('OP-01')
+  lookAt('hatter', null)
+  await rise(chair, side)
 }
-async function rise() {
-  const chair = seat
-  seat = null
+async function rise(chair, side) {
   await moveChair(chair, PULL, player.feet)
   anim.hold('sit_down', false)
   act('stand_up')
   const from = player.feet.clone(), to = chair.step.clone().setY(0)
   await tween(anim.actions.stand_up.getClip().duration, t => player.feet.lerpVectors(from, to, Math.max(0, t * 1.6 - 0.6)))
-  await walkTo([chair.front.x, 0, chair.front.z], chair.rot / DEG)
+  await walkTo([side.x, 0, side.z], chair.rot / DEG)
   await moveChair(chair, 0)
   chair.by = null
   banter.seated = false
@@ -79,8 +86,7 @@ async function rise() {
 }
 
 addEventListener('keydown', e => {
-  if (seat && ['KeyE', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) rise()
-  else if (e.code === 'KeyE' && !e.repeat && player.control && target) {
+  if (e.code === 'KeyE' && !e.repeat && player.control && target) {
     const useTarget = target
     target = undefined
     useTarget.use()
