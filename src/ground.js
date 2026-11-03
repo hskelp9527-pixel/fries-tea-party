@@ -6,7 +6,7 @@ import { meadow, terraces, plaza, overlook } from './layout.js'
 import { LEAVES, cardMaterial, cards, flowerClump, flowerMaterial, flowerMesh, shareAt, drawCount, walkers, stir } from './plants.js'
 import { player } from './player.js'
 import { cast } from './cast.js'
-import { lush, bloom, species, bare, moss, bed, pathDistance, ground, level, random } from './fields.js'
+import { noise, lush, bloom, species, bare, moss, bed, pathDistance, ground, level, random } from './fields.js'
 
 // ?view=fields colours the land by its fields instead: green how lush, magenta where flowers bloom, grey the paths.
 const FIELDS = new URLSearchParams(location.search).get('view') === 'fields'
@@ -134,7 +134,10 @@ for (let gx = x0; gx < x1; gx += spacing) {
     if (!open(x, z) || rand() > grassShare(x, z)) continue
     const l = lush(x, z), m = moss(x, z) > 0.3, yaw = rand() * Math.PI, y = level(x, z)
     // Mossy places grow a short soft pile (4 to 9 cm) so the daisies and clover show and Fries can walk through.
-    const height = m ? 0.04 + 0.05 * rand() : 0.14 + 0.2 * l * (0.6 + rand() * 0.8)
+    // Elsewhere the height follows the lushness, a slow patch noise (tall and short stretches 3 to 4 m across) and the
+    // bloom (up to 45% shorter, so the flowers stand clear of the grass instead of drowning in it).
+    const swell = noise(x * 0.3 + 9, z * 0.3), sun = noise(x * 0.22 - 5, z * 0.22 + 2)
+    const height = m ? 0.04 + 0.05 * rand() : (0.12 + 0.2 * l * (0.6 + rand() * 0.8)) * (0.6 + 0.9 * swell) * (1 - 0.45 * bloom(x, z))
     if (m && rand() < 0.6) {
       // Clover: a flat round leaf lying on the moss; one card each, so little geometry for a lot of green.
       const s = 0.1 + 0.1 * rand()
@@ -146,7 +149,7 @@ for (let gx = x0; gx < x1; gx += spacing) {
     for (const turn of [0, Math.PI / 2]) {
       cell(grassCells, GRASS_CELL, x, z, () => ({ list: [] })).list.push({
         position: new THREE.Vector3(x, y, z), quaternion: upright(yaw + turn), scale: new THREE.Vector3(height * 1.7, height, 1),
-        cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l, 1, 0.65 + 0.15 * rand()).multiplyScalar(0.8 + 0.35 * rand()),
+        cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l + 0.25 * sun, 1, 0.65 + 0.15 * rand() - 0.2 * sun).multiplyScalar((m ? 0.9 : 0.6 + 0.6 * sun) + 0.3 * rand()),
       })
     }
   }
@@ -158,21 +161,27 @@ for (let gx = x0; gx < x1; gx += spacing) {
 const LOW = ['flower_daisy', 'flower_forget_me_not', 'flower_violets', 'flower_daisy']
 const TALL = ['flower_foxglove', 'flower_mallow', 'flower_pink_rose', 'flower_red_rose', 'flower_foxglove']
 const BED = ['flower_daisy', 'flower_forget_me_not', 'flower_violets', 'flower_foxglove', 'flower_mallow', 'flower_pink_rose', 'flower_red_rose']
+const YELLOW = new THREE.Color(1, 0.82, 0.3), PINK = new THREE.Color(1, 0.62, 0.78)
 const clumps = {}
 const clump = new THREE.Matrix4()
 for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (webgpu ? 1 : 0.5)); n > 0; n--) {
   const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0)
-  if (rand() > bloom(x, z) || !open(x, z) || rand() > 0.6) continue
+  // The bloom is gathered into clusters about a metre across (cluster noise averages 0.5, so the count stays about the same).
+  if (rand() > bloom(x, z) * (0.3 + 1.4 * noise(x * 0.9 + 3, z * 0.9)) || !open(x, z) || rand() > 0.6) continue
   const kinds = rand() < 0.65 ? LOW : TALL, m = moss(x, z) > 0.3, ring = bed(x, z) > 0.4
   // Under the table and between the roots: small daisies and forget-me-nots. Round the plaza: every kind at random, a
   // mixed bed. Elsewhere the drift's species with its neighbours in the palette mixed in.
   const name = m ? (rand() < 0.8 ? 'flower_daisy' : 'flower_forget_me_not') : ring ? BED[Math.floor(rand() * BED.length)]
-    : kinds[Math.min(kinds.length - 1, Math.max(0, Math.floor(species(x + (rand() - 0.5) * 3, z + (rand() - 0.5) * 3) * kinds.length)))]
+    : kinds[Math.min(kinds.length - 1, Math.max(0, Math.floor(species(x, z) * kinds.length + (rand() - 0.5) * 2.2)))]
   clumps[name] ??= flowerClump(name)
-  ;(cell(flowerCells, FLOWER_CELL, x, z, () => ({ kinds: {} })).kinds[name] ??= []).push(clump.compose(
+  const matrix = clump.compose(
     new THREE.Vector3(x, level(x, z), z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
     new THREE.Vector3().setScalar(m ? 0.55 + rand() * 0.3 : ring ? 1 + rand() * 0.5 : 1.15 + rand() * 0.65),
-  ).clone())
+  ).clone()
+  // The daisy model is white: some clumps are tinted buttercup yellow or pink (a multiply on the white petals).
+  const dye = rand()
+  if (name === 'flower_daisy' && dye < 0.45) matrix.tint = dye < 0.28 ? YELLOW : PINK
+  ;(cell(flowerCells, FLOWER_CELL, x, z, () => ({ kinds: {} })).kinds[name] ??= []).push(matrix)
 }
 
 const grassMaterial = cardMaterial(LEAVES, { translucency: 1.1, flutter: 0.01, thin: GRASS_FADE })
