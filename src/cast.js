@@ -74,33 +74,49 @@ export const cast = Object.fromEntries(['hatter', 'hare', 'dormouse'].map(name =
   return [name, member]
 }))
 
-// The armchairs at the table, with a front approach along the chair's facing direction.
-const CHAIR_SLIDE = 0.9, CHAIR_TIME = 0.8
+// The armchairs at the table: `object`, the point the hips settle over (`seat`, at the seat's height, with the chair
+// at home), `front` (where a sitter comes to: beside the chair, in the aisle, since the chairs are pulled in under
+// the table), `step` (between the pulled-out chair and the table, where a sitter backs onto the seat from), the way
+// a sitter faces (`forward`, `rot`, radians, toward the table) and who sits in it (`by`). The hosts start in theirs.
+export const PULL = 0.9
+const CHAIR_TIME = 0.8
 export const chairs = placedAll.armchair.map(object => {
-  const forward = new THREE.Vector3(Math.sin(object.rotation.y), 0, Math.cos(object.rotation.y))
+  const forward = new THREE.Vector3(Math.sin(object.rotation.y), 0, Math.cos(object.rotation.y)), side = new THREE.Vector3(forward.z, 0, -forward.x)
   const seat = object.position.clone().addScaledVector(forward, 0.05).setY(0.48)
   const sparkle = glints[0].clone()
   sparkle.position.set(0, 0.8, 0)
   sparkle.scale.setScalar(0.18)
   sparkle.visible = false
   object.add(sparkle)
-  return { object, seat, forward, front: seat.clone().addScaledVector(forward, 0.7 - CHAIR_SLIDE).setY(0), rot: object.rotation.y, home: object.position.clone(), sparkle, by: null }
+  return {
+    object, seat, forward, front: object.position.clone().addScaledVector(side, 0.8), step: seat.clone().addScaledVector(forward, 0.7 - PULL).setY(0),
+    rot: object.rotation.y, home: object.position.clone(), sparkle, by: null,
+  }
 })
 for (const m of Object.values(cast)) if (m.seated) (m.chair = chairs.find(c => c.home.distanceTo(m.object.position) < 0.1)).by = m.name
 
 const ONCE = new Set(['sit_down', 'stand_up', 'sit_scared', 'conduct', 'serve', 'show_watch', 'lean_over', 'mend', 'butter', 'dunk_watch', 'lay_spoon', 'stuff'])
 
-// Slide along the chair's facing axis, carrying the sitter when occupied.
-async function chairBack(chair, distance, sitter) {
+// Magic: the chair slides by itself to `distance` metres back from its home, sparkling, carrying `rider` (a
+// position: a sitter's feet) along with it.
+export async function moveChair(chair, distance, rider) {
   const from = chair.object.position.clone(), to = chair.home.clone().addScaledVector(chair.forward, -distance)
-  const rider = sitter?.object.position.clone()
+  const start = rider?.clone()
   chair.sparkle.visible = true
   await tween(CHAIR_TIME, t => {
-    const ease = t * t * (3 - 2 * t)
-    chair.object.position.lerpVectors(from, to, ease)
-    if (sitter) sitter.object.position.copy(rider).add(chair.object.position).sub(from)
+    chair.object.position.lerpVectors(from, to, t * t * (3 - 2 * t))
+    if (rider) rider.copy(start).add(chair.object.position).sub(from)
   })
   chair.sparkle.visible = false
+}
+
+// A few steps straight to a point, beside or in front of a chair, where `walk` would route round the table.
+async function step(m, [x, z]) {
+  const from = m.object.position.clone(), to = new THREE.Vector3(x, from.y, z)
+  m.moving = true
+  m.object.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
+  await tween(from.distanceTo(to) / 0.9, t => m.object.position.lerpVectors(from, to, t))
+  m.moving = false
 }
 
 // Walks a character along [x, z] points at walking speed, facing where it goes.
@@ -131,43 +147,36 @@ export async function walk(name, points) {
   m.moving = false
 }
 
-// Pull the chair out, approach from its front, then sit before gliding back to the table.
+// Sits a character down: to the chair's side, the chair slides out by magic, a step in between it and the table,
+// sit_down backing onto the seat, and the chair glides back in to the table with the sitter.
 export async function sitDown(name, chair) {
   const m = cast[name]
   chair.by = name
-  await chairBack(chair, CHAIR_SLIDE)
   await walk(name, [[chair.front.x, chair.front.z]])
-  const seat = chair.seat.clone().addScaledVector(chair.forward, -CHAIR_SLIDE).setY(m.object.position.y)
-  const from = m.object.position.clone()
-  m.moving = true
-  m.object.rotation.y = Math.atan2(seat.x - from.x, seat.z - from.z)
-  await tween(from.distanceTo(seat) / 0.9, t => m.object.position.lerpVectors(from, seat, t))
-  m.moving = false
+  await moveChair(chair, PULL)
+  await step(m, [chair.step.x, chair.step.z])
   m.object.rotation.y = chair.rot
   m.chair = chair
   m.doing = 'sit_down'
-  await wait(m.anim.actions.sit_down.getClip().duration)
+  const from = m.object.position.clone(), to = chair.seat.clone().addScaledVector(chair.forward, -PULL).setY(from.y)
+  await tween(m.anim.actions.sit_down.getClip().duration, t => m.object.position.lerpVectors(from, to, Math.min(1, t * 1.6)))
   m.seated = true
   m.doing = null
-  await chairBack(chair, 0, m)
+  await moveChair(chair, 0, m.object.position)
 }
 
-// Pull the sitter out, stand and step clear before the empty chair returns home.
+// Gets a character up the same way in reverse: the chair slides out with them, stand_up stepping forward off the
+// seat, a step to the chair's side, and the empty chair glides home.
 export async function standUp(name) {
   const m = cast[name], chair = m.chair
-  await chairBack(chair, CHAIR_SLIDE, m)
+  await moveChair(chair, PULL, m.object.position)
   m.doing = 'stand_up'
   m.seated = false
-  await wait(m.anim.actions.stand_up.getClip().duration)
+  const from = m.object.position.clone(), to = chair.step.clone().setY(from.y)
+  await tween(m.anim.actions.stand_up.getClip().duration, t => m.object.position.lerpVectors(from, to, Math.max(0, t * 1.6 - 0.6)))
   m.doing = null
-  const from = m.object.position.clone(), front = chair.front.clone().setY(from.y)
-  m.moving = true
-  await tween(from.distanceTo(front) / 0.9, t => m.object.position.lerpVectors(from, front, t))
-  const clear = front.clone().add(new THREE.Vector3(chair.forward.z, 0, -chair.forward.x).multiplyScalar(0.8))
-  m.object.rotation.y = Math.atan2(clear.x - front.x, clear.z - front.z)
-  await tween(0.8 / 0.9, t => m.object.position.lerpVectors(front, clear, t))
-  m.moving = false
-  await chairBack(chair, 0)
+  await step(m, [chair.front.x, chair.front.z])
+  await moveChair(chair, 0)
   chair.by = null
   m.chair = null
 }
