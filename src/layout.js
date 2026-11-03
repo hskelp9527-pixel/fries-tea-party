@@ -324,7 +324,7 @@ export const trails = [[[22.6, -5.5], [26.5, -7], [30, -8.2]]]
 // (the step modules: their flower planters would block the steps), `hidden` keeps it out of the scene (only its
 // colliders and its place in `things` count); `scale` is uniform.
 export const placed = [
-  { model: 'big_tree', pos: [-4.2, 0, -12.2], rot: -30 }, // its long branches reach south-east over the head of the table; the tunnel through its roots runs north-north-east from the door
+  { model: 'big_tree', pos: [-4.2, -0.6, -12.2], rot: -30 }, // sunk 0.6 m so its roots (lowest points 0.0-0.6 m above its foot) meet the soil; its long branches reach south-east over the head of the table; the tunnel through its roots runs north-north-east from the door
   { model: 'long_table_dressed', pos: [0, 0, -3.5], rot: 90, solid: false },
   { model: 'long_table', pos: [0, 0, -3.5], rot: 90, hidden: true }, // the dressed table collides as the plain one, so its crockery cannot make the top unwalkable
   { model: 'armchair', pos: [-1.55, 0, -6.8], rot: 90 },
