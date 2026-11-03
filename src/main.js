@@ -19,6 +19,10 @@ import { updateTasks } from './tasks.js'
 import { updateHands } from './hands.js'
 
 const params = new URLSearchParams(location.search)
+// ?liquid owns its camera and animation loop instead of starting the story.
+if (params.has('liquid')) {
+  await import('./liquidLab.js')
+} else {
 // ?anims: buttons to try every character's clips by hand.
 if (params.has('anims')) import('./anims.js')
 
@@ -67,3 +71,4 @@ renderer.setAnimationLoop(now => {
   updateSun()
   render()
 })
+}
