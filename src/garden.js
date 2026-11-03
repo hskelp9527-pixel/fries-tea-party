@@ -7,12 +7,12 @@ import { wind } from './plants.js'
 
 const DEG = Math.PI / 180
 
-function place({ model: name, pos, rot = 0, scale = 1, solid = true, boxes = false }) {
+function place({ model: name, pos, rot = 0, scale = 1, solid = true, boxes = false, hidden = false }) {
   const object = model(name)
   object.position.set(...pos)
   object.rotation.y = rot * DEG
   object.scale.setScalar(scale)
-  scene.add(object)
+  if (!hidden) scene.add(object)
   if (solid) addColliders(name, object, boxes)
   return object
 }
@@ -38,6 +38,14 @@ export function keepOut(p, margin) {
     }
   }
 }
+
+// The hosts' end of the dressed table (beyond 2.6 m along it) is kept empty for the game's own cups, teapots and
+// the watch; the few pieces of dressing that stray into it stay hidden.
+const dressed = things.long_table_dressed
+dressed.updateMatrixWorld(true)
+dressed.traverse(o => {
+  if (o.name.startsWith('dress_') && dressed.worldToLocal(o.getWorldPosition(new THREE.Vector3())).x > 2.6) o.visible = false
+})
 
 // The mean of an object's width, height and depth.
 export const meanSize = object => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).toArray().reduce((a, b) => a + b) / 3

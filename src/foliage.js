@@ -137,23 +137,6 @@ for (const [x0, z0, x1, z1, height, thickness] of hedges) {
     .setTranslation((x0 + x1) / 2, height / 2, (z0 + z1) / 2))
 }
 
-// Trees on the slopes and hills beyond the garden, in layers from about 40 to 150 m out: rounded crowns of large
-// cards, darker and bluer as they recede (the haze does the rest). None stand in the south, behind the camera's
-// usual approach, or right under the sun.
-const farLeaves = []
-const [px0, pz0, px1, pz1] = meadow.plateau
-for (let i = 0; i < 150 * share; i++) {
-  const angle = rand() * Math.PI * 2, distance = 42 + Math.pow(rand(), 0.8) * 110
-  const x = Math.sin(angle) * distance, z = -Math.cos(angle) * distance
-  if (x > px0 && x < px1 && z > pz0 && z < pz1) continue
-  const height = 7 + rand() * 9, tall = rand() < 0.3, y = ground(x, z)
-  crown(farLeaves, {
-    centre: new THREE.Vector3(x, y + height * (tall ? 0.55 : 0.62), z),
-    radii: tall ? new THREE.Vector3(1.6, height * 0.5, 1.6) : new THREE.Vector3(height * 0.42, height * 0.38, height * 0.42),
-    cell: tall ? LEAVES.laurel : LEAVES.round, size: tall ? 1.6 : 2.4, light: 0.75 - distance * 0.002, layers: 1.5,
-  })
-}
-
 // The rose path behind the big tree, hidden until the ending: flagstones between banks of red roses, ending in
 // the heart-shaped arch.
 export const roses = new THREE.Group()
@@ -187,6 +170,44 @@ roses.add(arch, cards(cardMaterial(LEAVES, { crown: true, sway: 0.01 }), LEAVES,
 
 const leafMaterial = cardMaterial(LEAVES, { crown: true, sway: 0.012 })
 scene.add(cards(leafMaterial, LEAVES, [...treeLeaves, ...bushLeaves, ...ivyLeaves]))
-const far = cards(cardMaterial(LEAVES, { crown: true, sway: 0.004, flutter: 0, translucency: 0.3 }), LEAVES, farLeaves)
-far.castShadow = false
-scene.add(far)
+
+// Trees on the slopes and hills beyond the garden, in five layers from 40 to 150 m out: groves, a few lines of small
+// trees like hedgerows, and single trees, each standing on the height field. The `far_tree` model is drawn
+// instanced, one batch per mesh in it; the farther layers are tinted paler, and the haze does the rest.
+const [px0, pz0, px1, pz1] = meadow.plateau
+const farTrees = []
+const farTree = (x, z, scale, layer) => {
+  if (x > px0 - 4 && x < px1 + 4 && z > pz0 - 4 && z < pz1 + 4) return
+  const pale = layer / 4, k = 0.9 + rand() * 0.2
+  farTrees.push({ x, z, scale, yaw: rand() * Math.PI * 2, tint: new THREE.Color(k * (1 + 0.5 * pale), k * (1 + 0.5 * pale), k * (1 + 0.8 * pale)) })
+}
+const around = (near, far) => {
+  const angle = rand() * Math.PI * 2, distance = near + (far - near) * rand()
+  return [Math.sin(angle) * distance, -Math.cos(angle) * distance]
+}
+const LAYERS = [[40, 65, 10], [65, 90, 12], [90, 110, 14], [110, 130, 14], [130, 150, 16]]
+LAYERS.forEach(([near, far, groves], layer) => {
+  for (let g = 0; g < Math.round(groves * share); g++) {
+    const [cx, cz] = around(near, far), radius = 5 + rand() * 7
+    for (let i = 5 + Math.floor(rand() * 8); i > 0; i--) {
+      const angle = rand() * Math.PI * 2, r = radius * Math.sqrt(rand())
+      farTree(cx + Math.cos(angle) * r, cz + Math.sin(angle) * r, 0.7 + rand() * 0.7, layer)
+    }
+  }
+  for (let i = 0; i < Math.round(12 * share); i++) farTree(...around(near, far), 0.8 + rand() * 0.6, layer)
+  // A hedgerow: small trees in a line along the slope.
+  const [hx, hz] = around(near, far), heading = rand() * Math.PI
+  for (let i = 0; i < 16 * share; i++) farTree(hx + Math.cos(heading) * i * 2.2, hz + Math.sin(heading) * i * 2.2, 0.28 + rand() * 0.08, layer)
+})
+const proto = model('far_tree'), placement = new THREE.Matrix4(), spin = new THREE.Quaternion()
+proto.updateMatrixWorld(true)
+proto.traverse(part => {
+  if (!part.isMesh) return
+  const mesh = new THREE.InstancedMesh(part.geometry, part.material, farTrees.length)
+  farTrees.forEach(({ x, z, scale, yaw, tint }, i) => {
+    mesh.setMatrixAt(i, placement.compose(new THREE.Vector3(x, ground(x, z), z), spin.setFromAxisAngle(UP, yaw), new THREE.Vector3().setScalar(scale)).multiply(part.matrixWorld))
+    mesh.setColorAt(i, tint)
+  })
+  mesh.frustumCulled = false
+  scene.add(mesh)
+})

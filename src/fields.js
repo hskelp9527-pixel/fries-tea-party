@@ -1,4 +1,4 @@
-import { paths, meadow, terraces, overlook } from './layout.js'
+import { paths, trails, meadow, terraces, overlook } from './layout.js'
 
 // The shared fields of the garden. The ground's colour, where grass grows and how lush it is, where flowers bloom
 // and which, and the height of the land beyond the garden all come from these, so they agree with one another.
@@ -28,7 +28,7 @@ export function random(seed) {
 }
 
 // Distance on the ground to the nearest path's centre line.
-const segments = paths.flatMap(line => line.slice(1).map((p, i) => [line[i], p]))
+const segments = [...paths, ...trails].flatMap(line => line.slice(1).map((p, i) => [line[i], p]))
 export function pathDistance(x, z) {
   let best = Infinity
   for (const [[ax, az], [bx, bz]] of segments) {
@@ -64,13 +64,15 @@ export function bloom(x, z) {
 export const species = (x, z) => noise(x * 0.11 + 40, z * 0.11 - 13)
 
 // The land: flat over the garden but for the overlook's rounded meadow, falling away past the brow into a valley,
-// with layered hills rising beyond.
+// with three layers of hills rising beyond, at about 80, 125 and 175 m.
 export function ground(x, z) {
   const [x0, z0, x1, z1] = meadow.plateau
   const out = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1))
   const fall = -9 * Math.min(1, out / 22) ** 1.6
   const far = Math.hypot(x, z)
-  const hills = (6 + 30 * noise(x * 0.012 + 5, z * 0.012) + 9 * noise(x * 0.04, z * 0.04 + 9)) * Math.min(1, Math.max(0, (far - 55) / 70)) ** 1.3
+  const ridge = (r, w, h) => h * Math.exp(-(((far - r) / w) ** 2))
+  const hills = ((ridge(80, 16, 11) + ridge(125, 20, 19) + ridge(175, 26, 28)) * (0.55 + 0.9 * noise(x * 0.015 + 5, z * 0.015))
+    + 4 * noise(x * 0.04, z * 0.04 + 9)) * Math.min(1, Math.max(0, (far - 55) / 25))
   const [ox, oz, or, oh] = overlook, o = Math.min(1, Math.hypot(x - ox, z - oz) / or)
   return fall + hills + oh * (1 + Math.cos(o * Math.PI)) / 2
 }
