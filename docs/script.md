@@ -177,3 +177,22 @@ Exchanges for the banter scheduler. Each exchange plays its lines in order; the 
 | SE-10 | Dormouse | Dormouse breathes while sleeping | Tiny viscous treacle bubbles inflating and wetly popping |
 | SE-11 | Tea Potion | Drinking pink or blue tea | Magical suction whoosh, swirling airy pitch shift |
 | SE-12 | Giant Footsteps | Giant Fries steps on grass | Low bass ground thud with deep rumbling soil vibration |
+
+### Scene 9: Sitting Down at the Table
+
+Each time Fries sits in an armchair, one of these exchanges plays in turn; then the chair slides out and he gets up.
+
+| ID | Speaker | Context | Line | Delivery |
+|---|---|---|---|---|
+| ST-01 | Hatter | Seat 1/4: Fries sits down at the table | That chair is spoken for! | indignant, theatrical |
+| ST-02 | Fries | Seat 1/4: Reply | Spoken for by who? It's empty. | puzzled, polite |
+| ST-03 | Hatter | Seat 1/4: Shooing him off | By the next person who isn't you. Off you get! | brisk, dismissive |
+| ST-04 | March Hare | Seat 2/4: Fries sits down at the table | Not there! That's where the jam sits! | shrill, scandalised |
+| ST-05 | Fries | Seat 2/4: Reply | But the jam is in the jar. | reasonable, a little amused |
+| ST-06 | March Hare | Seat 2/4: Triumphant | Exactly! So it needs the chair even more! | gleeful, triumphant cackle |
+| ST-07 | Hatter | Seat 3/4: Fries sits down at the table | No room! No room at all! | sharp, theatrical shout |
+| ST-08 | Fries | Seat 3/4: Reply | There are twenty empty chairs! | exasperated, pointing out the obvious |
+| ST-09 | Hatter | Seat 3/4: Waving him away | And every one of them is full of nobody. Move along! | smug, airy |
+| ST-10 | Hatter | Seat 4/4: Fries sits down at the table | Change places! Everyone move one place down! | excited, conducting |
+| ST-11 | Fries | Seat 4/4: Reply | But I've only just sat down. | mildly protesting |
+| ST-12 | March Hare | Seat 4/4: Hopping up | Then you've only just stood up! | giggly, delighted |

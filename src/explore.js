@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu'
 import { player, placePlayer, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
 import { camera, lens } from './scene.js'
 import { lookAt, headOf } from './gaze.js'
+import speakers from './speakers.json'
 import { cast, chairs, rest, standUp, walk, sitDown, moveChair, PULL } from './cast.js'
 import { updateBanter, event, banter } from './banter.js'
 import { stream, surface, CUP_PROFILE } from './liquids.js'
@@ -33,8 +34,11 @@ uses.push(teaService, hallNote)
 let target, toldAboutTea = false, drank = false
 
 // Any empty armchair at the table, from either side: Fries walks to that side, the chair slides out, he steps in,
-// sits down and the chair carries him in to the table. A two-shot finds him and the Hatter, who shouts "No room!",
-// and the chair slides out again and he gets up by himself.
+// sits down and the chair carries him in to the table. A two-shot finds him and the Hatter, the hosts tell him off in
+// one of a few exchanges (a different one each time) and he answers back, and the chair slides out again and he gets
+// up by himself.
+const SEATED = [['ST-01', 'ST-02', 'ST-03'], ['ST-04', 'ST-05', 'ST-06'], ['ST-07', 'ST-08', 'ST-09'], ['ST-10', 'ST-11', 'ST-12']]
+let sits = Math.floor(Math.random() * SEATED.length)
 const otherSide = chair => chair.home.clone().multiplyScalar(2).sub(chair.front).setY(0)
 const nearSide = chair => [chair.front, otherSide(chair)].reduce((a, b) => (a.distanceTo(player.feet) < b.distanceTo(player.feet) ? a : b))
 const SITTING = rest('fries', 'sit_down', true, 1, true).lows[0]
@@ -65,9 +69,12 @@ async function sit(chair) {
   camera.position.copy(middle).addScaledVector(across, Math.max(2.2, fries.distanceTo(hatter) * 0.75)).setY(middle.y + 0.35)
   camera.lookAt(middle)
   lens.target = middle
-  lookAt('hatter', fries)
-  await say('OP-01')
-  lookAt('hatter', null)
+  lookAt('fries', hatter)
+  for (const id of SEATED[sits++ % SEATED.length]) {
+    if (speakers[id] !== 'fries') lookAt(speakers[id], fries)
+    await say(id)
+  }
+  for (const name of ['fries', 'hatter', 'hare']) lookAt(name, null)
   await rise(chair, side)
 }
 async function rise(chair, side) {
