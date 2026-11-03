@@ -17,12 +17,14 @@ function place({ model: name, pos, rot = 0, scale = 1, solid = true, boxes = fal
   return object
 }
 
-// The first object placed for each model name: things.hatter, things.big_tree, ...
-export const things = {}
+// The first object placed for each model name: things.hatter, things.big_tree, ...; every placed object of a model
+// in placedAll[name].
+export const things = {}, placedAll = {}
 const onTable = new Map()
 for (const entry of layout.placed) {
   const object = place(entry)
   things[entry.model] ??= object
+  ;(placedAll[entry.model] ??= []).push(object)
   if (entry.onTable || entry.on) onTable.set(entry, object)
 }
 

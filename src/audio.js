@@ -74,16 +74,19 @@ export function setVoicePitch(value) {
   pitch = value
 }
 
-// Plays a voice line by ID with its subtitle. Resolves true when it finishes, false when another line cuts it off.
-export function say(id) {
+// Plays a voice line by ID with its subtitle. `distance` is how far the speaker is from Fries: lines fade with it,
+// and only those within about 12 m get a subtitle. Resolves true when it finishes, false when another line cuts it
+// off.
+export function say(id, distance = 0) {
   line?.source.stop()
-  const source = ctx.createBufferSource()
+  const source = ctx.createBufferSource(), gain = ctx.createGain()
   source.buffer = voices[id]
   source.playbackRate.value = speakers[id] === 'fries' ? 1 : pitch
-  source.connect(voiceBus)
+  gain.gain.value = Math.max(0.12, Math.min(1, 1 - (distance - 4) / 22))
+  source.connect(gain).connect(voiceBus)
   source.start()
   const current = line = { id, source }
-  subtitle.textContent = subtitles[id]
+  subtitle.textContent = distance < 12 ? subtitles[id] : ''
   subtitle.className = speakers[id]
   return new Promise(resolve => {
     source.onended = () => {

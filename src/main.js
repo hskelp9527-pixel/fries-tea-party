@@ -12,7 +12,9 @@ import { begin } from './story.js'
 import { updateExplore } from './explore.js'
 import { updateFloating } from './floating.js'
 import { updateSong } from './song.js'
-import { updateCast } from './cast.js'
+import { updateCast, cast } from './cast.js'
+import { updateGaze } from './gaze.js'
+import { updateLooks, banter } from './banter.js'
 import { updateHands } from './hands.js'
 
 const params = new URLSearchParams(location.search)
@@ -56,6 +58,8 @@ renderer.setAnimationLoop(now => {
   updateFloating(dt)
   updateSong()
   updateCast(dt)
+  updateLooks()
+  updateGaze(dt, name => name === 'fries' ? banter.seated : cast[name].seated)
   world.step()
   updateHands()
   updateSun()

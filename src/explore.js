@@ -1,38 +1,18 @@
 import * as THREE from 'three/webgpu'
 import { player, setSize, reaches, nearProp, facePoint, act, walkTo, anim } from './player.js'
 import { camera } from './scene.js'
-import { cast } from './cast.js'
+import { cast, chairs, rest } from './cast.js'
+import { updateBanter, event, banter } from './banter.js'
 import { stream, surface } from './liquids.js'
 import { use, release, fly, toHand } from './hands.js'
 import contacts from '../docs/fries_hand_contacts.json'
 import { things, drinks, gears, doors, wake } from './garden.js'
 import { world } from './physics.js'
-import { zones } from './layout.js'
 import { setMusic, say, speaking, burst } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { game } from './state.js'
-import { setFloatingLevel, cupDodging } from './floating.js'
+import { setFloatingLevel } from './floating.js'
 
-// Ambient lines, highest priority first. Each plays once, when the garden has been quiet for a while;
-// `then` follows straight after. c describes what Fries is doing (see context() below).
-const BARKS = [
-  { id: 'SZ-05', when: c => c.size === 'small' && c.shrinks > 1 && c.near('table') },
-  { id: 'SZ-06', when: c => c.size === 'small' && c.shrinks > 1 && c.near('dormouse') },
-  { id: 'SZ-07', when: c => c.size === 'big' && c.grows > 1 && c.near('table') },
-  { id: 'SZ-08', when: c => c.size === 'big' && c.grows > 1 && c.near('cottage') },
-  { id: 'BK-10', when: c => c.size === 'small' && c.near('table') },
-  { id: 'BK-11', when: c => c.size === 'small' && c.near('table') },
-  { id: 'BK-12', when: c => c.size === 'big' && c.near('table') },
-  { id: 'BK-13', when: c => c.size === 'big' && c.near('table') },
-  { id: 'BK-04', when: c => c.near('hareChair') },
-  { id: 'BK-03', when: c => c.cupDodging },
-  { id: 'BK-02', when: c => c.near('tray') && c.still > 3 },
-  { id: 'BK-06', when: c => c.near('tray') && !c.drank && c.still > 6 },
-  { id: 'BK-05', when: c => c.circled, then: 'BK-09' },
-  { id: 'BK-01', when: c => c.near('table'), then: 'BK-08' },
-  { id: 'BK-07', when: c => c.near('table') && c.still > 8 && c.played('BK-01') },
-]
-const QUIET_BEFORE_BARK = 8 // seconds without a line
 const FIRST_HINT = 45 // seconds without finding a gear before the Dormouse sleep-talks a hint
 const NEXT_HINT = 35
 
@@ -44,8 +24,49 @@ const head = (character, height) => character.localToWorld(new THREE.Vector3(0, 
 const uses = drinks.map(d => ({ ...d, can: () => nearProp(d, d.pos), use: () => drink(d) }))
 let target, toldAboutTea = false, drank = false
 
+// Any empty armchair at the table: Fries walks to its front, turns and sits down; E or a step gets him up again.
+// Seated, the camera frames the table and the banter turns to him; the first time, the hosts shout "No room!".
+const SITTING = rest('fries', 'sit_down', true, 1, true).lows[0]
+let seat = null, sits = 0
+for (const chair of chairs) {
+  uses.push({
+    pos: chair.seat, label: 'Sit down', use: () => sit(chair),
+    can: () => !chair.by && player.size === 'normal' && Math.hypot(chair.front.x - player.feet.x, chair.front.z - player.feet.z) < 0.9,
+  })
+}
+async function sit(chair) {
+  player.control = false
+  chair.by = 'fries'
+  await walkTo([chair.front.x, 0, chair.front.z], chair.rot / DEG)
+  act('sit_down')
+  const from = player.feet.clone(), to = chair.seat.clone().setY(chair.seat.y - SITTING)
+  await tween(anim.actions.sit_down.getClip().duration, t => player.feet.lerpVectors(from, to, Math.min(1, t * 1.25)))
+  anim.hold('sit_down')
+  seat = chair
+  banter.seated = true
+  player.cinematic = true
+  const behind = new THREE.Vector3(Math.sin(chair.rot), 0, Math.cos(chair.rot)).multiplyScalar(-1.3)
+  camera.position.copy(chair.seat).add(behind).setY(1.55)
+  camera.lookAt(things.long_table.position.x, 0.85, -7)
+  event(sits++ ? 'sit' : 'firstSit')
+}
+async function rise() {
+  const chair = seat
+  seat = null
+  anim.hold('sit_down', false)
+  act('stand_up')
+  const from = player.feet.clone(), to = chair.front.clone().setY(0)
+  await tween(anim.actions.stand_up.getClip().duration, t => player.feet.lerpVectors(from, to, Math.max(0, t * 1.6 - 0.6)))
+  chair.by = null
+  banter.seated = false
+  player.cinematic = false
+  player.control = true
+  event('standUp')
+}
+
 addEventListener('keydown', e => {
-  if (e.code === 'KeyE' && target) target.use()
+  if (seat && ['KeyE', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) rise()
+  else if (e.code === 'KeyE' && target) target.use()
 })
 
 let exploring = false, onMended
@@ -71,7 +92,10 @@ async function drink(d) {
   setSize(d.becomes)
   if (d.becomes === 'small' && player.shrinks === 1) await firstShrink()
   else if (d.becomes === 'big' && player.grows === 1) await firstGrow()
-  else player.control = true
+  else {
+    if (d.becomes !== 'normal') event(d.becomes === 'small' ? 'shrink' : 'grow')
+    player.control = true
+  }
 }
 
 // Fries takes up the empty cup and holds it out; the Hatter beckons from his chair and the teapot flies over from
@@ -197,39 +221,8 @@ let sinceGear = 0
 function hint() {
   const gear = gears.filter(g => !g.found).sort((a, b) => a.pos.distanceTo(player.feet) - b.pos.distanceTo(player.feet))[0]
   gear.hinted = Math.min((gear.hinted ?? -1) + 1, gear.hints.length - 1)
-  say(gear.hints[gear.hinted])
+  say(gear.hints[gear.hinted], cast.dormouse.object.position.distanceTo(player.feet))
   sinceGear = FIRST_HINT - NEXT_HINT
-}
-
-let quiet = 0, circling = 0, lastAngle = null
-const played = new Set()
-const near = name => Math.hypot(player.feet.x - zones[name].pos[0], player.feet.z - zones[name].pos[1]) < zones[name].r
-
-// Circling the table: the angle Fries has swept round it while nearby.
-function trackCircling() {
-  const angle = Math.atan2(player.feet.z - zones.table.pos[1], player.feet.x - zones.table.pos[0])
-  circling = near('table') && lastAngle !== null ? circling + Math.atan2(Math.sin(angle - lastAngle), Math.cos(angle - lastAngle)) : 0
-  lastAngle = angle
-}
-
-function context() {
-  return {
-    size: player.size, shrinks: player.shrinks, grows: player.grows, still: player.still, drank, near,
-    circled: Math.abs(circling) > Math.PI * 2, played: id => played.has(id), cupDodging: cupDodging(),
-  }
-}
-
-function bark() {
-  const c = context()
-  const b = BARKS.find(b => !played.has(b.id) && b.when(c))
-  if (!b) return
-  played.add(b.id)
-  say(b.id).then(finished => {
-    if (finished && b.then) {
-      played.add(b.then)
-      say(b.then)
-    }
-  })
 }
 
 uses.push({
@@ -247,10 +240,24 @@ function mend() {
   onMended()
 }
 
+// Things Fries does that the hosts remark on: falling into the fountain's basin, stepping into the cottage's hall.
+let inBasin = false, inHall = false
+function happenings() {
+  const f = player.feet, basin = things.fountain.position
+  const basinNow = Math.hypot(f.x - basin.x, f.z - basin.z) < 1.3 && f.y > 0.25
+  if (basinNow && !inBasin) event('fountain')
+  inBasin = basinNow
+  const hallNow = doors.cottage.front.distanceTo(f) < 0.9 && f.y > 2.5
+  if (hallNow && !inHall) event('cottage')
+  inHall = hallNow
+}
+
+let quiet = 0
 export function updateExplore(dt) {
   if (!exploring) return
   target = undefined
   prompt.textContent = ''
+  if (banter.seated) updateBanter(dt)
   if (!player.control) return
   for (const u of uses) {
     if (u.can() && (!target || u.pos.distanceTo(player.feet) < target.pos.distanceTo(player.feet))) target = u
@@ -260,13 +267,13 @@ export function updateExplore(dt) {
   for (const g of gears) if (!g.found && nearProp(g, g.pos)) pickUp(g)
   clock += dt
   tryDoors()
+  happenings()
 
-  trackCircling()
   quiet = speaking() ? 0 : quiet + dt
   sinceGear += dt
   if (target?.model?.endsWith('teacup') && !toldAboutTea) {
     toldAboutTea = true
-    say('EX-10')
+    say('EX-10', cast.dormouse.object.position.distanceTo(player.feet))
   } else if (game.gears < 3 && sinceGear > FIRST_HINT && quiet > 3) hint()
-  else if (quiet > QUIET_BEFORE_BARK) bark()
+  else updateBanter(dt)
 }

@@ -39,9 +39,6 @@ export function setFloatingLevel(gearsFound) {
 }
 setFloatingLevel(0)
 
-// Whether a teacup is dodging Fries right now.
-export const cupDodging = () => items.some(it => it.kind === 'teacup' && it.away.lengthSq() > 0.04 * player.p.scale ** 2)
-
 const chest = new THREE.Vector3(), push = new THREE.Vector3(), offset = new THREE.Vector3(), near = new THREE.Vector3()
 let clock = 0
 
