@@ -21,6 +21,7 @@ canvas { display: block; }
 #subtitle.hare { color: #ffc9a3; }
 #subtitle.dormouse { color: #b8e0ff; }
 
-#size-hint { position: fixed; left: 0; right: 0; top: 18%; text-align: center; font-size: 22px; text-shadow: 0 1px 3px #000; opacity: 0; pointer-events: none; }
+#objective { position: fixed; top: 16px; left: 20%; right: 20%; text-align: center; font-size: 15px; text-shadow: 0 1px 3px #000; pointer-events: none; }
+#controls { position: fixed; right: 16px; bottom: 16px; font-size: 12px; text-shadow: 0 1px 3px #000; pointer-events: none; }
 
 #task-hint { position: fixed; left: 12%; right: 12%; top: 24%; text-align: center; font-size: 20px; text-shadow: 0 1px 3px #000; pointer-events: none; }
