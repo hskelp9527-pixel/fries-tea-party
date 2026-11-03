@@ -84,7 +84,7 @@ export function setSize(size, seconds = 1.2) {
 
 function resize(dt) {
   if (ease >= 1) return
-  ease = Math.min(1, ease + dt / duration)
+  ease = duration ? Math.min(1, ease + dt / duration) : 1 // a zero-length change snaps (0 / 0 would turn every size value into NaN)
   const k = ease * ease * (3 - 2 * ease)
   const to = SIZES[player.size]
   for (const key in to) player.p[key] = from[key] + (to[key] - from[key]) * k
