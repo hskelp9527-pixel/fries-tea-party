@@ -1,16 +1,19 @@
 import * as THREE from 'three/webgpu'
 import {
-  pass, mrt, normalView, normalWorldGeometry, uniform, vec3, vec4, float, Fn, mix, dot, pow, exp, smoothstep, screenUV,
+  pass, mrt, normalView, normalWorldGeometry, uniform, vec3, vec4, float, Fn, dot, pow, exp, screenUV,
   positionWorld, cameraPosition, cameraViewMatrix, positionViewDirection, materialEmissive, texture3D, renderOutput,
   output, context, fog,
 } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
 import { ao } from 'three/addons/tsl/display/GTAONode.js'
 import { lut3D } from 'three/addons/tsl/display/Lut3DNode.js'
+import { SUN, skyRadiance, paintedSky } from './sky.js'
+export { SUN, air } from './sky.js'
 
 const params = new URLSearchParams(location.search)
 // ?post=off draws the scene straight to the screen with the renderer's own tone mapping: the no-post baseline.
 // ?view=ao|bloom|haze shows one of the picture's controlling signals instead of the picture.
+// ?view=clouds shows cloud coverage on the sky; ?view=sky-off isolates the clear-air gradient.
 const POST = params.get('post') !== 'off', VIEW = params.get('view')
 
 // WebGPURenderer falls back to its WebGL 2 backend on its own; ?webgl forces that path for testing.
@@ -32,28 +35,8 @@ export const scene = new THREE.Scene()
 export const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 600)
 camera.rotation.order = 'YXZ'
 
-// Six o'clock. One model of the evening air drives the sky, the haze over distant things and the light the sky
-// throws on everything: a low golden sun about 10 degrees up in the north-west, behind the big tree as seen from
-// the table, a lavender zenith, a peach horizon, and a warm glow round the sun.
-export const SUN = new THREE.Vector3(-0.42, 0.18, -0.89).normalize()
 const sunDirection = uniform(SUN)
-export const air = {
-  horizon: uniform(new THREE.Color(1.0, 0.62, 0.4)),
-  zenith: uniform(new THREE.Color(0.42, 0.4, 0.66)),
-  glow: uniform(new THREE.Color(1.6, 0.9, 0.42)),
-}
-const SUN_RADIANCE = 40, SUN_SIZE = 1.1 * Math.PI / 180
-
-// Sky radiance along a direction: horizon to zenith, plus the forward glow of the sun's light in the haze.
-const skyRadiance = Fn(([direction]) => {
-  const up = direction.y.max(0)
-  const toSun = dot(direction, sunDirection).max(0)
-  return mix(air.horizon, air.zenith, pow(up, 0.55)).add(air.glow.mul(pow(toSun, 6).mul(0.5).add(pow(toSun, 48).mul(1.6))))
-})
-
-// The sky, with the sun's disc in it (bright enough to bloom).
-const disc = smoothstep(Math.cos(SUN_SIZE), Math.cos(SUN_SIZE * 0.7), dot(normalWorldGeometry, sunDirection))
-scene.backgroundNode = skyRadiance(normalWorldGeometry).add(vec3(1, 0.85, 0.6).mul(disc.mul(SUN_RADIANCE)))
+scene.backgroundNode = VIEW === 'sky-off' ? skyRadiance(normalWorldGeometry) : paintedSky(normalWorldGeometry, VIEW === 'clouds')
 
 // Haze: clear near, warm far, thicker low down. Its colour is the sky's along the line of sight, just above the
 // horizon, so distant hills melt into the sky behind them, golden towards the sun.
