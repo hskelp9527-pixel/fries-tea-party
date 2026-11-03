@@ -197,8 +197,8 @@ export function updateLens(cinematic, subject) {
   }
   camera.getWorldDirection(lensDirection)
   lens.distance.value = Math.max(camera.near, lensOffset.copy(lens.target ?? subject).sub(camera.position).dot(lensDirection))
-  lens.range.value = Math.max(0.08, lens.distance.value * 0.35)
-  lens.radius.value.set(0.009 / camera.aspect, 0.009)
+  lens.range.value = Math.max(0.08, lens.distance.value * 0.9) // a deep focus: only the far garden softens
+  lens.radius.value.set(0.0045 / camera.aspect, 0.0045)
 }
 
 // Render colour, normals and indirect light together. Capture the lighting context through a zero GI input;
@@ -251,7 +251,9 @@ const atmosphericHdr = hdr.add(shaftLight)
 
 // Signed circle of confusion in alpha, linear HDR in RGB. Both lens buffers are half resolution,
 // capped at 960 x 540. Depth-similar taps keep soft background bokeh off the sharp subject's silhouette.
-const coc = viewDistance.sub(lens.distance).div(viewDistance.max(0.01)).mul(lens.distance.div(lens.range)).clamp(-1, 1)
+// Nearer than focus blurs at a quarter strength, so foreground characters and props stay readable.
+const rawCoc = viewDistance.sub(lens.distance).div(viewDistance.max(0.01)).mul(lens.distance.div(lens.range)).clamp(-1, 1)
+const coc = rawCoc.max(0).add(rawCoc.min(0).mul(0.25))
 const lensSource = rtt(vec4(atmosphericHdr.rgb, coc), null, null, { depthBuffer: false })
 const bokeh = rtt(Fn(() => {
   const centre = lensSource.sample(screenUV).toVar()
