@@ -1,0 +1,36 @@
+{
+  "status": "awaiting_independent_review",
+  "production": {
+    "script": "/assets/index-sTRL8ZKV.js",
+    "sha256": "f0ff62f974d85202964cb72cce7b20ceed8b98b12a0e9fd145ac2739779e5fec"
+  },
+  "normalPlay": "independent_functional_foundation_accepted_and_new_unskipped_production_route_passed",
+  "interior": "connected_home_walk_pickup_read_exit_independently_accepted_and_new_main_route_passed",
+  "localization": "independent_text_foundation_and_eight_preference_cases_accepted_new_production_two_page_trace_passed",
+  "visual": "final_candidate_pending_independent_review",
+  "independentDecision": "pending",
+  "automatedChecks": {
+    "status": "passed",
+    "jobs": 17,
+    "record": "art/review/2026-11-11/revision/final/checks.json"
+  },
+  "reviewBlock": {
+    "native": "Configured gpt-6.1-sol reviewer cannot start on the current account",
+    "pendingChoice": "User confirmation to use supported Codex reviewer or authorize external Claude review",
+    "external": "Automatic approval rejected external project-data transfer; Claude review was not executed"
+  },
+  "remaining": [
+    "final_independent_dimension_scores_and_decision",
+    "recheck_latest_sloped_panorama_and_visible_cake_bite",
+    "watch_hand_gesture_finish",
+    "close_face_surface_transitions",
+    "foliage_massing_light_and_actor_composition",
+    "grotto_and_cottage_material_consistency"
+  ],
+  "reviews": [
+    "review-2026-11-11-independent.md",
+    "review-gameplay-localization-interior.md",
+    "review-followup-2026-11-11.md",
+    "review-production-2026-11-12.md"
+  ]
+}

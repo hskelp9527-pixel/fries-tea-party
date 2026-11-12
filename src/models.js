@@ -5,19 +5,57 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { RAPIER, world } from './physics.js'
 import { shapes } from './layout.js'
 import { rimLit } from './scene.js'
+import { loading } from './loading.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
+import files from 'virtual:tea-models'
 
 // Every art/models/<name>.glb on disk at build time, the garden kit in art/models/kit/ included, named by file.
 // Dropping a file in replaces that model's boxes. art/models/blender/ holds modelling work files, some with the same
 // names as the finished models, so it is left out.
-const files = import.meta.glob(['/art/models/**/*.glb', '!/art/models/blender/**'], { eager: true, query: '?url', import: 'default' })
 const loader = new GLTFLoader()
+loader.setMeshoptDecoder(MeshoptDecoder)
 const gltfs = {}
+let loadedModels = 0
 await Promise.all(Object.entries(files).map(async ([path, url]) => {
-  const gltf = gltfs[path.split('/').pop().slice(0, -'.glb'.length)] = await loader.loadAsync(url)
+  const gltf = await loader.loadAsync(url)
+  // Decode normalized quantized attributes before CPU geometry edits or merges.
+  gltf.scene.traverse(mesh => {
+    if (!mesh.isMesh) return
+    for (const name of ['position', 'normal', 'uv', 'uv1', 'uv2', 'color']) {
+      const attr = mesh.geometry.getAttribute(name)
+      if (!attr || attr.array instanceof Float32Array) continue
+      const array = new Float32Array(attr.count * attr.itemSize)
+      for (let i = 0; i < attr.count; i++) for (let c = 0; c < attr.itemSize; c++) array[i * attr.itemSize + c] = attr.getComponent(i, c)
+      mesh.geometry.setAttribute(name, new THREE.BufferAttribute(array, attr.itemSize))
+    }
+  })
+  if (/\/long_table(?:_dressed)?\.glb$/.test(path)) {
+    // The source model's long stretchers were only 8 cm above the soil,
+    // sealing the table's sides for the 22 cm small player. Lift the visible
+    // rails and their collision geometry together to leave a real crawl space.
+    gltf.scene.updateMatrixWorld(true)
+    const point=new THREE.Vector3(),inverse=new THREE.Matrix4()
+    gltf.scene.traverse(mesh=>{
+      if(!mesh.isMesh)return
+      const positions=mesh.geometry.attributes.position
+      inverse.copy(mesh.matrixWorld).invert()
+      let changed=false
+      for(let i=0;i<positions.count;i++){
+        point.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld)
+        if(Math.abs(point.x)<3.95&&point.y>.075&&point.y<.17&&Math.abs(point.z)>.82&&Math.abs(point.z)<.96){
+          point.y+=.22;point.applyMatrix4(inverse);positions.setXYZ(i,point.x,point.y,point.z);changed=true
+        }
+      }
+      if(changed){positions.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingBox();mesh.geometry.computeBoundingSphere()}
+    })
+  }
   stripRootMotion(gltf)
   // The characters (the models with clips) catch the sun on their edges.
   if (gltf.animations.length) gltf.scene.traverse(o => { if (o.isMesh) o.material = rimLit(o.material) })
   else if (!gltf.scene.getObjectsByProperty('isSkinnedMesh', true).length) mergeStaticMeshes(gltf.scene)
+  // The runtime needs the scene and clips, not the parser's obsolete buffer and node caches.
+  gltfs[path.split('/').pop().slice(0, -'.glb'.length)]={scene:gltf.scene,animations:gltf.animations}
+  loading('Setting the tea table...', ++loadedModels, Object.keys(files).length)
 }))
 
 // Keep independently addressed parts and their descendants in their original frames. Other static leaves can
@@ -73,10 +111,14 @@ export const clips = name => gltfs[name] ? gltfs[name].animations : []
 const box = new THREE.BoxGeometry()
 const DEG = Math.PI / 180
 const materials = {}
+const shadowCasters = new Set(['fries', 'hatter', 'hare', 'dormouse', 'big_tree', 'long_table',
+  'long_table_dressed', 'armchair', 'house', 'porch', 'fountain', 'tree_door', 'wall_stone',
+  'fence_picket', 'fence_broken', 'steps_stone', 'hat_rack'])
 
 // A new instance of a model: the glb when present, otherwise its placeholder boxes.
 export function model(name) {
   const object = gltfs[name] ? clone(gltfs[name].scene) : new THREE.Group()
+  object.userData.asset = name
   if (!gltfs[name]) {
     for (const [x, y, z, w, h, d, colour, rx = 0, ry = 0, rz = 0] of shapes[name]) {
       const mesh = new THREE.Mesh(box, materials[colour] ??= new THREE.MeshStandardMaterial({ color: colour, roughness: 0.85 }))
@@ -87,7 +129,12 @@ export function model(name) {
     }
   }
   object.rotation.order = 'YXZ'
-  object.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true })
+  object.traverse(o => {
+    if (!o.isMesh) return
+    o.castShadow = shadowCasters.has(name) && !o.name.startsWith('dress_')
+    o.receiveShadow = true
+    o.userData.shadowDynamic = ['fries', 'hatter', 'hare', 'dormouse', 'armchair', 'tree_door'].includes(name)
+  })
   return object
 }
 

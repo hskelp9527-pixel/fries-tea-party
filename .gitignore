@@ -8,6 +8,7 @@ audio/*
 TEA_PARTY.md
 TEA_PARTY_SCRIPT.md
 CHARACTER_CHECKLIST.md
+DIAGNOSIS.md
 canvas/
 
 node_modules/
@@ -17,6 +18,9 @@ __pycache__/
 # Subtitle languages other than English are added locally
 src/lang/*.json
 !src/lang/en.json
+!src/lang/zh.json
 
 # Local look-dev test page
 lookdev/
+
+.ohmygame-install-pending

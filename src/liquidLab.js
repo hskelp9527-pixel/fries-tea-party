@@ -1,11 +1,13 @@
 import * as THREE from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { renderer } from './scene.js'
 import { stream, surface, sheet, updateLiquids, liquidDebug, TEA, SYRUP, CUP_PROFILE } from './liquids.js'
-import potURL from '/art/models/pink_teapot.glb?url'
-import cupURL from '/art/models/teacup.glb?url'
+import media from 'virtual:tea-models'
+const potURL = media['/art/models/pink_teapot.glb']
+const cupURL = media['/art/models/teacup.glb']
 
 // Visual contract: downward advection without post, attached spout, falling tail,
 // contained fill, and identical local proportions/timing at 1x and 0.18x.
@@ -47,6 +49,7 @@ for (const x of [-0.75, 0.75]) for (const z of [-0.35, 0.35]) {
 }
 
 const loader = new GLTFLoader()
+loader.setMeshoptDecoder(MeshoptDecoder)
 const [potAsset, cupAsset] = await Promise.all([loader.loadAsync(potURL), loader.loadAsync(cupURL)])
 function asset(source, parent) {
   const object = source.scene.clone(true)
@@ -175,7 +178,7 @@ window.liquidLab = { scene, camera, controls, demos, liquidDebug, seek(index, se
   for (const demo of demos) demo.reset()
   for (let t = 0; t < seconds; t += 1 / 120) {
     for (const demo of demos) demo.update(1 / 120)
-    updateLiquids(1 / 120)
+    updateLiquids(1 / 120, camera)
   }
   window.liquidLab.view(index)
   paused = true
@@ -186,7 +189,7 @@ renderer.setAnimationLoop(now => {
   last = now
   if (!paused) {
     for (const d of demos) d.update(dt)
-    updateLiquids(dt)
+    updateLiquids(dt, camera)
   }
   controls.update()
   renderer.info.reset()

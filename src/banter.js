@@ -66,16 +66,25 @@ async function run(exchange) {
   busy = true
   const { lines, to } = exchange
   if (exchange.id) played.add(exchange.id)
+  let completed = 0
   for (let i = 0; i < lines.length; i++) {
-    if (queued) break
+    if (queued || !canBanter()) break
     talk = { speaker: speakers[lines[i]], to: exchange.about ? (i % 3 === 2 ? 'fries' : speakers[lines[i + 1]] ?? speakers[lines[i - 1]]) : to ?? speakers[lines[i + 1]] ?? speakers[lines[i - 1]] }
-    await say(lines[i], distance(talk.speaker) * (exchange.shout ? 0.35 : 1))
+    const finished = await say(lines[i], distance(talk.speaker) * (exchange.shout ? 0.35 : 1))
+    // A scripted line can take the voice channel away before control returns to Fries.
+    if (!finished) break
+    completed++
     await new Promise(resolve => setTimeout(resolve, 400))
+  }
+  if (completed === lines.length && !game.sceneSkipping) {
+    const key = exchange.id ?? lines.join(',')
+    const discovered = game.discovered ??= []
+    if (!discovered.includes(key)) discovered.push(key)
   }
   talk = null
   busy = false
   gap = 15 + Math.random() * 25
-  if (queued) {
+  if (queued && canBanter() && !speaking()) {
     const next = queued
     queued = null
     run(next)
@@ -88,7 +97,7 @@ export function event(name) {
   const next = choices.sort((a, b) => (a.last ?? -1) - (b.last ?? -1))[0]
   next.last = ++eventOrder
   queued = next
-  if (!busy && !speaking()) {
+  if (canBanter() && !busy && !speaking()) {
     queued = null
     run(next)
   }
@@ -96,6 +105,7 @@ export function event(name) {
 
 // Fries in a chair (the banter turns to him); see explore.js.
 export const banter = { seated: false }
+const canBanter=()=>!game.paused&&!game.sceneDepth&&(player.control||banter.seated)
 
 function context() {
   const near = zone => Math.hypot(player.feet.x - zones[zone].pos[0], player.feet.z - zones[zone].pos[1]) < zones[zone].r * player.p.scale ** 0.5
@@ -104,6 +114,8 @@ function context() {
 
 // Each frame while Fries explores: the next exchange when it is due, now and then the March Hare changing seats.
 export function updateBanter(dt) {
+  // Interactions and the finale own the voices while they control Fries.
+  if (!canBanter()) return
   if (game.gears > observedGears) {
     observedGears = game.gears
     event('gear')

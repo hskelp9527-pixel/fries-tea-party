@@ -3,31 +3,50 @@ import { renderer, scene, camera, air, pink, lens } from './scene.js'
 import { things, gears, clocks, doors, wake } from './garden.js'
 import { roses } from './foliage.js'
 import { model } from './models.js'
-import { start, song, page as pageStand } from './layout.js'
+import { start, song, repair, page as pageStand } from './layout.js'
+import { centreProp } from './prop-staging.js'
 import contacts from '../docs/fries_hand_contacts.json'
 import { player, placePlayer, act, walkTo, anim } from './player.js'
-import { hold, holdCast, release, fly, palmAt } from './hands.js'
-import { setMusic, say, burst } from './audio.js'
+import { hold, holdCast, release, fly, toHand } from './hands.js'
+import { setMusic, say, burst, prepareMusic } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { startExplore } from './explore.js'
 import { setFloatingLevel } from './floating.js'
 import { playSong } from './song.js'
-import { cast, stand } from './cast.js'
-import { game } from './state.js'
+import { cast, stand, standUp } from './cast.js'
+import { setHandTarget, clearHandTarget } from './contact-ik.js'
+import { contactWeight } from './clip-catalog.js'
+import { onSceneCleanup } from './cutscene.js'
+import { tr } from './i18n.js'
+import { game, setPhase, savedGame } from './state.js'
 
 const DEG = Math.PI / 180
 const v = (...a) => new THREE.Vector3(...a)
-const PINK_SKY = { horizon: new THREE.Color(1.12, 0.62, 0.72), zenith: new THREE.Color(0.52, 0.43, 0.82), glow: new THREE.Color(1.35, 0.78, 0.6) }
-const EVENING = Object.fromEntries(Object.keys(PINK_SKY).map(k => [k, air[k].value.clone()]))
 
 // 6:01: the sky and the whole picture turn pink, `t` from 0 to 1.
 export function turnPink(t) {
-  for (const k in PINK_SKY) air[k].value.lerpColors(EVENING[k], PINK_SKY[k], t)
   pink.value = t
 }
 
 // Starts the chapter. `from` (the ?start= parameter) skips ahead for testing: explore, song or ending.
 export async function begin(from) {
+  if (from === 'resume') {
+    const save = savedGame()
+    if (save) {
+      game.elapsed = save.elapsed ?? 0
+      Object.assign(game.rhythm, save.rhythm)
+      game.discovered = save.discovered ?? []
+      game.puzzles = save.puzzles ?? {}
+      game.puzzleMistakes = save.puzzleMistakes ?? 0
+      for (const g of gears) if (save.found.includes(g.layer)) {
+        g.found = true; g.object.visible = false; wake(g.layer)
+      }
+      game.found = gears.filter(g => g.found).map(g => g.layer)
+      game.gears = game.found.length
+      setFloatingLevel(game.gears)
+      from = save.phase === 'explore' ? 'explore' : save.phase === 'ending' ? 'ending' : 'song'
+    }
+  }
   if (from === 'song' || from === 'ending') {
     for (const g of gears) {
       g.found = true
@@ -35,6 +54,7 @@ export async function begin(from) {
       wake(g.layer)
     }
     game.gears = 3
+    game.found = gears.map(g => g.layer)
     setFloatingLevel(3)
   }
   if (from === 'ending') {
@@ -42,20 +62,40 @@ export async function begin(from) {
     return ending()
   }
   if (from === 'song') return finale()
-  if (from !== 'explore') await opening()
+  if (from !== 'explore') { setPhase('opening'); await opening() }
   else placePlayer(start.pos, start.rot) // where the opening leaves him; the default origin is under the table
   startExplore(finale)
 }
 
 async function finale() {
+  setPhase('mending')
   const hatter = cast.hatter, watch = things.pocket_watch
-  await walkTo([hatter.object.position.x - 0.3, 0, hatter.object.position.z + 0.75], 160)
+  const watchHome=watch.position.clone()
+  await walkTo([-2.5,0,-6.05],180)
+  if(hatter.seated)await standUp('hatter')
+  await stand('hatter',{pos:[-2.5,0,-6.85],rot:0},.8)
+  await arc(watch,v(-2.5,1.02,-6.45),.12,.65)
   hatter.doing = 'mend'
   act('mend')
-  holdCast(watch, hatter.object, 'RightHand', [0, 0.025, 0])
+  const watchScale=watch.scale.clone(),watchRotation=watch.quaternion.clone()
+  watch.scale.multiplyScalar(repair.scale);watch.rotation.set(-Math.PI/2,0,0)
+  const work=new THREE.Vector3(...repair.centre);centreProp(watch,work)
+  const restoreWatch=()=>{watch.scale.copy(watchScale);watch.quaternion.copy(watchRotation);watch.position.copy(watchHome)}
+  onSceneCleanup(restoreWatch)
+  for(const actor of [player.mesh,hatter.object])for(const side of ['left','right']){
+    const [x,y,z]=repair.hands[actor===player.mesh?'fries':'hatter']
+    setHandTarget(actor,side,'watch-repair',target=>target.copy(work).add(new THREE.Vector3((side==='left'?-1:1)*x,y,z)),()=>contactWeight('mend',anim.current?.time??0,18.54))
+  }
+  onSceneCleanup(()=>{clearHandTarget(player.mesh,'watch-repair');clearHandTarget(hatter.object,'watch-repair')})
+  // Keep the work and both hands readable during the repair, rather than a distant view.
+  player.cinematic = true
+  await shot(v(...repair.camera),work)
   await wait(Math.max(hatter.anim.actions.mend.getClip().duration, anim.actions.mend.getClip().duration))
   release(watch)
+  clearHandTarget(player.mesh,'watch-repair')
+  clearHandTarget(hatter.object,'watch-repair')
   hatter.doing = null
+  restoreWatch()
   await playSong()
   await wait(1.5)
   await ending()
@@ -91,6 +131,7 @@ const arc = (object, to, height, seconds) => {
 
 async function opening() {
   cutscene()
+  await prepareMusic('opening')
   setMusic({ opening: 1 }, 0)
   const watch = things.pocket_watch, page = things.book_page, home = watch.position.clone()
   for (const g of gears) {
@@ -156,6 +197,8 @@ async function opening() {
 }
 
 async function ending() {
+  await prepareMusic('ending')
+  setPhase('ending')
   cutscene()
   document.getElementById('hud').textContent = ''
   const watch = things.pocket_watch, page = things.book_page, door = doors.tree.pivot
@@ -177,7 +220,7 @@ async function ending() {
   await Promise.all([say('ED-02'), stand('hare', { pos: [0.6, 0, -8.4], rot: -60 }, 0.8)])
   cast.hatter.doing = 'stuff'
   cast.hare.doing = 'stuff'
-  await Promise.all([say('ED-03'), stand('dormouse', { pos: [teapot.x, teapot.y + 0.12, teapot.z], rot: 90 }, 1.2, 0.5)])
+  await Promise.all([say('ED-03'), stand('dormouse', { pos: [teapot.x, teapot.y + 0.12, teapot.z], rot: 90 }, 1.2, 0.5),wait(4.5)])
 
   cast.hatter.doing = null
   cast.hare.doing = null
@@ -189,8 +232,7 @@ async function ending() {
   page.visible = true
   act('reach')
   await wait(contacts.reach.time - 1.5)
-  await fly(page, end => palmAt('reach', end), 1.5, 0.4)
-  hold(page, { clip: 'reach', grip: pageStand.grip })
+  await toHand(page, { clip: 'reach', grip: pageStand.grip }, { seconds: 1.5, height: .4 })
   await Promise.all([say('ED-04'), tween(1.5, t => { door.rotation.y = 100 * DEG * t })])
 
   // Fries walks round the table to the door; the three ignore him completely.
@@ -206,6 +248,13 @@ async function ending() {
   await shot(v(-8.38, 1.6, -10.59), v(-4.78, 1.3, -16.89))
   await Promise.all([say('ED-08'), walk([[-6.38, 0, -13.99]], 1)])
   await wait(0.4)
+  setPhase('complete')
+  document.exitPointerLock()
+  const minutes = Math.floor(game.elapsed / 60), seconds = Math.floor(game.elapsed % 60)
+  document.getElementById('result-time').textContent = `${minutes}:${String(seconds).padStart(2, '0')}`
+  document.getElementById('result-rhythm').textContent = tr('{hits}/{total} notes · best streak {best}',{hits:game.rhythm.hits,total:game.rhythm.total,best:game.rhythm.best})
+  document.getElementById('results').hidden = false
+  document.getElementById('replay').focus()
   renderer.setAnimationLoop(null)
 }
 
@@ -213,7 +262,6 @@ async function ending() {
 async function walk(points, speed) {
   for (const point of points) {
     const from = player.feet.clone(), to = v(...point)
-    player.mesh.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
-    await tween(from.distanceTo(to) / speed, t => player.feet.lerpVectors(from, to, t))
+    await walkTo(point, Math.atan2(to.x-from.x,to.z-from.z)/DEG)
   }
 }

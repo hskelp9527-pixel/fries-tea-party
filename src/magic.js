@@ -101,7 +101,7 @@ const steamFrom = [...cups, things.pink_teapot, things.blue_teapot, things.teapo
 const puffs = Array.from({ length: 48 }, () => {
   const material = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false })
   const age = uniform(1), seed = rand() * 10
-  const soft = smoothstep(0.5, 0.05, uv().sub(0.5).length())
+  const soft = float(1).sub(smoothstep(0.05, 0.5, uv().sub(0.5).length()))
   const wisp = sin(uv().x.mul(9).add(time.mul(1.7)).add(seed)).mul(0.25).add(0.75)
   material.colorNode = vec3(1, 0.97, 0.94)
   material.opacityNode = soft.mul(wisp).mul(sin(age.mul(Math.PI))).mul(0.32)

@@ -8,8 +8,9 @@ import { cast as stage } from './layout.js'
 import { tween } from './tweens.js'
 import { game } from './state.js'
 import { scene } from './scene.js'
-import { holdCast, release } from './hands.js'
+import { holdCast, holdCastAt, release } from './hands.js'
 import { wait } from './tweens.js'
+import { clipInfo, resolveClip, SEATED_GESTURES, STANDING_GESTURES } from './clip-catalog.js'
 
 const DEG = Math.PI / 180
 
@@ -30,8 +31,6 @@ const BEATS = {
   'SG-02': { hare: 'laugh' },
   'ED-02': { hare: 'laugh' },
 }
-const SITTING = { idle: 'sit_idle', talk: 'sit_talk', laugh: 'sit_laugh', yell: 'sit_yell', point: 'sit_point' }
-const STANDING = { idle: 'idle', talk: 'talk', laugh: 'laugh', yell: 'talk', point: 'talk' }
 
 // Where a clip's body rests, in the model's own frame, at `samples` evenly spaced times through the clip (or at
 // its end): for sitting, the height of the buttocks (the lowest point just behind the hip joint); otherwise the
@@ -69,13 +68,26 @@ export function rest(name, clip, buttocks, samples = 1, end = false) {
 export const cast = Object.fromEntries(['hatter', 'hare', 'dormouse'].map(name => {
   const object = things[name], anim = new Animator(object, name)
   const member = { name, object, anim, blink: new Blink(object), armature: object.getObjectByName('Armature'), seated: 'seat' in stage[name], rests: {} }
-  if (member.seated && anim.has('sit_idle')) member.rests.sitting = rest(name, 'sit_idle', true)
+  if (anim.has('sit_idle')) {
+    if (member.seated) member.rests.sitting = rest(name, 'sit_idle', true)
+    const sitting = anim.actions.sit_idle
+    sitting.reset().play()
+    sitting.time = 0
+    anim.mixer.update(0)
+    member.seatPose = []
+    object.traverse(bone => {
+      if (bone.isBone && /(Hips|(?:Left|Right)(?:UpLeg|Leg|Foot|ToeBase|Toe_End))$/.test(bone.name)) member.seatPose.push({ bone, position: bone.position.clone(), quaternion: bone.quaternion.clone() })
+    })
+    sitting.stop()
+  }
   if (name === 'dormouse') {
     for (const clip in anim.actions) member.rests[clip] = rest(name, clip, false, 12)
     const bubble = object.children.find(o => o.geometry?.type === 'SphereGeometry'), head = object.getObjectByName('mixamorigHead')
-    head.attach(bubble)
-    bubble.position.set(0, 0, 0.05).applyQuaternion(object.getWorldQuaternion(new THREE.Quaternion())).add(head.getWorldPosition(new THREE.Vector3()))
-    head.worldToLocal(bubble.position)
+    if (bubble && head) {
+      head.attach(bubble)
+      bubble.position.set(0, 0, 0.05).applyQuaternion(object.getWorldQuaternion(new THREE.Quaternion())).add(head.getWorldPosition(new THREE.Vector3()))
+      head.worldToLocal(bubble.position)
+    }
   }
   return [name, member]
 }))
@@ -101,7 +113,6 @@ export const chairs = placedAll.armchair.map(object => {
 })
 for (const m of Object.values(cast)) if (m.seated) (m.chair = chairs.find(c => c.home.distanceTo(m.object.position) < 0.1)).by = m.name
 
-const ONCE = new Set(['sit_down', 'stand_up', 'sit_scared', 'conduct', 'serve', 'show_watch', 'lean_over', 'mend', 'butter', 'dunk_watch', 'lay_spoon', 'stuff'])
 
 // Magic: the chair slides by itself to `distance` metres back from its home, sparkling, carrying `rider` (a
 // position: a sitter's feet) along with it.
@@ -212,7 +223,8 @@ export function stand(name, { pos, rot }, seconds, hop = 0) {
 function play(m, line) {
   const speaking = line && speakers[line] === m.name
   if (m.doing) {
-    if (m.anim.current !== m.anim.actions[m.doing]) m.anim.play(m.doing, ONCE.has(m.doing))
+    const selected = resolveClip(m.doing, m.seated, m.anim.actions)
+    if (m.anim.current !== m.anim.actions[selected]) m.anim.play(selected)
   }
   else if (m.moving) m.anim.play('walk')
   else if (game.pass >= 1) m.anim.play(game.pass === 1 ? 'dance_swing' : 'dance_silly')
@@ -226,40 +238,67 @@ function play(m, line) {
       m.woken = true
       m.anim.play('wake', true)
     } else if (m.anim.current !== m.anim.actions.wake || !m.anim.current.isRunning()) m.anim.play('sit_talk')
-  } else m.anim.play((m.seated ? SITTING : STANDING)[(line && BEATS[line]?.[m.name]) ?? (speaking ? 'talk' : 'idle')])
+  } else m.anim.play((m.seated ? SEATED_GESTURES : STANDING_GESTURES)[(line && BEATS[line]?.[m.name]) ?? (speaking ? 'talk' : 'idle')])
 }
 
-const lift = new THREE.Vector3()
+const lift = new THREE.Vector3(), parentScale = new THREE.Vector3()
+function applyPosture(m, action, dt) {
+  const clip = action.getClip(), metadata = clipInfo(clip.name), r = m.rests[clip.name]
+  if(!m.seated&&metadata.posture==='upper')m.anim.standLowerBody()
+  const onSeat = m.rests.sitting ? stage[m.name].seat - m.object.position.y - m.rests.sitting.lows[0] : 0
+  if (m.seated && metadata.posture !== 'transition') {
+    // The complete canonical pelvis/leg pose is retained, not merely an upward
+    // root offset applied to a standing clip that would intersect the chair.
+    for (const pose of m.seatPose ?? []) { pose.bone.position.copy(pose.position); pose.bone.quaternion.copy(pose.quaternion) }
+    lift.set(0, onSeat, 0)
+  } else if (metadata.transition) {
+    const progress = Math.min(1, action.time / clip.duration * 1.25)
+    lift.set(0, onSeat * (metadata.transition === 'sit' ? progress : 1 - progress), 0)
+  } else if (r) lift.set(-r.middle.x, -r.lows[Math.floor(action.time / clip.duration * r.lows.length) % r.lows.length], -r.middle.z)
+  else lift.set(0, 0, 0)
+  if (m.armature.parent) {
+    m.armature.parent.getWorldScale(parentScale)
+    lift.set(lift.x / parentScale.x, lift.y / parentScale.y, lift.z / parentScale.z)
+  }
+  if (m.name === 'dormouse' || dt === 0) m.armature.position.copy(lift)
+  else m.armature.position.lerp(lift, Math.min(1, dt * 10))
+  m.object.updateWorldMatrix(true, true)
+}
+
 export function updateCast(dt) {
   const line = currentLine()
   for (const m of Object.values(cast)) {
     play(m, line)
     m.anim.mixer.update(dt)
     m.blink.update(dt, m.anim.current?.getClip().name.includes('sleep'))
-    if (!m.armature) continue
-    const action = m.anim.current, clip = action.getClip(), r = m.rests[clip.name], onSeat = stage[m.name].seat - m.object.position.y - m.rests.sitting?.lows[0]
-    // Sitting down the hips lower onto the seat through the clip; standing up they rise from it.
-    if (clip.name === 'sit_down' || clip.name === 'stand_up') {
-      const k = Math.min(1, action.time / clip.duration * 1.25)
-      lift.set(0, onSeat * (clip.name === 'sit_down' ? k : 1 - k), 0)
-    } else if (m.seated && (clip.name.startsWith('sit_') || ['show_watch', 'mend', 'butter', 'dunk_watch', 'stuff', 'lean_over'].includes(clip.name))) lift.set(0, onSeat, 0)
-    else if (r) lift.set(-r.middle.x, -r.lows[Math.floor(action.time / clip.duration * r.lows.length) % r.lows.length], -r.middle.z)
-    else lift.set(0, 0, 0)
-    if (m.name === 'dormouse') {
-      m.armature.position.copy(lift)
-      m.object.updateMatrixWorld(true)
-    } else m.armature.position.lerp(lift, Math.min(1, dt * 10))
+    if (m.armature && m.anim.current) applyPosture(m, m.anim.current, dt)
   }
 }
 
+// The audit uses the same lower-body mask and support correction as playback.
+export function sampleActorPose(name, clip, time, seated = false) {
+  const member = cast[name]
+  member.seated = seated
+  member.anim.mixer.stopAllAction()
+  member.anim.current = null
+  member.anim.play(clip, true)
+  const action = member.anim.current
+  action.stopFading().setEffectiveWeight(1)
+  action.time = THREE.MathUtils.clamp(time, 0, action.getClip().duration)
+  action.paused = true
+  member.anim.mixer.update(0)
+  applyPosture(member, action, 0)
+}
+
 // The under-table task chooses the bridge point and calls this when the Hare is needed.
-export async function laySpoon(point, spoon = model('spoon'), approach = point) {
+export async function laySpoon(point, spoon = model('spoon'), approach = point,gripPoint=new THREE.Vector3(.115,.001,0)) {
   const m = cast.hare, chair = m.chair
   if (m.seated) await standUp('hare')
   await walk('hare', [[approach.x, approach.z]])
   m.object.rotation.y = Math.atan2(point.x - approach.x, point.z - approach.z)
   scene.add(spoon)
-  holdCast(spoon, m.object, 'RightHand', [0, 0.03, 0])
+  spoon.quaternion.copy(m.object.getWorldQuaternion(new THREE.Quaternion())).multiply(new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP,Math.PI/2))
+  holdCastAt(spoon,m.object,'RightHand',gripPoint)
   m.doing = 'lay_spoon'
   await wait(m.anim.actions.lay_spoon.getClip().duration)
   release(spoon)

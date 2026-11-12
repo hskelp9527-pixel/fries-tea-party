@@ -1,12 +1,13 @@
 import * as THREE from 'three/webgpu'
-import { uniform, uv, sin, fract, smoothstep, mix, pow, dot, float, vec2, vec3, texture, normalMap, positionViewDirection, fwidth, attribute } from 'three/tsl'
-import { scene } from './scene.js'
+import { uniform, uv, sin, cos, fract, smoothstep, mix, pow, dot, float, vec2, vec3, texture, normalMap, positionViewDirection, fwidth, attribute, Fn, cross, varying, transformNormalToView, faceDirection } from 'three/tsl'
+import { scene, camera } from './scene.js'
 import { awake, things } from './garden.js'
 import { effects, syrup } from './layout.js'
 
 export const TEA = new THREE.Color(0.12, 0.028, 0.003), SYRUP = new THREE.Color(0.55, 0.19, 0.018)
 const TAU = Math.PI * 2, fract1 = x => x - Math.floor(x)
 const streams = [], surfaces = [], sheets = []
+export const liquidCounts=()=>({streams:streams.length,surfaces:surfaces.length,sheets:sheets.length})
 const running = s => !s.frozen && (s.layer === 'live' || awake[s.layer])
 export const liquidDebug = uniform(0) // 1: advected field, 2: resolved normals
 
@@ -39,9 +40,9 @@ function flowNormal(run, coordinates, direction, speed) {
 }
 function material(colour, mask = float(1), field = vec3(0.5, 0.5, 1), thickness = 0.01) {
   const m = new THREE.MeshPhysicalNodeMaterial({ color: colour, roughness: 0.09, envMapIntensity: 1.3,
-    clearcoat: 0.65, clearcoatRoughness: 0.12, transmission: 0.18, thickness,
+    clearcoat: 0.65, clearcoatRoughness: 0.12, transmission: 0, thickness,
     attenuationColor: colour, attenuationDistance: thickness * 5, ior: 1.333,
-    transparent: true, depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.015 })
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, alphaTest: 0.015 })
   m.normalNode = normalMap(field, vec2(0.22))
   const fresnel = pow(float(1).sub(dot(m.normalNode, positionViewDirection).abs().saturate()), 5)
   m.opacityNode = mix(0.67, 0.96, fresnel).mul(mask)
@@ -62,6 +63,23 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
   const breakup = mix(1, smoothstep(0.24, 0.52, beads), smoothstep(0.72, 1, along))
   const envelope = smoothstep(tail, tail.add(0.025), along).mul(float(1).sub(smoothstep(head.sub(0.025), head, along)))
   const m = material(colour, envelope.mul(breakup), field, radius * 2)
+  const source = uniform(from), destination = uniform(to), flightTime = uniform(1)
+  const gravity = 9.81 * radius / 0.007, rise = Math.sqrt(2 * gravity * height)
+  const gpuGravity=uniform(gravity),gpuRise=uniform(rise),gpuRadius=uniform(radius),gpuSpeed=uniform(Math.sqrt(gravity*radius))
+  const seconds = along.mul(flightTime), delta = destination.sub(source)
+  const tangent = vec3(delta.x, gpuRise.sub(seconds.mul(gpuGravity)).mul(flightTime), delta.z).normalize()
+  const reference = tangent.z.abs().greaterThan(0.9).select(vec3(1, 0, 0), vec3(0, 0, 1))
+  const binormal = cross(tangent, reference).normalize(), normal = cross(binormal, tangent)
+  const angle = uv().y.mul(TAU), radial = normal.mul(cos(angle)).add(binormal.mul(sin(angle)))
+  const speed = gpuRise.sub(seconds.mul(gpuGravity)).pow(2).add(delta.xz.lengthSq().div(flightTime.pow(2))).sqrt()
+  const width = gpuRadius.div(speed.div(gpuSpeed).mul(0.25).add(1).sqrt())
+  const terminal = smoothstep(0.72, 1, along)
+  const bead = sin(along.mul(95).sub(run.mul(26))).mul(0.5).add(0.5).pow(0.55).mul(0.75).add(0.25)
+  const pulse = sin(along.mul(40).sub(run.mul(18))).mul(0.13).add(1).mul(mix(1, bead, terminal))
+  const centreLine = mix(source, destination, along)
+  m.positionNode = vec3(centreLine.x, source.y.add(seconds.mul(gpuRise)).sub(seconds.pow(2).mul(gpuGravity).mul(.5)), centreLine.z).add(radial.mul(width).mul(pulse))
+  m.normalNode = transformNormalToView(varying(radial)).mul(faceDirection).normalize()
+  m.opacityNode = mix(0.67, 0.96, pow(float(1).sub(dot(m.normalNode, positionViewDirection).abs().saturate()), 5)).mul(envelope).mul(breakup)
   const g = new THREE.BufferGeometry(), segments = 64, sides = 10
   const positions = new Float32Array((segments + 1) * (sides + 1) * 3), uvs = [], indices = []
   for (let i = 0; i <= segments; i++) for (let j = 0; j <= sides; j++) {
@@ -71,7 +89,8 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
       indices.push(a, a + 1, b, b, a + 1, b + 1)
     }
   }
-  g.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage))
+  g.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(positions.length).map((_, i) => i % 3 === 2 ? 1 : 0), 3))
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
   g.setIndex(indices)
   const body = new THREE.Mesh(g, m), group = new THREE.Group()
@@ -88,10 +107,13 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
   droplets.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   droplets.frustumCulled = false
   group.add(droplets)
-  const point = new THREE.Vector3(), tangent = new THREE.Vector3(), n = new THREE.Vector3(), b = new THREE.Vector3()
+  const point = new THREE.Vector3()
+  g.boundingSphere = new THREE.Sphere()
+  const previousFrom = new THREE.Vector3(), previousTo = new THREE.Vector3()
+  let initialized = false, previousClock = -1
   const matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion(), size = new THREE.Vector3()
   const s = { group, body, rings, droplets, from, to, layer, frozen, run, flight: 0, age: layer === 'live' && !frozen ? 0 : null, stopped: null, release: false,
-    start() { s.age = s.frozen ? null : 0; s.stopped = null; head.value = s.frozen ? 2 : 0; tail.value = -1 },
+    start() { initialized = false; s.age = s.frozen ? null : 0; s.stopped = null; head.value = s.frozen ? 2 : 0; tail.value = -1 },
     stop() { s.stopped ??= s.age },
     remove() { s.stop(); s.release = true },
     dispose() {
@@ -101,39 +123,20 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
     },
     update(dt) {
       const live = running(s)
+      if (!live && initialized && previousClock === run.value && previousFrom.equals(from) && previousTo.equals(to)) return
       if (live) run.value += dt
       // Scale gravity with the authored nozzle size: similar pours retain their timing at every scale.
-      const gravity = 9.81 * radius / 0.007, rise = Math.sqrt(2 * gravity * height)
       const duration = (rise + Math.sqrt(rise * rise + 2 * gravity * Math.max(0.00001, from.y - to.y))) / gravity
       s.flight = duration
+      flightTime.value = duration
+      g.boundingSphere.center.lerpVectors(from, to, 0.5)
+      g.boundingSphere.radius = from.distanceTo(to) / 2 + height + radius * 10
       if (s.age === null) s.age = duration
       if (live) {
         s.age += dt
         head.value = s.age / duration
         tail.value = s.stopped === null ? -1 : (s.age - s.stopped) / duration
       }
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments, seconds = t * duration
-        point.lerpVectors(from, to, t)
-        point.y = from.y + rise * seconds - gravity * seconds * seconds / 2
-        tangent.copy(to).sub(from); tangent.y = (rise - gravity * seconds) * duration; tangent.normalize()
-        n.set(0, 0, 1)
-        if (Math.abs(tangent.z) > 0.9) n.set(1, 0, 0)
-        b.crossVectors(tangent, n).normalize(); n.crossVectors(b, tangent)
-        const velocity = Math.sqrt((rise - gravity * seconds) ** 2 + ((to.x - from.x) ** 2 + (to.z - from.z) ** 2) / duration ** 2)
-        const r = radius / Math.sqrt(1 + velocity / Math.sqrt(gravity * radius) * 0.25)
-        const terminal = THREE.MathUtils.smoothstep(t, 0.72, 1)
-        const bead = 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(t * 95 - run.value * 26)) ** 0.55
-        const pulse = (1 + 0.13 * Math.sin(t * 40 - run.value * 18)) * (1 - terminal + terminal * bead)
-        for (let j = 0; j <= sides; j++) {
-          const a = j / sides * TAU, k = (i * (sides + 1) + j) * 3
-          positions[k] = point.x + (n.x * Math.cos(a) + b.x * Math.sin(a)) * r * pulse
-          positions[k + 1] = point.y + (n.y * Math.cos(a) + b.y * Math.sin(a)) * r * pulse
-          positions[k + 2] = point.z + (n.z * Math.cos(a) + b.z * Math.sin(a)) * r * pulse
-        }
-      }
-      g.attributes.position.needsUpdate = true
-      g.computeVertexNormals(); g.computeBoundingSphere()
       const hitting = head.value >= 1 && tail.value < 1
       for (const ring of rings) {
         const k = fract1(run.value * 1.8 + ring.userData.phase)
@@ -151,6 +154,7 @@ export function stream(from, to, { height = 0.1, radius = 0.01, colour = TEA, la
         droplets.setMatrixAt(i, matrix.compose(point, rotation, size))
       }
       droplets.instanceMatrix.needsUpdate = true
+      previousFrom.copy(from); previousTo.copy(to); previousClock = run.value; initialized = true
       if (s.release && tail.value > 1.1) s.dispose()
     } }
   streams.push(s); s.update(0)
@@ -175,7 +179,7 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
   const wave = sin(distance.mul(48).sub(run.mul(4))).mul(0.055)
   const field = vec3(flow.xy.add(radial.div(distance).mul(wave)), flow.z)
   const surfaceMaterial = material(colour, float(1), field, radius * 0.3)
-  surfaceMaterial.transmission = 0.06
+  surfaceMaterial.transmission = 0
   surfaceMaterial.clearcoat = 0.35
   surfaceMaterial.opacityNode = float(0.97)
   const disc = new THREE.Mesh(new THREE.CircleGeometry(radius, 64).rotateX(-Math.PI / 2), surfaceMaterial)
@@ -189,7 +193,7 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
   steam.frustumCulled = false
   parent.add(steam)
   const matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion(), p = new THREE.Vector3(), size = new THREE.Vector3()
-  const s = { disc, steam, layer, frozen, run, fill,
+  const s = { disc, steam, layer, frozen, run, fill, removed:false,
     set(f) {
       s.fill = THREE.MathUtils.clamp(f, 0, 1)
       const floor = profile ? profile[0][0] : centre.y, height = THREE.MathUtils.lerp(floor, top, s.fill)
@@ -197,10 +201,16 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
       disc.scale.setScalar(profile ? innerRadius(profile, height) / radius : 1)
       disc.visible = s.fill > 0
     },
-    remove() { disc.removeFromParent(); steam.removeFromParent(); disc.geometry.dispose(); disc.material.dispose(); steam.dispose(); steamGeometry.dispose(); steamMaterial.dispose(); surfaces.splice(surfaces.indexOf(s), 1) },
+    remove() {
+      if(s.removed)return
+      s.removed=true
+      disc.removeFromParent();steam.removeFromParent();disc.geometry.dispose();disc.material.dispose();steam.dispose();steamGeometry.dispose();steamMaterial.dispose()
+      const index=surfaces.indexOf(s);if(index>=0)surfaces.splice(index,1)
+    },
     update(dt) {
       if (running(s)) run.value += dt
       steam.visible = hot && s.fill > 0 && running(s)
+      if (!steam.visible) return
       for (let i = 0; i < 9; i++) {
         const age = fract1(run.value * 0.28 + i / 9), angle = i * 2.39996
         p.copy(disc.position)
@@ -221,6 +231,31 @@ export function surface(parent, centre, radius, top, { colour = TEA, fill = 1, l
 // A second pooled draw owns detached ropes, splash droplets and fine spray.
 export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'live', parent = scene, frozen = false, spread = radius * 0.42, drift = new THREE.Vector2(), rippleReach = radius * 0.24 } = {}) {
   const run = uniform(0), amount = uniform(1), kind = attribute('liquidPart', 'float')
+  // Local polar UVs own the curtain, foam and ripples. Only their clock changes;
+  // geometry, opacity and normals all derive from this same bounded field on the GPU.
+  const fall = top - bottom, landing = radius * 1.05 + spread
+  const ringPhase = attribute('liquidPhase', 'float')
+  const ringAge = fract(run.mul(0.9).add(ringPhase))
+  const ringInner = kind.equal(1).select(landing - radius * 0.055, ringAge.mul(rippleReach).add(landing))
+  const ringWidth = kind.equal(1).select(radius * 0.12, radius * 0.014)
+  const ringLift = kind.equal(1).select(radius * 0.055, radius * 0.005)
+  const ringOpacity = kind.equal(1).select(0.88, float(1).sub(ringAge).pow(2).mul(0.45))
+  const shape = Fn(([coord]) => {
+    const angle = coord.x.mul(TAU), v = coord.y
+    const flight = v.sub(0.08).div(0.92).max(0)
+    const lobe = sin(angle.mul(11).add(sin(angle.mul(5).add(flight.mul(8)).sub(run.mul(2))).mul(0.45)))
+    const wave = sin(angle.mul(23).sub(flight.mul(9)).add(run.mul(3)))
+    const wobble = lobe.mul(0.028).add(wave.mul(0.018)).mul(radius)
+    const roll = v.div(0.08).min(1).mul(Math.PI / 2)
+    const r = sin(roll).mul(0.09).add(0.96).mul(radius).add(flight.mul(spread)).add(wobble.mul(flight.add(0.65)))
+    const height = cos(roll).mul(radius * 0.025).add(top).sub(flight.pow(2).mul(fall))
+      .add(sin(angle.mul(17).add(flight.mul(24)).sub(run.mul(9))).mul(radius * 0.022).mul(flight.add(0.2)))
+    const curtain = vec3(cos(angle).mul(r).add(flight.mul(drift.x)), height, sin(angle).mul(r).add(flight.mul(drift.y)))
+    const churn = sin(angle.mul(31).sub(run.mul(11))).mul(sin(angle.mul(19).add(run.mul(7))))
+    const rr = ringInner.add(v.mul(ringWidth)).add(churn.mul(radius * 0.006))
+    const ring = vec3(cos(angle).mul(rr).add(drift.x), sin(v.mul(Math.PI)).mul(ringLift).mul(churn.mul(0.35).add(1)).add(bottom + radius * 0.008), sin(angle).mul(rr).add(drift.y))
+    return kind.equal(0).select(curtain, ring)
+  })
   const a = uv().x.mul(TAU), t = uv().y
   const warp = sin(a.mul(5).add(t.mul(8)).sub(run.mul(2))).mul(0.45)
   const lobes = sin(a.mul(11).add(warp)).mul(0.22)
@@ -233,18 +268,53 @@ export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'li
   const foam = kind.equal(0).select(crest, kind.equal(1).select(float(0.65).add(lobes.mul(0.3)), float(0.12)))
   const field = flowNormal(run, vec2(uv().x.mul(4), t.mul(0.7)), vec2(0, -1), 1.1)
   const m = material(colour, float(1), field, radius * 0.035)
-  // Covered fragments are dense liquid; holes supply the lower curtain's transparency.
-  m.transmission = 0; m.transparent = false; m.forceSinglePass = true; m.depthWrite = true; m.alphaToCoverage = true
-  m.opacityNode = kind.equal(0).select(coverage.mul(0.96), attribute('liquidFade', 'float')).mul(amount)
-  m.alphaTest = 0.2
-  m.colorNode = liquidDebug.equal(1).select(vec3(coverage, foam, t), liquidDebug.equal(2).select(m.normalNode.mul(0.5).add(0.5), mix(uniform(colour), vec3(0.88, 0.79, 0.59), foam)))
-  m.roughnessNode = mix(0.09, 0.48, foam)
+  m.ior=1.45;m.attenuationDistance=radius*.18;m.clearcoat=.22;m.envMapIntensity=.7
+  const position = shape(uv())
+  m.positionNode = position
+  // Exact derivatives of the authored polar field, evaluated once per vertex.
+  const analyticNormal = Fn(([coord]) => {
+    const a = coord.x.mul(TAU), v = coord.y, f = v.sub(0.08).div(0.92).max(0)
+    const fv = v.greaterThanEqual(0.08).select(1 / 0.92, 0)
+    const roll = v.div(0.08).min(1).mul(Math.PI / 2), rv = v.lessThan(0.08).select(Math.PI / 0.16, 0)
+    const warp = a.mul(5).add(f.mul(8)).sub(run.mul(2)), lobe = a.mul(11).add(sin(warp).mul(0.45))
+    const wave = a.mul(23).sub(f.mul(9)).add(run.mul(3)), crest = a.mul(17).add(f.mul(24)).sub(run.mul(9))
+    const wobble = sin(lobe).mul(0.028).add(sin(wave).mul(0.018)).mul(radius)
+    const wa = cos(lobe).mul(cos(warp).mul(2.25).add(11)).mul(0.028).add(cos(wave).mul(0.414)).mul(radius)
+    const wf = cos(lobe).mul(cos(warp).mul(3.6)).mul(0.028).sub(cos(wave).mul(0.162)).mul(radius)
+    const r = sin(roll).mul(0.09).add(0.96).mul(radius).add(f.mul(spread)).add(wobble.mul(f.add(0.65)))
+    const ra = wa.mul(f.add(0.65))
+    const rV = cos(roll).mul(radius * 0.09).mul(rv).add(wf.mul(f.add(0.65)).add(wobble).add(spread).mul(fv))
+    const ya = cos(crest).mul(radius * 0.022 * 17).mul(f.add(0.2))
+    const yv = sin(roll).mul(-radius * 0.025).mul(rv).sub(f.mul(2 * fall).mul(fv))
+      .add(cos(crest).mul(24).mul(f.add(0.2)).add(sin(crest)).mul(radius * 0.022).mul(fv))
+    const da = vec3(cos(a).mul(ra).sub(sin(a).mul(r)), ya, sin(a).mul(ra).add(cos(a).mul(r)))
+    const dv = vec3(cos(a).mul(rV).add(fv.mul(drift.x)), yv, sin(a).mul(rV).add(fv.mul(drift.y)))
+    const ca = a.mul(31).sub(run.mul(11)), cb = a.mul(19).add(run.mul(7))
+    const churn = sin(ca).mul(sin(cb)), derivative = cos(ca).mul(sin(cb)).mul(31).add(sin(ca).mul(cos(cb)).mul(19))
+    const rr = ringInner.add(v.mul(ringWidth)).add(churn.mul(radius * 0.006)), rra = derivative.mul(radius * 0.006)
+    const rha = sin(v.mul(Math.PI)).mul(ringLift).mul(derivative).mul(0.35)
+    const rhv = cos(v.mul(Math.PI)).mul(Math.PI).mul(ringLift).mul(churn.mul(0.35).add(1))
+    const ringA = vec3(cos(a).mul(rra).sub(sin(a).mul(rr)), rha, sin(a).mul(rra).add(cos(a).mul(rr)))
+    const ringV = vec3(cos(a).mul(ringWidth), rhv, sin(a).mul(ringWidth))
+    return kind.equal(0).select(cross(dv, da), cross(ringV, ringA)).normalize()
+  })
+  m.normalNode = transformNormalToView(varying(analyticNormal(uv()))).mul(faceDirection).normalize()
+  // Blend the thin amber curtain as well as opening holes. Treating covered
+  // pixels as opaque made it read as cream glaze. Environment highlights and
+  // alpha blending avoid an extra full-resolution transmission render target.
+  m.transmission = 0; m.transparent = true; m.forceSinglePass = true; m.depthWrite = false; m.alphaToCoverage = false
+  const churn = sin(a.mul(31).sub(run.mul(11))).mul(sin(a.mul(19).add(run.mul(7))))
+  const ringFade = sin(t.mul(Math.PI)).mul(ringOpacity).mul(churn.mul(0.25).add(0.75))
+  m.opacityNode = kind.equal(0).select(coverage.mul(0.64), ringFade).mul(amount)
+  m.alphaTest = 0.04
+  m.colorNode = liquidDebug.equal(1).select(vec3(coverage, foam, t), liquidDebug.equal(2).select(m.normalNode.mul(0.5).add(0.5), mix(uniform(colour).mul(.55), vec3(0.75, 0.41, 0.12), foam.mul(.12))))
+  m.roughnessNode = mix(0.07, 0.2, foam.mul(.2))
   const g = new THREE.BufferGeometry(), segments = 160, rows = 40
-  const positions = [], uvs = [], parts = [], fades = [], indices = []
-  function patch(part, rowCount) {
+  const positions = [], uvs = [], parts = [], phases = [], indices = []
+  function patch(part, rowCount, phase = 0) {
     const start = positions.length / 3
     for (let y = 0; y <= rowCount; y++) for (let x = 0; x <= segments; x++) {
-      positions.push(0, 0, 0); uvs.push(x / segments, y / rowCount); parts.push(part); fades.push(1)
+      positions.push(0, 0, 0); uvs.push(x / segments, y / rowCount); parts.push(part); phases.push(phase)
       if (y < rowCount && x < segments) {
         const k = start + y * (segments + 1) + x, next = k + segments + 1
         indices.push(k, next, k + 1, next, next + 1, k + 1)
@@ -252,56 +322,35 @@ export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'li
     }
     return start
   }
-  const curtainStart = patch(0, rows)
-  const impactStart = patch(1, 6)
-  const rippleStarts = [patch(2, 2), patch(2, 2), patch(2, 2)]
-  const p = new THREE.Float32BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage)
-  const fade = new THREE.Float32BufferAttribute(fades, 1).setUsage(THREE.DynamicDrawUsage)
-  g.setAttribute('position', p); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
-  g.setAttribute('liquidPart', new THREE.Float32BufferAttribute(parts, 1)); g.setAttribute('liquidFade', fade); g.setIndex(indices)
+  patch(0, rows); patch(1, 6)
+  for (let i = 0; i < 3; i++) patch(2, 2, i / 3)
+  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(positions.map((_, i) => i % 3 === 1 ? 1 : 0), 3))
+  g.setAttribute('liquidPart', new THREE.Float32BufferAttribute(parts, 1)); g.setAttribute('liquidPhase', new THREE.Float32BufferAttribute(phases, 1)); g.setIndex(indices)
+  const extent = landing + rippleReach + radius * 0.15
+  g.boundingBox = new THREE.Box3(new THREE.Vector3(-extent + Math.min(0, drift.x), bottom - radius * 0.1, -extent + Math.min(0, drift.y)), new THREE.Vector3(extent + Math.max(0, drift.x), top + radius * 0.1, extent + Math.max(0, drift.y)))
+  g.boundingSphere = g.boundingBox.getBoundingSphere(new THREE.Sphere())
   const mesh = new THREE.Mesh(g, m)
-  mesh.position.copy(centre); mesh.frustumCulled = false; parent.add(mesh)
+  mesh.position.copy(centre); parent.add(mesh)
   const splashMaterial = material(colour)
   splashMaterial.transmission = 0; splashMaterial.forceSinglePass = true
   splashMaterial.colorNode = mix(uniform(colour), vec3(0.85, 0.78, 0.59), uv().y.mul(0.5))
   const drops = new THREE.InstancedMesh(dropGeometry, splashMaterial, 160)
   drops.instanceMatrix.setUsage(THREE.DynamicDrawUsage); drops.frustumCulled = false; parent.add(drops)
   const matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion(), point = new THREE.Vector3(), size = new THREE.Vector3()
-  const fall = top - bottom, landing = radius * 1.05 + spread
+  const bounds = new THREE.Sphere(), frustum = new THREE.Frustum(), projection = new THREE.Matrix4()
+  let initialized = false, lastAmount, lastClock
   const s = { mesh, drops, layer, frozen, run, set: value => { amount.value = value },
-    update(dt) {
+    update(dt, viewCamera = camera) {
+      mesh.visible = drops.visible = amount.value > 0
+      if (initialized && ((!running(s) && lastAmount === amount.value && lastClock === run.value) || !mesh.visible)) return
+      mesh.updateWorldMatrix(true, false)
+      bounds.copy(g.boundingSphere).applyMatrix4(mesh.matrixWorld)
+      projection.multiplyMatrices(viewCamera.projectionMatrix, viewCamera.matrixWorldInverse)
+      frustum.setFromProjectionMatrix(projection, viewCamera.coordinateSystem)
+      if (initialized && (viewCamera.position.distanceTo(bounds.center) > 25 + bounds.radius || !frustum.intersectsSphere(bounds))) return
       if (running(s)) run.value += dt
       const clock = run.value
-      mesh.visible = drops.visible = amount.value > 0
-      for (let y = 0; y <= rows; y++) {
-        const v = y / rows, flight = Math.max(0, (v - 0.08) / 0.92)
-        for (let x = 0; x <= segments; x++) {
-          const angle = x / segments * TAU
-          const lobe = Math.sin(angle * 11 + Math.sin(angle * 5 + flight * 8 - clock * 2) * 0.45)
-          const wave = Math.sin(angle * 23 - flight * 9 + clock * 3)
-          const wobble = (lobe * 0.028 + wave * 0.018) * radius
-          const roll = Math.min(1, v / 0.08) * Math.PI / 2
-          const r = radius * (0.96 + 0.09 * Math.sin(roll)) + spread * flight + wobble * (0.65 + flight)
-          const height = top + radius * 0.025 * Math.cos(roll) - fall * flight * flight
-            + radius * 0.022 * Math.sin(angle * 17 + flight * 24 - clock * 9) * (0.2 + flight)
-          p.setXYZ(curtainStart + y * (segments + 1) + x, Math.cos(angle) * r + drift.x * flight, height, Math.sin(angle) * r + drift.y * flight)
-        }
-      }
-      function ring(start, rowCount, inner, width, lift, opacity) {
-        for (let y = 0; y <= rowCount; y++) for (let x = 0; x <= segments; x++) {
-          const angle = x / segments * TAU, v = y / rowCount, k = start + y * (segments + 1) + x
-          const churn = Math.sin(angle * 31 - clock * 11) * Math.sin(angle * 19 + clock * 7)
-          const r = inner + v * width + radius * 0.006 * churn
-          p.setXYZ(k, Math.cos(angle) * r + drift.x, bottom + radius * 0.008 + Math.sin(v * Math.PI) * lift * (1 + churn * 0.35), Math.sin(angle) * r + drift.y)
-          fade.setX(k, Math.sin(v * Math.PI) * opacity * (0.75 + churn * 0.25))
-        }
-      }
-      ring(impactStart, 6, landing - radius * 0.055, radius * 0.12, radius * 0.055, 0.88)
-      rippleStarts.forEach((start, i) => {
-        const age = fract1(clock * 0.9 + i / 3)
-        ring(start, 2, landing + age * rippleReach, radius * 0.014, radius * 0.005, (1 - age) ** 2 * 0.45)
-      })
-      p.needsUpdate = fade.needsUpdate = true; g.computeVertexNormals()
       for (let i = 0; i < drops.count; i++) {
         const age = fract1(clock * (i < 48 ? 1.4 : 2.3) + i * 0.618034), angle = i * 2.39996
         let r, height, scale, travel = 1
@@ -323,6 +372,9 @@ export function sheet(centre, radius, top, bottom, { colour = SYRUP, layer = 'li
         drops.setMatrixAt(i, matrix.compose(point, rotation, size.multiplyScalar(amount.value)))
       }
       drops.instanceMatrix.needsUpdate = true
+      initialized = true
+      lastAmount = amount.value
+      lastClock = run.value
     },
     remove() {
       mesh.removeFromParent(); g.dispose(); m.dispose()
@@ -373,7 +425,7 @@ if (!new URLSearchParams(location.search).has('liquid')) {
   drips = Array.from({ length: D.count }, (_, i) => new THREE.Vector3(...D.center.map((c, axis) => c + (fract1(Math.sin(i * 71.7 + axis * 39.1) * 43758.5453) - 0.5) * D.size[axis])))
   placeDrips(); scene.add(hanging)
 }
-export function updateLiquids(dt) {
+export function updateLiquids(dt, viewCamera = camera) {
   if (awake.syrup && hanging) {
     for (const p of drips) {
       p.y -= dt * 0.6
@@ -383,5 +435,5 @@ export function updateLiquids(dt) {
   }
   for (let i = streams.length - 1; i >= 0; i--) streams[i].update(dt)
   for (const s of surfaces) s.update(dt)
-  for (const s of sheets) s.update(dt)
+  for (const s of sheets) s.update(dt, viewCamera)
 }

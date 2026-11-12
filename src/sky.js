@@ -1,15 +1,16 @@
 import * as THREE from 'three/webgpu'
 import { Fn, uniform, vec2, vec3, float, mix, dot, pow, exp, smoothstep, atan, asin, texture, time } from 'three/tsl'
+import { LOOK, phaseColors } from './look.js'
 
 // Linear HDR radiance. The garden, haze and sky share this low north-west sun.
-export const SUN = new THREE.Vector3(-0.42, 0.18, -0.89).normalize()
+export const SUN = new THREE.Vector3(...LOOK.sun).normalize()
 const sunDirection = uniform(SUN)
 export const air = {
-  horizon: uniform(new THREE.Color(0.86, 0.5, 0.31)), // six in the evening: peach and amber low down
-  zenith: uniform(new THREE.Color(0.3, 0.25, 0.47)), // and soft lavender overhead, not a daytime blue
-  glow: uniform(new THREE.Color(1.0, 0.56, 0.24)),
+  horizon: uniform(phaseColors.frozen.horizon.clone()),
+  zenith: uniform(phaseColors.frozen.zenith.clone()),
+  glow: uniform(phaseColors.frozen.glow.clone()),
 }
-const SUN_RADIUS = 0.4 * Math.PI / 180
+const SUN_RADIUS = LOOK.sunRadius * Math.PI / 180
 
 // A restrained forward-scattering lobe, not a second sun spread across the frame.
 // Haze and the diffuse environment use this same clear-air radiance, without clouds or disc.
@@ -87,6 +88,6 @@ export const paintedSky = Fn(([direction, cloudView]) => {
   const highColor = air.horizon.mul(0.65).add(air.zenith.mul(0.25)).add(air.glow.mul(0.15))
   const sky = mix(mix(skyRadiance(direction), highColor, highCover), lowColor, lowCover)
   const disc = smoothstep(Math.cos(SUN_RADIUS * 1.12), Math.cos(SUN_RADIUS * 0.88), towardSun)
-  const radiance = sky.add(vec3(5, 2.7, 0.85).mul(disc).mul(float(1).sub(coverage)))
+  const radiance = sky.add(vec3(...LOOK.sunRadiance).mul(disc).mul(float(1).sub(coverage)))
   return cloudView.select(vec3(coverage), radiance)
 })

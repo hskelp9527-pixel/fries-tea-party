@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 660" role="img" aria-label="March Hare cottage ground floor and tested circulation">
+<rect width="780" height="660" fill="#211c30"/><g font-family="sans-serif" fill="#f9eed8"><text x="50" y="40" font-size="24">March Hare cottage · ground floor</text><text x="50" y="64" font-size="14">Interior 6.10 × 4.85 m · floor +1.10 m · house yaw −20°</text></g>
+<g transform="translate(90 100) scale(100)">
+<rect x="0" y="0" width="6.1" height="4.85" fill="#755035" stroke="#e3d2a9" stroke-width=".08"/>
+<path d="M0 1.85H1.18M2.16 1.85H2.38" stroke="#e3d2a9" stroke-width=".1"/>
+<rect x=".23" y=".18" width="1.15" height="1.45" rx=".04" fill="#924443"/>
+<rect x=".62" y=".22" width=".75" height=".31" fill="#e3d2a9"/>
+<rect x=".17" y="2.89" width=".56" height="1.16" fill="#46573e"/>
+<rect x="1.14" y="3.065" width=".86" height=".67" fill="#a47b50"/>
+<rect x=".12" y="1.92" width=".35" height=".65" fill="#b2985f"/>
+<rect x="5.42" y="1.5" width=".60" height="1.90" fill="#46573e"/>
+<rect x="3.35" y=".05" width="1.25" height=".45" fill="#6b5d50"/>
+<circle cx="3.95" cy=".32" r=".09" fill="#ffdf85"/>
+<rect x="2.61" y=".19" width=".48" height=".08" fill="#eddbab"/>
+<path d="M3.9 4.85h1.62" stroke="#755035" stroke-width=".16"/>
+<path d="M4.0 5.3V3l-1-.9L1.7 2l.15-1.0L2.8 3L4.75 2.7L3.88 1.15L2.85 .95L4 3V5.3" fill="none" stroke="#91cfcd" stroke-width=".035" stroke-dasharray=".1 .07"/>
+<g font-family="sans-serif" font-size=".15" fill="#f9eed8"><text x=".4" y="1.78">Sleeping</text><text x=".8" y="4.4">Sitting / tea</text><text x="4.7" y="3.7">Kitchen</text><text x="3.3" y=".8">Hearth / gear</text><text x="2.4" y=".6">Note</text><text x="3.8" y="5.55">Garden door / steps</text></g></g>
+<g font-family="sans-serif" fill="#91cfcd" font-size="14"><text x="55" y="625">Dashed line: controller walkthrough, quest pickup, note reading and return to the garden.</text></g></svg>

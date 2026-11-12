@@ -1,0 +1,315 @@
+{
+  "source": "DIAGNOSIS.md",
+  "date": "2026-11-12",
+  "status": "awaiting_independent_review",
+  "production": {
+    "script": "/assets/index-sTRL8ZKV.js",
+    "sha256": "f0ff62f974d85202964cb72cce7b20ceed8b98b12a0e9fd145ac2739779e5fec"
+  },
+  "independentReview": "docs/review-production-2026-11-12.md",
+  "remainingFinish": [
+    "final_independent_dimension_scores_and_decision",
+    "recheck_latest_sloped_panorama_and_visible_cake_bite",
+    "watch_hand_gesture_finish",
+    "close_face_surface_transitions",
+    "foliage_massing_light_and_actor_composition",
+    "grotto_and_cottage_material_consistency"
+  ],
+  "scope": "All 31 optimization task cards, ordinary play first as requested. Administrative worktree deletion and git publication are separate.",
+  "tasks": {
+    "P1": {
+      "status": "verified",
+      "evidence": [
+        "src/liquids.js",
+        "art/review/2026-11-11/optimized/s14.json",
+        "art/review/2026-11-11/optimized/liquid-flowing.jpg"
+      ]
+    },
+    "P2": {
+      "status": "verified",
+      "evidence": [
+        "src/batch-static.js",
+        "src/floating.js",
+        "scripts/cup-atlas.mjs"
+      ],
+      "note": "340 draws in the reference view"
+    },
+    "P3": {
+      "status": "verified",
+      "evidence": [
+        "src/ground.js",
+        "scripts/bake-flower-atlas.py",
+        "art/optimized/flowers/dimensions.json"
+      ],
+      "note": "1939672 submitted triangles; 9-11 m dither transition"
+    },
+    "P4": {
+      "status": "verified",
+      "evidence": [
+        "src/scene.js",
+        "art/review/2026-11-11/optimized/s14.json"
+      ],
+      "note": "60 visible casters; separate static/dynamic maps"
+    },
+    "P5a": {
+      "status": "verified",
+      "evidence": [
+        "scripts/compress-media.mjs",
+        "scripts/compress-audio.mjs",
+        "vite.config.js"
+      ]
+    },
+    "P5b": {
+      "status": "verified",
+      "evidence": [
+        "docs/asset-sizes-2026-11-11.md",
+        "art/optimized/asset-report.json"
+      ],
+      "note": "63 GLBs and 137 distinct source WAVs; the diagnosis counted media and URL modules separately"
+    },
+    "P6": {
+      "status": "verified",
+      "evidence": [
+        "src/main.js",
+        "src/loading.js",
+        "art/review/2026-11-11/revision/standard-full/playthrough.json"
+      ],
+      "note": "Native-speed entire chapter maximum, aggregated across checkpoint reload: 56.2 ms; CPU 4x cold stalls reported separately"
+    },
+    "P7": {
+      "status": "verified",
+      "evidence": [
+        "src/quality.js",
+        "art/review/2026-11-11/optimized/explore-cpu4.json"
+      ],
+      "note": "38.67 FPS with CPU throttled before navigation"
+    },
+    "L1": {
+      "status": "verified",
+      "evidence": [
+        "scripts/gameplay.mjs",
+        "scripts/route.mjs",
+        "art/review/2026-11-11/revision/standard-full/playthrough.json"
+      ]
+    },
+    "L2": {
+      "status": "verified",
+      "evidence": [
+        "scripts/gameplay.mjs",
+        "scripts/route.mjs",
+        "art/review/2026-11-11/revision/standard-full/playthrough.json"
+      ]
+    },
+    "L3": {
+      "status": "verified",
+      "evidence": [
+        "scripts/gameplay.mjs",
+        "scripts/route.mjs",
+        "art/review/2026-11-11/revision/standard-full/playthrough.json"
+      ]
+    },
+    "L4": {
+      "status": "verified",
+      "evidence": [
+        "scripts/gameplay.mjs",
+        "scripts/route.mjs",
+        "art/review/2026-11-11/revision/standard-full/playthrough.json"
+      ]
+    },
+    "C1": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "scripts/extract-color-script.py",
+        "docs/color-script.md",
+        "src/look-palette.json"
+      ],
+      "note": "Direction implemented under the request to complete the diagnosis; the delivered palette is available for user review"
+    },
+    "C2": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/look.js",
+        "art/review/2026-11-11/complete/s01-comparison.jpg",
+        "art/review/2026-11-11/complete/s14-comparison.jpg",
+        "art/review/2026-11-11/complete/s12-comparison.jpg"
+      ]
+    },
+    "C3": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/plants.js",
+        "src/ground.js",
+        "art/review/2026-11-11/complete/views/s14-no-post.jpg"
+      ]
+    },
+    "C4": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "docs/review-production-2026-11-12.md",
+        "art/review/2026-11-11/complete/all-18-comparison.jpg",
+        "art/review/2026-11-11/complete/views/frames.json"
+      ]
+    },
+    "A1": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "scripts/prepare-characters.py",
+        "art/review/2026-11-11/complete/fries-proportions.jpg",
+        "art/review/2026-11-11/complete/hatter-proportions.jpg"
+      ],
+      "note": "Fries 4.23 heads; Hatter 4.15 heads; Hare/Dormouse unchanged"
+    },
+    "A2": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/contact-ik.js",
+        "art/review/2026-11-11/revision/drink/timeline.json"
+      ],
+      "note": "Twelve sampled poses, real lip/rim contact, protected eye band and finger skin versus tea cavity; not continuous intersection proof"
+    },
+    "A3": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/hands.js",
+        "art/review/2026-11-11/complete/contacts/contacts.json",
+        "art/review/2026-11-11/complete/contacts/page-pinch-back.jpg"
+      ],
+      "note": "Measured palm spoon grip, paper-corner pinch, magical gear suspension, face-up enlarged repair watch and clap. Independent contact-finish limits remain recorded"
+    },
+    "A4": {
+      "status": "verified",
+      "evidence": [
+        "src/clip-catalog.js",
+        "src/animation.js",
+        "src/cast.js"
+      ]
+    },
+    "A5": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/secondary-motion.js",
+        "scripts/prepare-characters.py",
+        "art/review/2026-11-11/complete/motion-audio.json"
+      ]
+    },
+    "A6": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "scripts/prepare-characters.py",
+        "src/clip-catalog.js",
+        "art/optimized/asset-report.json"
+      ],
+      "note": "Distinct found; stuff 4.54 s and mend 18.54 s on both actors, aligned playback duration"
+    },
+    "A7": {
+      "status": "verified",
+      "evidence": [
+        "scripts/audit-contacts.mjs",
+        "scripts/audit-skin.mjs",
+        "art/review/2026-11-11/complete/contact-audit.json",
+        "art/review/2026-11-11/complete/skin-audit.json"
+      ],
+      "note": "Zero sampled skeletal-envelope intersections and abnormal skin-edge stretch. These do not certify fingers, glasses, every prop or continuous mesh intersection"
+    },
+    "A8": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "art/review/2026-11-11/complete/clips/index.html",
+        "art/review/2026-11-11/complete/contact-audit.md"
+      ],
+      "note": "71 clips; 142 images"
+    },
+    "A9": {
+      "status": "verified",
+      "evidence": [
+        "scripts/prepare-characters.py",
+        "art/characters/finished",
+        "art/optimized/asset-report.json"
+      ],
+      "note": "Equivalent local with-skin workflow: retained Mixamo sources rebound to revised skeletons and exported with runtime names intact; no fresh network download claimed"
+    },
+    "G1": {
+      "status": "verified",
+      "evidence": [
+        "docs/gameplay-revision.md"
+      ],
+      "note": "The complete direction was implemented under the user request; this record does not claim a separate user sign-off"
+    },
+    "G2": {
+      "status": "verified",
+      "evidence": [
+        "src/explore.js",
+        "src/gear-games.js",
+        "src/rhythm.js",
+        "art/review/2026-11-11/revision/standard-full/playthrough.json",
+        "art/review/2026-11-11/revision/challenges/playthrough.json",
+        "art/review/2026-11-11/revision/repeat/report.json"
+      ],
+      "note": "Ordinary baseline first; three gear puzzles optional. Visible-cue robot checks rhythm integration, not first-time human comprehension. Tea/cake repeat uses rate 1; Enter interruption is a separate placement fixture"
+    },
+    "G3": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/style.css",
+        "src/session-ui.js",
+        "art/review/2026-11-11/complete/ui-title.jpg",
+        "art/review/2026-11-11/complete/ui-subtitle.jpg",
+        "art/review/2026-11-11/complete/ui-pause.jpg",
+        "art/review/2026-11-11/revision/standard-full/results.jpg"
+      ],
+      "note": "Results hide all transient play overlays synchronously before rendering freezes"
+    },
+    "G4": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/cottage.js",
+        "src/locations.js",
+        "art/review/2026-11-11/revision/cottage/walkthrough.json",
+        "art/review/2026-11-11/complete/views/hall-front.jpg",
+        "art/review/2026-11-11/complete/views/under-table-front.jpg",
+        "art/review/2026-11-11/complete/views/rose-path-front.jpg"
+      ],
+      "note": "Connected furnished home, actual walk/pick/read/exit; each authored location has front and side images"
+    },
+    "G5": {
+      "status": "verified",
+      "evidence": [
+        "docs/audio-sources.md",
+        "art/optimized/audio/sources.json",
+        "src/lang/zh.json",
+        "art/review/2026-11-11/revision/standard-full/language.json",
+        "art/review/2026-11-11/revision/language-matrix/report.json"
+      ],
+      "note": "33 CC0 Foley variants, 137 dialogue pairs, product UI and eight preference cases. Silent recordings do not prove audible synchronization; missing-key probe covers translated calls, not all possible conditional text"
+    },
+    "G6": {
+      "status": "implemented_pending_independent_review",
+      "evidence": [
+        "src/motes.js",
+        "src/liquids.js",
+        "src/player.js",
+        "src/story.js",
+        "art/review/2026-11-11/complete/views/s12.jpg"
+      ]
+    }
+  },
+  "metrics": {
+    "fps": 147.86691977220502,
+    "scriptMs": 6.461843243243242,
+    "liquidMs": 0.06892560553633217,
+    "draws": 340,
+    "triangles": 1939672,
+    "casters": 60,
+    "startupBytes": 13889452,
+    "gpuBytes": 389772791,
+    "cpu4Fps": 38.66698556964046,
+    "cpu4ColdStalls": [
+      176.40000000000146,
+      101
+    ],
+    "maximumChapterFrame": 56.20000000000073,
+    "animationClips": 71,
+    "poseSamples": 16899,
+    "skinSamples": 284
+  }
+}

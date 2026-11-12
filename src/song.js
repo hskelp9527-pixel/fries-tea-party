@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu'
+import { LOOK } from './look.js'
 import beatMap from '../audio/04t_little_bat_a.beats.json'
 import { camera, scene, sun } from './scene.js'
 import { cups, tableProps, things } from './garden.js'
@@ -6,9 +7,10 @@ import { glow } from './models.js'
 import { song as staging, cast as stage } from './layout.js'
 import { stand } from './cast.js'
 import { player, placePlayer, setSize, act } from './player.js'
-import { setMusic, say, playing, heard, musicLength, ting } from './audio.js'
+import { setMusic, say, playing, heard, musicLength, ting, prepareMusic } from './audio.js'
 import { tween, wait } from './tweens.js'
-import { game, hop } from './state.js'
+import { game, hop, setPhase } from './state.js'
+import { createRhythm } from './rhythm.js'
 
 const beats = beatMap.beats
 // The song is sung three times; each pass starts on this beat. Confirm by ear against the recording.
@@ -20,37 +22,37 @@ const CUES = [
   { beat: 46, id: 'SG-04' }, // the Dormouse joins in
   { beat: 88, id: 'SG-05' }, // the final chorus
 ]
-const WINDOW = 0.12 // seconds either side of a beat that count as a hit
+const notes = beats.filter((_, i) => i >= PASSES[1] && (i - PASSES[1]) % 2 === 0)
+let rhythm = createRhythm(notes)
 // Light rises with each pass, since the three passes are about equally loud.
-const LIGHT = [[0.45, 2.8], [0.6, 3.6], [0.75, 4.4]] // [sky, sun] intensity per pass
-// Camera keyframes on beats; each holds until the next one, or glides to it. The crane in the final chorus
-// first backs out from under the canopy, then rises over the garden.
+const LIGHT = LOOK.song // [environment, sun] intensity per pass
+// The final chorus glides into the shared garden overview, with the performers
+// large enough to read and the low sun visible above the cottage.
 const SHOTS = [
   { beat: 0, pos: [-2.4, 1.5, -2.9], look: [-0.1, 1.9, -6.3] },
   { beat: 40, pos: [-2.1, 1.55, -3.5], look: [-0.5, 0.8, -4.4] },
   { beat: 88, pos: [-2.6, 1.7, -2.4], look: [-0.1, 1.2, -5.8], glide: true },
-  { beat: 112, pos: [-3.5, 2.2, 4], look: [0, 1, -5], glide: true },
-  { beat: 145, pos: [-9, 9, 9], look: [0, 1, -4] },
+  { beat: 112, pos: [-5, 3.2, 2], look: [.5, 1.3, -6], glide: true },
+  { beat: 145, ...staging.overview },
 ]
 
 const hud = document.getElementById('hud')
 const prompt = document.getElementById('prompt')
+const rhythmCue = document.getElementById('rhythm-cue')
+const instruction = document.getElementById('rhythm-instruction')
 const tapCup = cups[staging.tapCup]
 glow(tapCup, 0xffd070, 0)
 let cupJump = 0
 
-let active = false, start = 0, next = 0, cue = 0, hits = 0, done
-const scored = new Set()
+let active = false, start = 0, next = 0, cue = 0, done
 
 // Fries taps on Space or a click; only beats from the second pass on can be hit.
 function tap(at) {
-  if (!active) return
+  if (!active || game.paused) return
   const t = heard(at) - start
-  if (t < beats[PASSES[1]] - WINDOW) return
-  const beat = beats.findIndex((b, i) => i >= PASSES[1] && !scored.has(i) && Math.abs(b - t) <= WINDOW)
-  if (beat >= 0) {
-    scored.add(beat)
-    hits++
+  const hit = rhythm.tap(t)
+  if (hit === null) return
+  if (hit) {
     ting(1320)
     act('clap')
     tween(0.25, k => {
@@ -58,15 +60,16 @@ function tap(at) {
       tapCup.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 2 * (1 - k) })
     })
   }
-  prompt.textContent = beat >= 0 ? 'Hit' : 'Miss'
+  prompt.textContent = tr(hit ? 'In time' : 'Listen for the glowing cup')
   score()
 }
-const score = () => { hud.textContent = `Rhythm ${hits}/${beats.length - PASSES[1]}` }
-addEventListener('keydown', e => { if (e.code === 'Space') tap(e.timeStamp) })
-addEventListener('mousedown', e => { if (e.button === 0) tap(e.timeStamp) })
+const score = () => { hud.textContent = tr('Rhythm {hits}/{total} · Streak {combo}',{hits:rhythm.stats.hits,total:notes.length,combo:rhythm.stats.combo}) }
+addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat) tap(e.timeStamp) })
+addEventListener('mousedown', e => { if (e.button === 0&&!e.target.closest('button,select,input,#pause-menu')) tap(e.timeStamp) })
 
 // The watch is mended: the Hatter climbs onto the table and the song plays. Resolves after the last line.
 export async function playSong() {
+  setPhase('song')
   player.control = false
   player.cinematic = true
   setSize('normal', 0)
@@ -80,11 +83,15 @@ export async function playSong() {
   await Promise.all([say('SG-01'), stand('hatter', stage.hatter.song, 1.2, 0.6)])
   await wait(0.3)
 
+  await prepareMusic('song')
   setMusic({ song: 1 }, 0)
   start = playing.song.start
-  next = cue = hits = 0
-  scored.clear()
+  next = cue = 0
+  rhythm = createRhythm(notes)
+  game.rhythm = rhythm.stats
   active = true
+  rhythmCue.hidden = false
+  document.getElementById('controls').textContent = tr('Space or click · Tap when the cup glows · Extra taps break your streak')
   await new Promise(resolve => { done = resolve })
   prompt.textContent = ''
   await say('SG-06')
@@ -97,13 +104,26 @@ function shoot(from, to, k) {
 }
 
 export function updateSong() {
-  if (!active) return
+  if (!active || game.paused) return
+  if (game.sceneSkipping) {
+    finishSong()
+    return
+  }
   const t = heard() - start
+  rhythm.update(t)
+  const visibleCue = rhythm.cue(t), cueLight = visibleCue.open
+  rhythmCue.dataset.open = String(cueLight)
+  rhythmCue.dataset.note = String(visibleCue.index)
+  rhythmCue.style.setProperty('--approach', Math.max(0, Math.min(1, 1 - visibleCue.remaining / .55)))
+  instruction.textContent = tr(t < notes[0] - .55 ? 'Listen first. Join in when the cup begins to glow.'
+    : cueLight ? 'Space / click · Now!' : 'Follow the pulse. Wait for the golden light.')
+  tapCup.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = cueLight ? 1.8 : 0 })
+  if (t >= notes[0]) score()
   while (next < beats.length && beats[next] <= t) next++
   const last = next - 1
   game.pulse = last >= 0 ? Math.exp(-(t - beats[last]) * 6) : 0
 
-  const pass = PASSES.findLastIndex(p => last >= p)
+  const pass = Math.max(0, PASSES.findLastIndex(p => last >= p))
   if (pass !== game.pass) {
     game.pass = pass
     const [h0, s0] = [scene.environmentIntensity, sun.intensity], [h1, s1] = LIGHT[pass]
@@ -111,6 +131,10 @@ export function updateSong() {
     if (pass === 1) {
       score()
       stand('hare', stage.hare.song, 0.8)
+    }
+    if(pass===2){
+      const from=player.mesh.rotation.y,to=staging.overview.friesRot*Math.PI/180
+      tween(2,k=>{player.mesh.rotation.y=from+(to-from)*k})
     }
   }
   while (cue < CUES.length && last >= CUES[cue].beat) say(CUES[cue++].id)
@@ -123,15 +147,22 @@ export function updateSong() {
   for (const cup of cups) cup.scale.setScalar(1 + 0.35 * game.pulse * nearDancers(cup.position))
 
   // From the final chorus to the last note, every prop on the table hops on each beat.
-  game.hop = pass === 2 ? { beat: last, phase: Math.min(1, (t - beats[last]) / ((beats[last + 1] ?? beats[last] * 2 - beats[last - 1]) - beats[last])) } : null
+  game.hop = pass === 2 ? { strength: 0.2 + 0.8 * rhythm.strength(), beat: last, phase: Math.min(1, (t - beats[last]) / ((beats[last + 1] ?? beats[last] * 2 - beats[last - 1]) - beats[last])) } : null
   if (t > musicLength('song')) {
-    active = false
-    game.pulse = 0
-    game.pass = -1
-    game.hop = null
-    done()
+    finishSong()
   }
   placeProps()
+}
+function finishSong() {
+  active = false
+  rhythmCue.hidden = true
+  delete rhythmCue.dataset.open
+  game.pulse = 0; game.pass = -1; game.hop = null; cupJump = 0
+  for (const cup of cups) cup.scale.setScalar(1)
+  tapCup.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 0 })
+  placeProps()
+  const resolve = done; done = null
+  resolve?.()
 }
 
 // Each prop hops by its own size; one standing on another (a teapot on the tray) rides with that one instead.
@@ -147,3 +178,5 @@ function placeProps() {
   }
   tapCup.position.y += cupJump
 }
+import { tr, onLanguageChange } from './i18n.js'
+onLanguageChange(()=>{if(active){score();document.getElementById('controls').textContent=tr('Space or click · Tap when the cup glows · Extra taps break your streak')}})

@@ -22,6 +22,7 @@ const share = webgpu ? 1 : 0.5
 // over its whole surface, each card facing roughly out of the volume with a random twist, its petiole towards
 // the middle.
 function crown(list, { centre, radii, cell, size, light = 1, layers = 2.5 }) {
+  size *= 1.3
   const radius = Math.max(radii.x, radii.y, radii.z), p = 1.6
   const area = 4 * Math.PI * (((radii.x * radii.y) ** p + (radii.x * radii.z) ** p + (radii.y * radii.z) ** p) / 3) ** (1 / p)
   const count = Math.round(area * layers / (0.5 * size * size) * share)
@@ -63,14 +64,14 @@ tree.traverse(o => {
 })
 const treeBase = tree.position
 for (const { sum, n } of cellsOfWood.values()) {
-  if (n < 4) continue
+  if (n < 2) continue
   const centre = sum.divideScalar(n)
-  if (noise(centre.x * 0.55 + 2, centre.z * 0.55 + centre.y * 0.3) < 0.18) continue
+  if (noise(centre.x * 0.55 + 2, centre.z * 0.55 + centre.y * 0.3) < 0.11) continue
   const outer = Math.min(1, Math.hypot(centre.x - treeBase.x, centre.z - treeBase.z) / (6 * tree.scale.x))
   // The camera's sweep stops at the leaves (a sensor nothing else feels), so it pulls in rather than entering them.
   world.createCollider(RAPIER.ColliderDesc.ball(1.2 * tree.scale.x).setTranslation(centre.x, centre.y + 0.25, centre.z).setSensor(true))
   crown(treeLeaves, {
-    centre: centre.add(new THREE.Vector3(0, 0.25, 0)), radii: new THREE.Vector3(1.15, 0.8, 1.15).multiplyScalar(tree.scale.x),
+    centre: centre.add(new THREE.Vector3(0, 0.25, 0)), radii: new THREE.Vector3(1.25, 0.85, 1.25).multiplyScalar(tree.scale.x),
     cell: LEAVES.round, size: 0.32, light: 0.8 + 0.3 * outer, layers: 1.6 + outer,
   })
 }
@@ -154,18 +155,18 @@ const roseLeaves = [], roseHeads = []
 const roseClump = flowerClump('flower_red_rose'), head = new THREE.Matrix4()
 const [rx0, rz0] = rosePath.from, [rx1, rz1] = rosePath.to, length = Math.hypot(rx1 - rx0, rz1 - rz0)
 const along = new THREE.Vector2(rx1 - rx0, rz1 - rz0).normalize(), across = new THREE.Vector2(-along.y, along.x)
-for (let d = 0; d < length; d += 0.55) {
+for (let d = 0; d < length; d += 0.35) {
   const stone = model(`flagstone_${'abcd'[Math.floor(rand() * 4)]}`)
   stone.position.set(rx0 + along.x * d, ground(rx0 + along.x * d, rz0 + along.y * d) - 0.05, rz0 + along.y * d)
   stone.rotation.y = rand() * 3
   roses.add(stone)
   for (const side of [-1, 1]) {
-    const centre = new THREE.Vector3(rx0 + along.x * d + across.x * side * 1.05, 0.5, rz0 + along.y * d + across.y * side * 1.05)
-    crown(roseLeaves, { centre, radii: new THREE.Vector3(0.55, 0.5, 0.55), cell: LEAVES.round, size: 0.16, light: 0.8 })
-    for (let k = 0; k < 2; k++) {
+    const centre = new THREE.Vector3(rx0 + along.x * d + across.x * side * 1.5, 1.05, rz0 + along.y * d + across.y * side * 1.5)
+    crown(roseLeaves, { centre, radii: new THREE.Vector3(0.7, 1.05, 0.7), cell: LEAVES.round, size: 0.22, light: 0.8 })
+    for (let k = 0; k < 6; k++) {
       const out = new THREE.Vector3(rand() - 0.5, rand() * 0.8, rand() - 0.5).normalize()
       roseHeads.push(head.compose(
-        centre.clone().add(out.clone().multiply(new THREE.Vector3(0.55, 0.5, 0.55))), new THREE.Quaternion().setFromUnitVectors(UP, out),
+        centre.clone().add(out.clone().multiply(new THREE.Vector3(0.7, 1.05, 0.7))), new THREE.Quaternion().setFromUnitVectors(UP, out),
         new THREE.Vector3().setScalar(0.4 + rand() * 0.2),
       ).clone())
     }

@@ -1,5 +1,8 @@
 import * as THREE from 'three/webgpu'
 import { clips } from './models.js'
+import { clipInfo } from './clip-catalog.js'
+import { registerContactRig, setRigAction } from './contact-ik.js'
+import { registerCharacterMotion } from './secondary-motion.js'
 
 const FADE = 0.2 // seconds
 
@@ -7,19 +10,42 @@ const FADE = 0.2 // seconds
 // nothing to play under that name.
 export class Animator {
   constructor(object, name) {
+    this.object = object
+    this.name = name
     this.mixer = new THREE.AnimationMixer(object)
     this.actions = {}
     for (const clip of clips(name)) this.actions[clip.name] = this.mixer.clipAction(clip)
     this.current = null
+    this.standPose=[]
+    this.upperPose=[]
+    if(this.actions.idle){
+      const idle=this.actions.idle;idle.reset().play();this.mixer.update(0)
+      object.traverse(bone=>{if(bone.isBone&&/(Hips|(?:Left|Right)(?:UpLeg|Leg|Foot|ToeBase|Toe_End))$/.test(bone.name))this.standPose.push({bone,position:bone.position.clone(),quaternion:bone.quaternion.clone()})})
+      object.traverse(bone=>{if(bone.isBone&&!this.standPose.some(p=>p.bone===bone)&&!bone.name.startsWith('secondary_'))this.upperPose.push({bone,position:bone.position.clone(),quaternion:bone.quaternion.clone()})})
+      idle.stop()
+    }
+    if (object.parent) {
+      registerContactRig(object, name)
+      registerCharacterMotion(object, name)
+    }
   }
 
   has(name) {
     return name in this.actions
   }
+  standLowerBody(){
+    for(const pose of this.standPose){pose.bone.position.copy(pose.position);pose.bone.quaternion.copy(pose.quaternion)}
+  }
+  relaxUpperBody(){
+    for(const pose of this.upperPose){pose.bone.position.copy(pose.position);pose.bone.quaternion.copy(pose.quaternion)}
+    this.object.updateWorldMatrix(true,true)
+  }
 
   // Crossfades to a clip that loops, or with `once` plays a single time and holds its last frame.
-  play(name, once = false, reverse = false) {
+  play(name, once = undefined, reverse = false) {
     const next = this.actions[name]
+    const metadata = clipInfo(name)
+    once ??= !metadata.loop
     if (!next || (next === this.current && !once)) return
     if (next === this.current) next.reset()
     else {
@@ -28,20 +54,21 @@ export class Animator {
     }
     next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity)
     next.clampWhenFinished = once
-    next.timeScale = reverse ? -1 : 1
+    next.timeScale = (reverse ? -1 : 1) * (metadata.duetDuration ? next.getClip().duration / metadata.duetDuration : 1)
     if (reverse) next.time = next.getClip().duration
     next.play()
     this.current = next
+    if (this.object.parent) setRigAction(this.object, next, this.name)
   }
 
   // Whether a clip played with `once` is still going (a held clip is).
   playing(name) {
-    return this.actions[name].isRunning() || this.held === name
+    return !!this.actions[name]?.isRunning() || this.held === name
   }
 
   // Holds a clip on its current frame, or (with false) lets it run on.
   hold(name, held = true) {
-    this.actions[name].paused = held
+    if (this.actions[name]) this.actions[name].paused = held
     this.held = held ? name : null
   }
 
@@ -57,7 +84,7 @@ export class Animator {
 export class Blink {
   constructor(object) {
     this.lids = []
-    object.getObjectByName('Eyelids').traverse(o => { if (o.morphTargetDictionary) this.lids.push(o) })
+    object.getObjectByName('Eyelids')?.traverse(o => { if (o.morphTargetDictionary) this.lids.push(o) })
     this.timer = 2 + Math.random() * 4
     this.phase = -1
   }

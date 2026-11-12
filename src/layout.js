@@ -306,16 +306,17 @@ const stones = (line, spacing) => line.slice(1).flatMap(([x1, z1], i) => {
 // plaza to the cottage's first flight of steps; a loop through the western garden; spurs to the south-west and
 // south-east. Flowers grow in bands either side of them.
 export const paths = [
-  [[1, 27], [0.6, 20], [0, 14], [-0.5, 9], [-1.4, 5.6], [-2.7, 2.6], [-3.1, -1], [-3.2, -4.5], [-5.48, -9.49], [-6.68, -11.19], [-7.68, -11.69]],
-  [[-2.7, 2.6], [0.4, 2.9], [4.5, 3.6], [9, 2.6], [13, 0.2], [15.4, -2.2]],
+  [[1, 27], [0.6, 20], [0, 14], [-0.5, 9], [-1.4, 5.6], [-2.7, 2.6], [-3.1, -1], [-3.2, -4.5], [-5.4,-6.4],[-8.7,-8.3],[-8.7,-10.2],[-7.8,-11.6],[-7.18,-12.79]],
+  [[-2.7, 2.6], [0.4, 2.9], [4.5, 3.6], [9, 2.6], [13, 0.2], [15.4, -2.2],[17,-3.5]],
   [[0, 14], [3.5, 11.4], [7, 8.2], [9.4, 4.8], [9, 2.6]],
-  [[16.2, -8.6], [14, -10.8], [11.6, -12.6], [10.05, -13.5]],
+  [[17,-6.8],[16.2, -8.6], [14, -10.8], [11.6, -12.6], [10.05, -13.5]],
+  [[-3.2,-4.5],[-3.4,-8.8],[3,-8.8],[5.8,-7.3],[8,-8],[9,-11],[10.05,-13.5]],
   [[-3.1, -1], [-8, 0.4], [-13, -1.6], [-17.5, -6], [-19.6, -11.5], [-16, -16], [-11, -14.6]],
   [[-0.5, 9], [-6, 12.5], [-12, 15.5], [-18, 17.5]],
   [[13, 0.2], [16, 6], [20, 11], [25, 14.5]],
 ]
 // Paths worn into the grass without flagstones, where the ground climbs: from the plaza up the overlook.
-export const trails = [[[22.6, -5.5], [26.5, -7], [30, -8.2]]]
+export const trails = [[[22.6, -5.5], [26.5, -7], [30, -8.2]],[[10.05,-13.5],[10,-14.45],[13,-15.85],[14.6,-17.25],[16,-19],[20.5,-22],[21.23,-23.85]]]
 
 // Every fixed object. `onTable` props dance on the table in the final chorus; `on` names the prop one stands on,
 // which it rides with. `solid: false` leaves it without colliders, `boxes` makes its placeholder boxes its colliders
@@ -370,7 +371,7 @@ export const placed = [
   ...row('fence_picket', [-14, 17.2], [-17, 18.8], 1.5),
   ...wall([8, -6.5], [11.5, -7.6], 0), ...wall([21, 14], [24, 17.5], 0),
   { model: 'rose_arch', pos: [-2.7, 0, 2.6], rot: -50 },
-  { model: 'rose_arch', pos: [-5.48, 0, -9.49], rot: 15 },
+  { model: 'rose_arch', pos: [-14.6, 0, -3.2], rot: -134 },
   { model: 'rose_arch', pos: [7, 0, 8.2], rot: 138 },
   { model: 'rose_arch', pos: [9, 0, 2.6], rot: 112 },
   { model: 'rose_arch', pos: [14.5, 0, 3.1], rot: 27 },
@@ -448,8 +449,8 @@ export const gears = [
     by: 'small', clip: 'pick_up', stand: [18.155, 0, -5.003], rot: 90, grip: [-0.004, -0.03, 0.072],
   },
   { // on the hall's mantelpiece, beside the buttered clock; position and stand are in the house's frame
-    in: 'house', pos: [1.25, 1.989, 1.88], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
-    by: 'normal', clip: 'reach', standIn: 'house', stand: [1.183, 1.1, 2.289], rot: 180, grip: [0, 0.05, 0.007],
+    in: 'house', pos: [1.25, 1.989, -1.98], layer: 'flowers', line: 'GR-03', hints: ['EX-07', 'EX-08', 'EX-09'],
+    by: 'normal', clip: 'reach', standIn: 'house', stand: [1.183, 1.1, -1.15], rot: 180, grip: [0, 0.05, 0.007],
   },
 ]
 
@@ -476,7 +477,7 @@ export const drinks = [
   },
   {
     model: 'cake', pos: [24, 1.8, -19.4], becomes: 'normal', label: 'Eat the cake',
-    by: 'big', clip: 'drink', stand: [24, 1.8, -18.45], rot: 0, grip: [-0.008, 0.045, 0.003],
+    by: 'big', clip: 'drink', stand: [24, 1.8, -18.45], rot: 180, grip: [-0.008, 0.045, 0.003],
   },
 ]
 
@@ -619,7 +620,14 @@ export const syrup = {
 // Staging for the song: Fries faces the table with a teacup in front of him.
 export const song = {
   fries: { pos: [-1.45, 0, -4.2], rot: 90 },
+  overview: { pos: [-3.8, 2.3, -1.5], look: [.2, 1.3, -6], fov: 58, friesRot: -32 },
   tapCup: 5, // index into tableCups
+}
+
+export const repair={
+  centre:[-2.5,1.02,-6.45],scale:4.5,
+  hands:{fries:[.14,-.055,.14],hatter:[.16,-.055,-.14]},
+  camera:[-3.35,1.95,-6.4],
 }
 
 // The cast sits where it is placed above (the Dormouse lies on its plate). `seat` is the height of the seat the
@@ -670,15 +678,16 @@ export const grotto = { valve: [gears[1].pos[0], gears[1].pos[2]] }
 
 // In the house's own frame, behind its door_hinge at (0.5, 1.1, 2.877).
 export const hall = {
-  centre: [1.28, 1.1, 2.2], halfWidth: 0.72, depth: 0.6,
-  mantel: { pos: [1.28, 1.955, 1.9], size: [1.25, 0.05, 0.3] },
-  note: [1.28, 1.65, 1.76],
+  centre: [.35, 1.1, .125], halfWidth: 3.05, depth: 2.425,
+  mantel: { pos: [1.28, 1.955, -2.08], size: [1.25, 0.07, 0.35] },
+  note: [.15, 1.72, -2.08],
   props: [
-    { model: 'saucer', at: [1.7, 1.98, 1.9], scale: 1.7 },
-    { model: 'spoon', at: [1.67, 2, 1.9], rot: 35, scale: 1.6 },
-    { model: 'spoon', at: [1.8, 2, 1.93], rot: -25, scale: 1.4 },
-    { model: 'butter', at: [1.7, 2.01, 1.9], scale: 0.6 },
-    { model: 'pocket_watch', at: [0.86, 1.98, 1.9], scale: 3 },
-    { model: 'butter', at: [0.86, 2.06, 1.9], scale: 0.7 },
+    { model: 'jam_jar', at: [1.52, 1.99, -2.12], scale: 1.3 },
+    { model: 'saucer', at: [1.7, 1.99, -2.08], scale: 1.7 },
+    { model: 'spoon', at: [1.67, 2.01, -2.08], rot: 35, scale: 1.6 },
+    { model: 'spoon', at: [1.8, 2.01, -2.05], rot: -25, scale: 1.4 },
+    { model: 'butter', at: [1.7, 2.02, -2.08], scale: 0.6 },
+    { model: 'pocket_watch', at: [.86, 1.99, -2.08], scale: 3 },
+    { model: 'butter', at: [.86, 2.07, -2.08], scale: .7 },
   ],
 }

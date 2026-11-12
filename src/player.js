@@ -1,10 +1,12 @@
 import * as THREE from 'three/webgpu'
 import { RAPIER, world } from './physics.js'
-import { renderer, scene, camera } from './scene.js'
+import { renderer, scene, camera, lens } from './scene.js'
 import { model } from './models.js'
 import { start } from './layout.js'
-import { burst, setVoicePitch, currentSpeaker } from './audio.js'
+import { playSfx, setVoicePitch, currentSpeaker } from './audio.js'
+import { game } from './state.js'
 import { Animator, Blink } from './animation.js'
+import { clipInfo } from './clip-catalog.js'
 import { tween } from './tweens.js'
 
 const DEG = Math.PI / 180
@@ -54,6 +56,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyV' && player.control) player.view = player.view === 'first' ? 'third' : 'first'
 })
 addEventListener('keyup', e => keys.delete(e.code))
+addEventListener('blur', () => { keys.clear(); jump = false })
 addEventListener('mousemove', e => {
   if (document.pointerLockElement !== renderer.domElement || !player.control) return
   player.yaw -= e.movementX * 0.0022
@@ -111,6 +114,11 @@ export function updatePlayer(dt) {
     const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw)
     move.set(r * cos - f * sin, 0, -r * sin - f * cos)
     if (f || r) move.normalize().multiplyScalar(p.speed * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? RUN : 1))
+    if (player.size === 'small') {
+      const dx=player.feet.x-0.1,dz=player.feet.z+7.15,d=Math.hypot(dx,dz)
+      const breath=Math.max(0,Math.sin(game.elapsed*2.1))**3
+      if(d<1.5&&d>0.03) move.addScaledVector(dir.set(dx,0,dz).normalize(),breath*(1-d/1.5)*0.38)
+    }
     if (jump && grounded) velY = Math.sqrt(2 * GRAVITY * p.jump)
     velY -= GRAVITY * dt
 
@@ -132,7 +140,10 @@ export function updatePlayer(dt) {
     stride += grounded ? travelled : 0
     if (stride > 0.7 * s) {
       stride = 0
-      burst(p.stepPitch, p.stepGain)
+      const surface = player.feet.y>.6&&Math.abs(player.feet.x)<1.4&&player.feet.z>-8&&player.feet.z<1 ? 'wood'
+        : player.feet.y>1 || Math.hypot(player.feet.x-18.5,player.feet.z+5)<3.5 ? 'stone' : 'grass'
+      playSfx(`footstep_${surface}`,{pitch:p.stepPitch,gain:p.stepGain})
+      if(player.size==='big') game.giantStep=1
       shake = p.shake
     }
     if (f || r) {
@@ -157,14 +168,20 @@ const ball = new RAPIER.Ball(0.1)
 const NO_TURN = { x: 0, y: 0, z: 0, w: 1 }
 
 function updateCamera(dt) {
-  camera.layers.enable(1)
-  if (player.cinematic) return
   const s = player.p.scale
+  eye.copy(player.feet).setY(player.feet.y + EYE * s)
+  camera.layers.enable(1)
+  if (player.cinematic) {
+    // Authored first-person shots keep their camera, but still hide the body
+    // when the lens is inside its eye/head region. Enabling layer 1 each frame
+    // previously undid stageFrame's first-person mask and filled the view with hair.
+    if(lens.reading||camera.position.distanceToSquared(eye)<(.5*s)**2)camera.layers.disable(1)
+    return
+  }
   camera.fov = player.p.fov
   camera.near = 0.04 * s
   camera.updateProjectionMatrix()
   camera.rotation.set(player.pitch, player.yaw, 0)
-  eye.copy(player.feet).setY(player.feet.y + EYE * s)
   if (player.view === 'first') {
     camera.position.copy(eye)
     camera.layers.disable(1)
@@ -179,6 +196,7 @@ function updateCamera(dt) {
     const hit = world.castShape(eye, NO_TURN, dir, ball, 0, far, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, collider)
     const distance = hit ? Math.max(0, hit.time_of_impact - 0.02 * s) : far
     camera.position.copy(eye).addScaledVector(dir, distance)
+    if (distance < 0.5 * s) camera.layers.disable(1)
   }
   camera.position.x += (Math.random() - 0.5) * shake
   camera.position.y += (Math.random() - 0.5) * shake
@@ -198,7 +216,17 @@ export function act(name) {
 export async function walkTo([x, y, z], rot) {
   const from = player.feet.clone(), to = new THREE.Vector3(x, y, z), distance = from.distanceTo(to)
   if (distance > 0) player.mesh.rotation.y = Math.atan2(to.x - from.x, to.z - from.z)
-  await tween(distance / player.p.speed, t => player.feet.lerpVectors(from, to, t))
+  let previous = 0
+  await tween(distance / player.p.speed, t => {
+    const step = distance * (t - previous)
+    previous = t
+    move.subVectors(to, player.feet)
+    if (move.length() > step) move.setLength(step)
+    collider.setTranslation({ x: player.feet.x, y: player.feet.y + HEIGHT / 2 * player.p.scale, z: player.feet.z })
+    controller.computeColliderMovement(collider, move, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS)
+    const allowed = controller.computedMovement()
+    player.feet.add(allowed)
+  })
   const start = player.mesh.rotation.y, turn = rot * DEG - start
   await tween(0.3, t => { player.mesh.rotation.y = start + Math.atan2(Math.sin(turn), Math.cos(turn)) * t })
 }
@@ -222,6 +250,7 @@ function animate(dt, speed, airborne) {
     else anim.play('idle')
   }
   anim.mixer.update(dt)
+  if(clipInfo(anim.current?.getClip().name??'idle').posture==='upper')anim.standLowerBody()
   if (player.nod) player.mesh.getObjectByName('mixamorigHead').rotateX(player.nod)
   blink.update(dt, anim.current?.getClip().name.includes('sleep'))
 }
@@ -245,6 +274,17 @@ export function reaches(point) {
 export function nearProp(prop, point) {
   const s = player.p.scale, f = player.feet
   return player.size === prop.by && Math.hypot(point.x - f.x, point.z - f.z) < 1.2 * s && Math.abs(f.y - prop.stand[1]) < 0.35 * s && sees(point)
+}
+
+// The hollow is part of the trunk collision mesh. A giant reaches from the lawn;
+// the trunk must not occlude its own gear or force him onto a root to interact.
+export function nearGear(gear) {
+  if (player.size !== gear.by) return false
+  if (gear.in === 'big_tree') {
+    const [x, y, z] = gear.stand, f = player.feet
+    return Math.hypot(f.x - x, f.z - z) <= 4 && Math.abs(f.y - y) < 1.75
+  }
+  return nearProp(gear, gear.pos)
 }
 
 // Whether nothing solid lies between Fries's eye and `point`.

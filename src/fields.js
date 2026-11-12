@@ -67,7 +67,7 @@ export function bloom(x, z) {
   const edge = Math.exp(-(((d - meadow.pathWidth / 2 - 0.9) / 0.7) ** 2))
   let drift = 0
   for (const [dx, dz, r] of meadow.drifts) drift = Math.max(drift, Math.exp(-((Math.hypot(x - dx, z - dz) / r) ** 2)))
-  const patches = Math.max(0, noise(x * 0.16 + 11, z * 0.16) * 1.6 - 0.9)
+  const patches = Math.max(0, noise(x * 0.12 + 11, z * 0.12) * 1.6 - 0.9) * 0.45
   // Under the table and between the roots only a sprinkle of small daisies; round the plaza a full bed.
   return Math.min(1, Math.max(edge * 0.8, drift, patches, 0.35 * moss(x, z), bed(x, z)) * (0.7 + 0.3 * noise(x * 0.7, z * 0.7)))
 }
@@ -75,16 +75,15 @@ export function bloom(x, z) {
 // Which flowers grow here: a slowly changing value in [0, 1] that picks from a palette, so each drift has its own.
 export const species = (x, z) => noise(x * 0.11 + 40, z * 0.11 - 13)
 
-// The land: flat over the garden but for the overlook's rounded meadow, falling away past the brow into a valley,
-// with three layers of hills rising beyond, at about 80, 125 and 175 m.
+// The playable garden falls into a low valley. The painted distance owns the
+// distant ridge silhouette; extra concentric terrain ridges would hide its trees
+// and villages behind broad, featureless bands of haze.
 export function ground(x, z) {
   const [x0, z0, x1, z1] = meadow.plateau
   const out = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1))
   const fall = -9 * Math.min(1, out / 22) ** 1.6
   const far = Math.hypot(x, z)
-  const ridge = (r, w, h) => h * Math.exp(-(((far - r) / w) ** 2))
-  const hills = ((ridge(80, 16, 11) + ridge(125, 20, 19) + ridge(175, 26, 28)) * (0.55 + 0.9 * noise(x * 0.015 + 5, z * 0.015))
-    + 4 * noise(x * 0.04, z * 0.04 + 9)) * Math.min(1, Math.max(0, (far - 55) / 25))
+  const hills = 1.6 * noise(x * 0.04, z * 0.04 + 9) * Math.min(1, Math.max(0, (far - 55) / 25))
   const [ox, oz, or, oh] = overlook, o = Math.min(1, Math.hypot(x - ox, z - oz) / or)
   return fall + hills + oh * (1 + Math.cos(o * Math.PI)) / 2
 }

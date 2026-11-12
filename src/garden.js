@@ -9,6 +9,7 @@ import { game } from './state.js'
 import { wind } from './plants.js'
 import { RAPIER, world } from './physics.js'
 import { random } from './fields.js'
+import { mergePaintedProp } from './batch-static.js'
 
 const DEG = Math.PI / 180
 
@@ -38,7 +39,28 @@ for (const entry of layout.placed) {
   if (entry.onTable || entry.on) onTable.set(entry, object)
 }
 
-// Pushes a point sideways out of the room kept clear around the cast and Fries's song spot, `margin` further.
+// Repeated inert pieces (walls, wall caps, fences, arches, steps) draw as one instanced mesh per part instead of one
+// mesh each: several hundred fewer draws, in the shadow pass as well. Their colliders stay where they were placed.
+for (const name of ['wall_stone', 'wall_cap_flowers', 'fence_picket', 'fence_broken', 'rose_arch', 'steps_stone', 'flagstone_a', 'flagstone_b', 'flagstone_c', 'flagstone_d']) {
+  const objects = placedAll[name], parts = []
+  objects.forEach(o => o.updateMatrixWorld(true))
+  objects[0].traverse(m => { if (m.isMesh) parts.push(m) })
+  parts.forEach((part, k) => {
+    const mesh = new THREE.InstancedMesh(part.geometry, part.material, objects.length)
+    objects.forEach((o, i) => {
+      let n = 0
+      o.traverse(m => { if (m.isMesh && n++ === k) mesh.setMatrixAt(i, m.matrixWorld) })
+    })
+    mesh.castShadow = part.castShadow
+    mesh.receiveShadow = part.receiveShadow
+    mesh.computeBoundingSphere()
+    scene.add(mesh)
+  })
+  objects.forEach(o => o.removeFromParent())
+}
+
+const houseInverse=things.house.matrixWorld.clone().invert(),housePoint=new THREE.Vector3()
+// Keep ambient magic outside the physical cottage shell as well as the cast.
 export function keepOut(p, margin) {
   for (const [x, z, r, bottom, top] of layout.keepClear) {
     const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz), clear = r + margin
@@ -46,6 +68,13 @@ export function keepOut(p, margin) {
       p.x = x + dx / d * clear
       p.z = z + dz / d * clear
     }
+  }
+  housePoint.copy(p).applyMatrix4(houseInverse)
+  if(housePoint.y>-margin&&housePoint.y<13+margin&&Math.abs(housePoint.x)<6.4+margin&&Math.abs(housePoint.z)<5.5+margin){
+    const dx=6.4+margin-Math.abs(housePoint.x),dz=5.5+margin-Math.abs(housePoint.z)
+    if(dx<dz)housePoint.x=(housePoint.x<0?-1:1)*(6.4+margin)
+    else housePoint.z=(housePoint.z<0?-1:1)*(5.5+margin)
+    p.copy(housePoint.applyMatrix4(things.house.matrixWorld))
   }
 }
 
@@ -64,8 +93,38 @@ dressed.traverse(o => {
   if (o.name.startsWith('dress_') && dressed.worldToLocal(o.getWorldPosition(new THREE.Vector3())).x > 2.6) o.visible = false
 })
 
+// The baked table dressing is static; the playable and dancing props are separate.
+// Merge by material and attribute layout, since exported copies have independent
+// geometries even when they use the same porcelain. Preserve hidden dressing and flames.
+const tableParts = new Map(), tableInverse = new THREE.Matrix4().copy(dressed.matrixWorld).invert()
+dressed.traverseVisible(part => {
+  if (!part.isMesh || part.children.length || part.name.startsWith('flame') || Array.isArray(part.material)) return
+  const attributes = Object.entries(part.geometry.attributes).sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, value]) => `${name}:${value.itemSize}:${value.normalized}`).join('|')
+  const key = `${part.material.uuid}:${!!part.geometry.index}:${attributes}:${part.castShadow}:${part.receiveShadow}`
+  if (!tableParts.has(key)) tableParts.set(key, [])
+  tableParts.get(key).push(part)
+})
+for (const parts of tableParts.values()) {
+  if (parts.length < 2) continue
+  const first = parts[0], geometries = parts.map(part => part.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(tableInverse, part.matrixWorld)))
+  const mesh = new THREE.Mesh(mergeGeometries(geometries), first.material)
+  mesh.name = `Table ${first.material.name}`
+  mesh.castShadow = first.castShadow
+  mesh.receiveShadow = first.receiveShadow
+  mesh.geometry.computeBoundingSphere()
+  dressed.add(mesh)
+  parts.forEach(part => part.removeFromParent())
+  geometries.forEach(geometry => geometry.dispose())
+}
+
 // The mean of an object's width, height and depth.
 export const meanSize = object => new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).toArray().reduce((a, b) => a + b) / 3
+mergePaintedProp(dressed)
+// The tabletop and legs retain a cheap cached silhouette; small crockery does not cast.
+const tableShadowParts=layout.shapes.long_table.slice(0,1).concat(layout.shapes.long_table.slice(5)).map(([x,y,z,w,h,d])=>new THREE.BoxGeometry(w,h,d).translate(x,y,z))
+const tableShadow=new THREE.Mesh(mergeGeometries(tableShadowParts),new THREE.MeshBasicMaterial())
+tableShadow.applyMatrix4(dressed.matrixWorld);tableShadow.layers.set(4);tableShadow.castShadow=true;scene.add(tableShadow);tableShadowParts.forEach(part=>part.dispose())
 glow(things.book_page, 0xfff0b0, 2)
 
 // One draw per dressed model: retain floral maps and bake the other material identities into vertex data.
@@ -93,13 +152,15 @@ function instanceModel(name, objects) {
       material.color.toArray(tint, i * 3)
       surface.set([material.roughness, material.metalness, material.map ? 1 : 0], i * 3)
     }
-    for (const key of Object.keys(geometry.attributes)) if (!['position', 'normal', 'uv'].includes(key)) geometry.deleteAttribute(key)
+    for (const key of Object.keys(geometry.attributes)) if (!['position', 'normal', 'uv', 'uv1', 'uv2'].includes(key)) geometry.deleteAttribute(key)
     geometry.setAttribute('dressTint', new THREE.BufferAttribute(tint, 3))
     geometry.setAttribute('dressSurface', new THREE.BufferAttribute(surface, 3))
     geometry.clearGroups()
     pieces.push(geometry)
     if (material.map) mapped = material
   })
+  for(const name of ['uv1','uv2']) if(pieces.some(piece=>piece.hasAttribute(name)))
+    for(const piece of pieces) if(!piece.hasAttribute(name))piece.setAttribute(name,piece.attributes.uv.clone())
   const geometry = mergeGeometries(pieces), surface = attribute('dressSurface', 'vec3')
   pieces.forEach(piece => piece.dispose())
   const material = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide })
@@ -120,7 +181,7 @@ function instanceModel(name, objects) {
   geometry.computeBoundingBox()
   const size = geometry.boundingBox.getSize(new THREE.Vector3())
   objects.forEach(object => dressSizes.set(object, (size.x + size.y + size.z) / 3 * object.scale.x))
-  dressBatches.push({ mesh, objects })
+  dressBatches.push({ mesh, objects, dynamic:['lantern','hanging_clock','clock_hand'].includes(name), initialized:false, wasMoving:false })
   return mesh
 }
 const extraTable = layout.tableDressing.map(({ pos, rot = 0, scale = 1 }) => {
@@ -230,7 +291,14 @@ function hang(object, ring) {
   chainTransforms.push(link)
 }
 
-export const cups = layout.tableCups.map(pos => place({ model: 'teacup', pos, solid: false }))
+export const cups = layout.tableCups.map((pos, i) => {
+  if (i === layout.song.tapCup) return place({ model: 'teacup', pos, solid: false })
+  const cup = new THREE.Object3D()
+  cup.position.set(...pos)
+  scene.add(cup)
+  return cup
+})
+instanceModel('teacup', cups.filter((_, i) => i !== layout.song.tapCup))
 
 const clockFaces = layout.clocks.map(({ pos, rot }) => {
   const clock = new THREE.Object3D()
@@ -423,12 +491,21 @@ export function updateGarden(dt, time) {
 
 // After the song and hand poses: instances, flames and halos follow the same final prop transforms.
 const dressTransform = new THREE.Object3D(), dressPoint = new THREE.Vector3(), dressScale = new THREE.Vector3()
+const dressMatrix = new THREE.Matrix4()
+let lastDressTime=0
 const brassNormalMatrix = new THREE.Matrix3(), brassDirection = new THREE.Vector3()
 export function updateDressing(time) {
-  for (const { mesh, objects } of dressBatches) {
+  game.giantStep=Math.max(0,(game.giantStep??0)-(time-lastDressTime)*3.2)
+  lastDressTime=time
+  for (const batch of dressBatches) {
+    const {mesh,objects}=batch,moving=!!game.hop||game.giantStep>0
+    if(batch.initialized&&!batch.dynamic&&!moving&&!batch.wasMoving)continue
+    batch.initialized=true;batch.wasMoving=moving
     objects.forEach((object, i) => {
       object.updateWorldMatrix(true, false)
-      mesh.setMatrixAt(i, object.matrixWorld)
+      dressMatrix.copy(object.matrixWorld)
+      if(cups.includes(object)&&game.giantStep>0) dressMatrix.elements[13]+=Math.sin(game.giantStep*Math.PI)*.09
+      mesh.setMatrixAt(i, dressMatrix)
     })
     mesh.instanceMatrix.needsUpdate = true
   }

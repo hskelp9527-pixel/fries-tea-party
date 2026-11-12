@@ -1,0 +1,29 @@
+{
+  "frozen": {
+    "source": "art/storyboard/s01.png",
+    "main": "#dd9457",
+    "secondary": "#423d24",
+    "accent": "#851f1c",
+    "shadow": "#9d96a8",
+    "sky": "#f6c181",
+    "roseSky": "#a87882"
+  },
+  "awake": {
+    "source": "art/storyboard/s14.png",
+    "main": "#dc9957",
+    "secondary": "#444221",
+    "accent": "#a23937",
+    "shadow": "#7c7693",
+    "sky": "#eead76",
+    "roseSky": "#c296a5"
+  },
+  "sixOhOne": {
+    "source": "art/storyboard/s15.png",
+    "main": "#de8f50",
+    "secondary": "#3d3b1e",
+    "accent": "#9c403b",
+    "shadow": "#625366",
+    "sky": "#f9a375",
+    "roseSky": "#d57a92"
+  }
+}

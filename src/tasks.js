@@ -1,17 +1,19 @@
 import * as THREE from 'three/webgpu'
-import { scene, camera } from './scene.js'
+import { scene, camera, lens } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { model, addColliders } from './models.js'
 import { things, gears, glints, awake } from './garden.js'
 import { player, act, walkTo, anim } from './player.js'
 import { cast, standUp, sitDown, laySpoon } from './cast.js'
-import { say, burst, ting, playing, heard } from './audio.js'
+import { say, burst, ting, playing, heard, prepareMusic, setMusic } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { underTable, grotto, hall, overlook, song as songSpot } from './layout.js'
 import { stream, surface, CUP_PROFILE, TEA } from './liquids.js'
 import { toHand, release } from './hands.js'
 import { random } from './fields.js'
-import { game } from './state.js'
+import { game, checkpoint } from './state.js'
+import { onSceneCleanup } from './cutscene.js'
+import { spoonBridge } from './prop-staging.js'
 
 // The tasks at each place. Each place first shows what Fries cannot do yet: a glint on every missing gear (the one
 // high on the big tree's trunk, the one in the cottage hall), a light and ticking
@@ -86,23 +88,26 @@ cup.rotation.x = Math.PI
 saucer.position.set(ux, 0.09, uz)
 saucer.rotation.x = Math.PI
 scene.add(cup, saucer)
-addColliders('teacup', cup)
-addColliders('saucer', saucer)
+// A smooth porcelain support avoids catching the tiny capsule on the inverted
+// saucer's individual triangle seams where it joins the spoon.
+world.createCollider(RAPIER.ColliderDesc.cylinder(.035,.052).setTranslation(ux,.035,uz))
+world.createCollider(RAPIER.ColliderDesc.cylinder(.004,.067).setTranslation(ux,.089,uz))
 const [low, high] = underTable.spoon.map(a => new THREE.Vector3(...a))
 const run = high.clone().sub(low), middle = low.clone().lerp(high, 0.5)
 let bridged = false
 async function layBridge() {
   bridged = true
   const spoon = model('spoon')
-  const bounds = new THREE.Box3().setFromObject(spoon), size = bounds.getSize(new THREE.Vector3())
-  const scale = run.length() / size.z
-  spoon.scale.setScalar(scale)
-  await laySpoon(middle, spoon, new THREE.Vector3(...underTable.hare))
-  // The spoon's long axis is +Z. Centre it over the gap from the saucer to the floor.
-  spoon.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), run.clone().normalize())
-  spoon.position.copy(middle).sub(bounds.getCenter(new THREE.Vector3()).multiplyScalar(scale).applyQuaternion(spoon.quaternion))
-  world.createCollider(RAPIER.ColliderDesc.cuboid(0.035, 0.004, run.length() / 2 + 0.02)
-    .setTranslation(middle.x, middle.y, middle.z).setRotation(spoon.quaternion))
+  const bridge=spoonBridge(spoon,low,high)
+  await laySpoon(middle, spoon, new THREE.Vector3(...underTable.hare),bridge.handle)
+  bridge.place()
+  // Collision is the same measured spoon surface the player sees.
+  const vertex=new THREE.Vector3()
+  spoon.traverse(mesh=>{if(!mesh.isMesh)return;const p=mesh.geometry.attributes.position,vertices=new Float32Array(p.count*3)
+    for(let i=0;i<p.count;i++)vertex.fromBufferAttribute(p,i).applyMatrix4(mesh.matrixWorld).toArray(vertices,i*3)
+    const indices=mesh.geometry.index?new Uint32Array(mesh.geometry.index.array):Uint32Array.from({length:p.count},(_,i)=>i)
+    world.createCollider(RAPIER.ColliderDesc.trimesh(vertices,indices))
+  })
   say('SZ-05', cast.hare.object.position.distanceTo(player.feet))
   ting(1700)
 }
@@ -120,7 +125,9 @@ pipe.position.set(vx + 0.045, 0.2, vz)
 const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.005, 6, 20).rotateX(Math.PI / 2), brass)
 wheel.position.set(vx + 0.045, 0.024, vz)
 for (let k = 0; k < 4; k++) wheel.add(new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.004, 0.006).rotateY(k * Math.PI / 4), brass))
-const lamp = new THREE.PointLight(0xffb060, 1.2, 1.8)
+// This is a centimetre-scale alcove: inverse-square falloff makes a full-size
+// lamp wash out the valve and ceiling at these distances.
+const lamp = new THREE.PointLight(0xffb060, 0.018, 1.2)
 lamp.position.set(vx, 0.18, vz)
 scene.add(pipe, wheel, lamp)
 const moss = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: 0x4a6a2a, roughness: 1 }), 40)
@@ -156,27 +163,38 @@ for (const { model: name, at, rot = 0, scale = 1 } of hall.props) {
 
 // A handwritten note gives the Dormouse's clue somewhere the player can read it at normal size.
 const paper = document.createElement('canvas')
-paper.width = 768
-paper.height = 512
+paper.width = 1024
+paper.height = 640
 const ink = paper.getContext('2d')
-ink.fillStyle = '#eddbab'
-ink.fillRect(0, 0, paper.width, paper.height)
-ink.fillStyle = '#553c24'
-ink.font = '36px Georgia'
-;['The best butter!', 'No bread-knives in the works.', 'The Dormouse was muttering:', '"Crawl into the cracked', 'fountain foot..."'].forEach((line, i) => ink.fillText(line, 36, 72 + i * 78))
-const note = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.32), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(paper), roughness: 0.9 }))
+const noteTexture=new THREE.CanvasTexture(paper)
+noteTexture.colorSpace=THREE.SRGBColorSpace
+let readingNote=false
+function drawNote(){
+  if(readingNote)document.getElementById('task-hint').textContent=tr('The best butter! No bread-knives in the works. The Dormouse mutters...')
+  ink.fillStyle='#eddbab';ink.fillRect(0,0,paper.width,paper.height);ink.fillStyle='#321c0e';ink.font='500 48px "Microsoft YaHei", sans-serif'
+  ;['The best butter!', 'No bread-knives in the works.', 'The Dormouse was muttering:', '"Crawl into the cracked', 'fountain foot..."'].forEach((line,i)=>ink.fillText(tr(line),44,85+i*104));noteTexture.needsUpdate=true
+}
+drawNote();onLanguageChange(drawNote)
+const note = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.3625), new THREE.MeshBasicMaterial({ map: noteTexture, toneMapped:false }))
 note.position.copy(house.localToWorld(new THREE.Vector3(...hall.note)))
 note.rotation.y = house.rotation.y
 scene.add(note)
 export const hallNote = {
   pos: note.position, label: 'Read the butter-stained note',
-  can: () => player.size === 'normal' && note.position.distanceTo(player.feet.clone().add(new THREE.Vector3(0, 1.1, 0))) < 1,
+  read: false,
+  can: () => !hallNote.read && insideHall() && note.position.distanceTo(player.feet.clone().add(new THREE.Vector3(0, 1.1, 0))) < 1,
   use: async () => {
     player.control = false
-    document.getElementById('task-hint').textContent = 'The best butter! No bread-knives in the works. The Dormouse mutters...'
-    await say('EX-06')
+    player.cinematic=true;readingNote=true;lens.reading=true
+    onSceneCleanup(()=>{readingNote=false;lens.reading=false;document.getElementById('task-hint').textContent=''})
+    const from=camera.position.clone(),to=house.localToWorld(new THREE.Vector3(.15,1.9,-1.4)),fov=camera.fov
+    await tween(.35,t=>{camera.position.lerpVectors(from,to,t);camera.lookAt(note.position);camera.fov=fov+(45-fov)*t;camera.updateProjectionMatrix()})
+    document.getElementById('task-hint').textContent = tr('The best butter! No bread-knives in the works. The Dormouse mutters...')
+    const finished = await say('EX-06')
+    await wait(1.5)
+    hallNote.read = true
+    if (finished && !game.sceneSkipping && !game.discovered.includes('hall-note')) { game.discovered.push('hall-note'); checkpoint() }
     document.getElementById('task-hint').textContent = ''
-    player.control = true
   },
 }
 export function insideHall() {
@@ -196,16 +214,32 @@ let lane = 1, serving = false, cupTea, servedCup
 const spot = new THREE.Vector3(...songSpot.fries.pos)
 const at = k => spot.clone().add(new THREE.Vector3(0, 0, LANES[k]))
 addEventListener('keydown', e => {
-  if (!serving || e.repeat) return
+  if (!serving || game.paused || e.repeat) return
   if (e.code === 'KeyA') lane = Math.max(0, lane - 1)
   if (e.code === 'KeyD') lane = Math.min(2, lane + 1)
 })
 const musicBeat = () => (heard() - playing.awake.start) / BEAT
 async function untilBeat(beat) {
-  while (musicBeat() < beat) await wait(0.01)
+  while (!game.sceneSkipping && musicBeat() < beat) await wait(0.01)
 }
 async function serve() {
   player.control = false
+  await prepareMusic('awake')
+  if (!playing.awake) setMusic({ frozen: 1 - game.gears / 3, awake: game.gears / 3 })
+  const chair = cast.hatter.chair
+  const homes = pots.map(name => ({ object: things[name], position: things[name].position.clone(), rotation: things[name].rotation.clone() }))
+  const streams = new Set()
+  cupTea = servedCup = null
+  onSceneCleanup(async failed => {
+    serving = false
+    for (const pour of streams) pour.remove()
+    for (const { object, position, rotation } of homes) { object.position.copy(position); object.rotation.copy(rotation) }
+    cast.hatter.doing = cast.hatter.aim = null
+    cupTea?.remove(); servedCup?.removeFromParent()
+    if (servedCup) release(servedCup)
+    anim.hold('reach', false)
+    if (failed && !cast.hatter.seated) await sitDown('hatter', chair)
+  })
   lane = 1
   await walkTo(at(1).toArray(), 90)
   player.cinematic = true
@@ -222,10 +256,8 @@ async function serve() {
   anim.hold('reach')
   release(servedCup)
   cupTea = surface(servedCup, new THREE.Vector3(0, 0.012, 0), 0.044, 0.065, { fill: 0, profile: CUP_PROFILE })
-  const chair = cast.hatter.chair
   await standUp('hatter')
   cast.hatter.doing = 'conduct'
-  const homes = pots.map(name => ({ object: things[name], position: things[name].position.clone(), rotation: things[name].rotation.clone() }))
   const spouts = [new THREE.Vector3(0, 0.117, 0.134), new THREE.Vector3(0, 0.2, 0.172), new THREE.Vector3(0, 0.2, 0.172)]
   const landing = k => at(k).add(new THREE.Vector3(0.42, 0.98, 0))
   const targets = homes.map(({ object }, k) => {
@@ -235,7 +267,7 @@ async function serve() {
   cast.hatter.aim = targets[1]
   await Promise.all(homes.map(({ object, position }, k) => tween(1, t => object.position.lerpVectors(position, targets[k], t))))
   serving = true
-  document.getElementById('task-hint').textContent = 'A / D  Move your cup under the pouring teapot'
+  document.getElementById('task-hint').textContent = tr('A / D  Move your cup under the pouring teapot')
   let caught = 0
   const first = Math.ceil(musicBeat()) + 2
   for (let n = 0; n < POURS; n++) {
@@ -246,8 +278,10 @@ async function serve() {
     await tween(BEAT, t => { pot.rotation.x = 0.8 * t })
     const target = landing(k), spout = pot.localToWorld(spouts[k].clone())
     const pour = stream(spout, k === lane ? cupTea.disc.getWorldPosition(target) : target, { height: 0, radius: 0.0045, colour: TEA })
+    streams.add(pour)
     await untilBeat(beat + 1)
     pour.remove()
+    streams.delete(pour)
     if (servedCup.position.distanceTo(target) < 0.13) {
       caught++
       ting(1100 + caught * 120)
@@ -255,10 +289,12 @@ async function serve() {
     } else {
       burst(5, 0.6)
       const miss = stream(target, target.clone().setY(0.78), { height: 0, radius: 0.0045, colour: TEA })
+      streams.add(miss)
       await wait(BEAT)
       miss.remove()
+      streams.delete(miss)
     }
-    document.getElementById('task-hint').textContent = `A / D  Move your cup - Tea caught ${caught}/${POURS}`
+    document.getElementById('task-hint').textContent = tr('A / D  Move your cup - Tea caught {caught}/{total}',{caught,total:POURS})
     await tween(BEAT, t => { pot.rotation.x = 0.8 * (1 - t) })
   }
   serving = false
@@ -274,10 +310,10 @@ async function serve() {
   await sitDown('hatter', chair)
   document.getElementById('task-hint').textContent = ''
   player.cinematic = false
-  player.control = true
 }
 
 export function updateTasks(dt, clock) {
+  if (game.paused) return
   updateGlints()
   if (serving) {
     player.feet.lerp(at(lane), Math.min(1, dt * 12))
@@ -296,3 +332,4 @@ export function updateTasks(dt, clock) {
     d.position.set(d.userData.x, 0.41 - 0.4 * k * k, d.userData.z)
   }
 }
+import { tr, onLanguageChange } from './i18n.js'

@@ -47,8 +47,9 @@ function cloud(count, fireflies) {
   ))
   material.scaleNode = home.w
   const radius = uv().sub(0.5).length()
-  const halo = smoothstep(0.5, 0, radius).pow(2)
-  const core = smoothstep(fireflies ? 0.12 : 0.24, 0, radius)
+  const halo = float(1).sub(smoothstep(0, 0.5, radius)).pow(2)
+  const core = float(1).sub(smoothstep(0, fireflies ? 0.12 : 0.24, radius))
+  material.opacityNode = halo
   const breath = sin(time.mul(fireflies ? 0.85 : 0.32).add(phase)).mul(0.5).add(0.5)
   material.colorNode = vec3(1, fireflies ? 0.8 : 0.67, 0.25)
     .mul(core.mul(fireflies ? 4 : 1.5).add(halo.mul(0.22)))

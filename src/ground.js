@@ -5,6 +5,8 @@ import { RAPIER, world } from './physics.js'
 import { meadow, paths, terraces, plaza, overlook } from './layout.js'
 import { LEAVES, cardMaterial, cards, flowerClump, flowerMaterial, flowerMesh, shareAt, drawCount, walkers, stir } from './plants.js'
 import { player } from './player.js'
+import { quality } from './quality.js'
+import { surfacePalette } from './look.js'
 import { cast } from './cast.js'
 import { noise, lush, bloom, species, bare, moss, bed, pathDistance, ground, level, random } from './fields.js'
 
@@ -35,26 +37,30 @@ const here = positionWorld.xz
 const broad = mx_noise_float(here.mul(0.11)), patch = mx_noise_float(here.mul(0.45).add(17)), speckle = mx_noise_float(here.mul(2.6).add(5))
 // Lively greens: yellow-green where dry, a deep fresh green where lush, with sunlit and shaded drifts and warm golden
 // patches (each mix weight trades vividness against how tidy the lawn looks; the sun's warm light multiplies all of it).
-let grass = mix(color(0xa9b84e), color(0x58a63a), field.r)
-grass = mix(grass, color(0x9ccb4c), smoothstep(0.05, 0.55, broad).mul(0.6))
-grass = mix(grass, color(0x3f8a36), smoothstep(0.05, 0.5, broad.negate()).mul(0.4))
-grass = mix(grass, color(0xd2c85a), smoothstep(0.3, 0.6, patch.add(float(1).sub(field.r).mul(0.5))).mul(0.45))
+let grass = mix(color(surfacePalette.dry), color(surfacePalette.lush), field.r)
+grass = mix(grass, color(surfacePalette.dry), smoothstep(0.05, 0.55, broad).mul(0.3))
+grass = mix(grass, color(surfacePalette.moss), smoothstep(0.05, 0.5, broad.negate()).mul(0.4))
+grass = mix(grass, color(surfacePalette.dry), smoothstep(0.3, 0.6, patch.add(float(1).sub(field.r).mul(0.5))).mul(0.25))
 // Worn ground is sun-baked sand, warmer and lighter in patches with a fine grain: paths read as pale ribbons across the green.
-let soil = mix(grass, mix(color(0xcfae78), color(0xe6cc98), smoothstep(-0.3, 0.4, patch)).mul(speckle.mul(0.12).add(1)), smoothstep(0.25, 0.75, field.g.add(patch.mul(0.35)).add(speckle.mul(0.15))).mul(0.92))
+let soil = mix(grass, mix(color(surfacePalette.soil), color(surfacePalette.soilLight), smoothstep(-0.3, 0.4, patch)).mul(speckle.mul(0.12).add(1)), smoothstep(0.25, 0.75, field.g.add(patch.mul(0.35)).add(speckle.mul(0.15))).mul(0.92))
 // Moss and damp: a soft deep green that mottles with the patch noise, kept off the worn paths.
 const mossy = smoothstep(0.15, 0.6, field.a.add(patch.mul(0.2))).mul(float(1).sub(field.g))
-soil = mix(soil, mix(color(0x5a9a3e), color(0x8ac04e), smoothstep(-0.2, 0.5, patch)).mul(speckle.mul(0.12).add(1)), mossy.mul(0.9))
+soil = mix(soil, color(surfacePalette.moss).mul(speckle.mul(0.12).add(1)), mossy.mul(0.9))
 soil = soil.mul(speckle.mul(0.1).add(1))
-const valley = mix(mix(color(0x6d8c3e), color(0xb8a24f), smoothstep(-0.1, 0.4, mx_noise_float(here.mul(0.018).add(41)))), color(0x4a6a3a), smoothstep(0.2, 0.6, mx_noise_float(here.mul(0.03).add(9))))
+const valley = mix(mix(color(surfacePalette.farGrass), color(surfacePalette.farDry), smoothstep(-0.1, 0.4, mx_noise_float(here.mul(0.018).add(41)))), color(surfacePalette.farForest), smoothstep(0.2, 0.6, mx_noise_float(here.mul(0.03).add(9))))
 const groundMaterial = new THREE.MeshStandardNodeMaterial({ roughness: 1 })
-groundMaterial.colorNode = FIELDS ? vec3(field.g.mul(0.5), field.r, field.b) : mix(soil, valley.mul(speckle.mul(0.1).add(1)), smoothstep(55, 95, here.sub(vec2(0, -4)).length()))
+groundMaterial.colorNode = FIELDS ? vec3(field.g.mul(0.5), field.r, field.b) : mix(soil, valley.mul(speckle.mul(0.1).add(1)), smoothstep(38, 70, here.sub(vec2(0, -4)).length()))
 groundMaterial.roughnessNode = float(1).sub(field.a.mul(0.3))
+// Below the non-walkable garden brow, hand the distance over to the painted
+// valley instead of exposing an empty fog-colored plane from giant height.
+groundMaterial.alphaHash = true
+groundMaterial.opacityNode = smoothstep(-7,-2,positionWorld.y)
 
 // The land, out to the far hills. Its cells are 0.5 m over the garden, as fine as the walkable height field, so the
 // plants rooted on the true height lie on the mesh (the overlook's slope is only a few metres across); beyond 40 m
 // they widen by 8% a step.
 const edges = [0]
-for (let step = 0.5; edges.at(-1) < 210; edges.push(edges.at(-1) + step)) if (edges.at(-1) >= 40) step *= 1.08
+for (let step = 1; edges.at(-1) < 210; edges.push(edges.at(-1) + step)) if (edges.at(-1) >= 40) step *= 1.08
 const coords = [...edges.slice(1).reverse().map(e => -e), ...edges], count = coords.length
 const land = new THREE.PlaneGeometry(1, 1, count - 1, count - 1).rotateX(-Math.PI / 2)
 const position = land.attributes.position
@@ -86,7 +92,12 @@ for (const [x0, z0, x1, z1, height] of terraces) {
   scene.add(block)
   world.createCollider(RAPIER.ColliderDesc.cuboid((x1 - x0) / 2, height / 2, (z1 - z0) / 2).setTranslation(block.position.x, block.position.y, block.position.z))
 }
-const paving = new THREE.Mesh(new THREE.CircleGeometry(plaza[2], 48).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc9bca4, roughness: 0.85 }))
+const pavingMaterial=new THREE.MeshStandardNodeMaterial({roughness:.87})
+const tile=positionWorld.xz.mul(1.45),tx=tile.x.fract(),tz=tile.y.fract()
+const joint=tx.min(float(1).sub(tx)).min(tz.min(float(1).sub(tz)))
+const paver=mix(color(0x9e8b71),color(0xbdab8b),smoothstep(-.3,.4,mx_noise_float(tile.floor().mul(3.1))))
+pavingMaterial.colorNode=mix(color(0x61594e),paver.mul(speckle.mul(.045).add(.975)),smoothstep(.012,.035,joint))
+const paving = new THREE.Mesh(new THREE.CircleGeometry(plaza[2], 48).rotateX(-Math.PI / 2), pavingMaterial)
 paving.position.set(plaza[0], 0.015, plaza[1])
 paving.receiveShadow = true
 scene.add(paving)
@@ -102,16 +113,12 @@ const GRASS_CELL = 16, FLOWER_CELL = 8
 // points. Each plant grows from its root as the share passes its rank, so density changes swell and shrink plants
 // instead of popping them, and past the last point nothing is drawn (the ground texture carries the colour). Longer or
 // fuller curves cost triangles; thinner mid curves show the lawn through the grass sooner.
-// Grass (2 triangles a card): full to 20 m, half by 40, a fifth by 60, none past 80.
-const GRASS_FADE = [[40, 1], [60, 0.5], [80, 0]]
-// Flowers are two meshes per cell and kind. The modelled clump (1000 to 2500 triangles) is drawn only close up, thinning from
-// every clump at 5 m to none at 15 m; a vertex-merged copy (100 to 350 triangles) takes over as it thins (the far mesh draws
-// the clumps the near one does not, so near and far together are about one clump in every spot at 5 to 15 m) and carries on out to 60
-// m, thinning as it goes. A shorter near curve saves the most triangles; a longer one keeps the petals crisp further out.
-// Plants change only far from the player (beyond 28 m for flowers, 40 m for grass): nearer changes read as flowers
-// growing and shrinking round him as he walks.
-const NEAR_FLOWERS = [[28, 1], [34, 0]]
-const FAR_FLOWERS = [[28, 0], [34, 0.8], [50, 0.4], [70, 0]]
+// Grass (2 triangles a card): every card to 40 m, half by 60, none past 80.
+const GRASS_FADE = [[15, 1], [27, 0.25], [40, 0]]
+// Flowers are two meshes per cell and kind. The modelled clump (1000 to 2500 triangles) is drawn within 12 m only; past it
+// a vertex-merged copy (300 to 600 triangles) stands in the same spot, every one of them out to 60 m, so the lawn never
+// thins round the player. The swap is instant (see GROW): resizing plants on the way read as flowers following him.
+// A longer near distance costs the most triangles (the full clumps were most of the frame's 10 million at 30 m).
 const rand = random(11)
 const grassCells = new Map(), flowerCells = new Map()
 function cell(cells, size, x, z, make) {
@@ -143,7 +150,7 @@ const grassShare = (x, z) => {
 }
 // Grass: tufts as pairs of crossed cards, taller, deeper and greener where the lawn is lush. They stand on a
 // jittered grid, so the lawn is covered evenly with no bare patches between them, and wide enough to overlap.
-const spacing = 1 / Math.sqrt(meadow.grassPerSquareMetre * share)
+const spacing = 1 / Math.sqrt(meadow.grassPerSquareMetre * share * .64)
 for (let gx = x0; gx < x1; gx += spacing) {
   for (let gz = z0; gz < z1; gz += spacing) {
     const x = gx + rand() * spacing, z = gz + rand() * spacing
@@ -166,7 +173,7 @@ for (let gx = x0; gx < x1; gx += spacing) {
     const lean = leanToPath(x, z)
     for (const turn of [0, Math.PI / 2]) {
       cell(grassCells, GRASS_CELL, x, z, () => ({ list: [] })).list.push({
-        position: new THREE.Vector3(x, y, z), quaternion: lean ? lean.clone().multiply(upright(yaw + turn)) : upright(yaw + turn), scale: new THREE.Vector3(height * 1.7, height, 1),
+        position: new THREE.Vector3(x, y, z), quaternion: lean ? lean.clone().multiply(upright(yaw + turn)) : upright(yaw + turn), scale: new THREE.Vector3(height * 2.1, height * 1.08, 1),
         cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l + 0.25 * sun, 1, 0.65 + 0.15 * rand() - 0.2 * sun).multiplyScalar((m ? 0.9 : 0.6 + 0.6 * sun) + 0.3 * rand()),
       })
     }
@@ -189,8 +196,8 @@ for (let n = Math.round((x1 - x0) * (z1 - z0) * meadow.flowersPerSquareMetre * (
   const kinds = rand() < 0.65 ? LOW : TALL, m = moss(x, z) > 0.3, ring = bed(x, z) > 0.4
   // Under the table and between the roots: small daisies and forget-me-nots. Round the plaza: every kind at random, a
   // mixed bed. Elsewhere the drift's species with its neighbours in the palette mixed in.
-  const name = m ? (rand() < 0.8 ? 'flower_daisy' : 'flower_forget_me_not') : ring ? BED[Math.floor(rand() * BED.length)]
-    : kinds[Math.min(kinds.length - 1, Math.max(0, Math.floor(species(x, z) * kinds.length + (rand() - 0.5) * 2.2)))]
+  const name = m ? (rand() < 0.8 ? 'flower_daisy' : 'flower_forget_me_not') : ring ? BED[Math.min(BED.length - 1, Math.floor(species(x, z) * BED.length))]
+    : kinds[Math.min(kinds.length - 1, Math.max(0, Math.floor(species(x, z) * kinds.length + (rand() - 0.5) * 0.25)))]
   clumps[name] ??= flowerClump(name)
   const matrix = clump.compose(
     new THREE.Vector3(x, level(x, z), z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
@@ -227,7 +234,8 @@ petals.computeBoundingSphere()
 scene.add(petals)
 
 const grassMaterial = cardMaterial(LEAVES, { translucency: 1.1, flutter: 0.01, thin: GRASS_FADE })
-const nearFlowerMaterial = flowerMaterial(NEAR_FLOWERS), farFlowerMaterial = flowerMaterial(FAR_FLOWERS)
+grassMaterial.colorNode = grassMaterial.colorNode.mul(color(0x9baf91))
+const nearFlowerMaterial = flowerMaterial(undefined, false, true), farFlowerMaterial = flowerMaterial(undefined, true, true)
 const shuffle = list => {
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -241,13 +249,58 @@ for (const c of grassCells.values()) {
   scene.add(mesh)
   drawn.push({ mesh, full: c.list.length, box: c.box, fade: GRASS_FADE })
 }
-for (const c of flowerCells.values()) {
-  for (const [name, list] of Object.entries(c.kinds)) {
-    const matrices = shuffle(list), { geometry, simple } = clumps[name]
-    for (const [clump, fade, order] of [[{ geometry, material: nearFlowerMaterial }, NEAR_FLOWERS, matrices], [{ geometry: simple, material: farFlowerMaterial }, FAR_FLOWERS, [...matrices].reverse()]]) {
-      const mesh = flowerMesh(clump, order)
-      scene.add(mesh)
-      drawn.push({ mesh, full: list.length, box: c.box, fade })
+// Pack visible flowers by species and detail tier. Small spatial cells previously
+// submitted hundreds of draws, including empty near/far tiers. Each flower now
+// chooses exactly one geometry, with the same authored position and tint.
+const flowerGroups = new Map(), flowerBatches = []
+for (const c of flowerCells.values()) for (const [name, list] of Object.entries(c.kinds)) {
+  if (!flowerGroups.has(name)) flowerGroups.set(name, [])
+  flowerGroups.get(name).push(...list)
+}
+for (const [name, matrices] of flowerGroups) {
+  const { geometry, simple } = clumps[name]
+  const near = flowerMesh({ geometry, material: nearFlowerMaterial }, matrices)
+  const far = flowerMesh({ geometry: simple, material: farFlowerMaterial }, matrices)
+  for (const mesh of [near, far]) {
+    mesh.name = `${name} ${mesh === near ? 'near' : 'far'}`
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+    mesh.geometry.attributes.aRoot.setUsage(THREE.DynamicDrawUsage)
+    mesh.instanceColor.setUsage(THREE.DynamicDrawUsage)
+    mesh.frustumCulled = false // the per-instance sphere cull below owns visibility
+    scene.add(mesh)
+  }
+  geometry.computeBoundingSphere()
+  const centre = geometry.boundingSphere.center, radius = geometry.boundingSphere.radius
+  const plants = matrices.map(matrix => ({ matrix, tint: matrix.tint ?? new THREE.Color(1, 1, 1),
+    root: new THREE.Vector3().setFromMatrixPosition(matrix),
+    bounds: new THREE.Sphere(centre.clone(), radius).applyMatrix4(matrix) }))
+  flowerBatches.push({ near, far, plants })
+}
+const plantFrustum = new THREE.Frustum(), plantProjection = new THREE.Matrix4()
+const lastFlowerView = new THREE.Matrix4()
+let lastFlowerQuality = 0
+function updateFlowers() {
+  camera.updateMatrixWorld()
+  plantProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+  if (lastFlowerView.equals(plantProjection) && lastFlowerQuality === quality.distance) return
+  lastFlowerView.copy(plantProjection)
+  lastFlowerQuality = quality.distance
+  plantFrustum.setFromProjectionMatrix(plantProjection, camera.coordinateSystem)
+  for (const { near, far, plants } of flowerBatches) {
+    near.count = far.count = 0
+    for (const plant of plants) {
+      const distance = Math.hypot(plant.root.x - camera.position.x, plant.root.z - camera.position.z) * quality.distance
+      if (distance > 60 || !plantFrustum.intersectsSphere(plant.bounds)) continue
+      for(const mesh of distance<9?[near]:distance>11?[far]:[near,far]){
+        const index=mesh.count++
+        mesh.setMatrixAt(index, plant.matrix)
+        mesh.setColorAt(index, plant.tint)
+        mesh.geometry.attributes.aRoot.setXYZ(index, plant.root.x, plant.root.y, plant.root.z)
+      }
+    }
+    for (const mesh of [near, far]) {
+      mesh.visible = mesh.count > 0
+      mesh.instanceMatrix.needsUpdate = mesh.instanceColor.needsUpdate = mesh.geometry.attributes.aRoot.needsUpdate = true
     }
   }
 }
@@ -276,10 +329,11 @@ function updateWalkers() {
 
 export function updateGround() {
   updateWalkers()
+  updateFlowers()
   for (const d of drawn) {
     const [bx0, bz0, bx1, bz1] = d.box
-    const distance = Math.hypot(Math.max(bx0 - camera.position.x, 0, camera.position.x - bx1), Math.max(bz0 - camera.position.z, 0, camera.position.z - bz1))
-    d.mesh.count = drawCount(d.full, shareAt(d.fade, distance))
+    const distance = Math.hypot((bx0+bx1)/2-camera.position.x,(bz0+bz1)/2-camera.position.z)
+    d.mesh.count = drawCount(d.full, shareAt(d.fade, distance * quality.distance))
     d.mesh.visible = d.mesh.count > 0
   }
 }

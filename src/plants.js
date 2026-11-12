@@ -1,17 +1,20 @@
 import * as THREE from 'three/webgpu'
 import {
   uniform, attribute, uv, texture, time, sin, vec2, vec3, vec4, float, mix, pow, dot, smoothstep, positionLocal,
-  positionWorld, positionGeometry, cameraPosition, cameraViewMatrix, normalWorld,
+  positionWorld, positionGeometry, cameraPosition, cameraViewMatrix, normalWorld, interleavedGradientNoise, screenCoordinate,
 } from 'three/tsl'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { SUN } from './scene.js'
 import { model } from './models.js'
+import { quality, onQualityChange } from './quality.js'
+const qualityDistance=uniform(quality.distance)
+onQualityChange(()=>{qualityDistance.value=quality.distance})
 
 // Leaves and grass are drawn as instanced cards cut out of the alpha atlas leaves.png (2 x 2: round serrated
 // leaf, laurel leaf, ivy leaf, grass tuft); without it each card is a plain oval. Flowers are modelled clumps.
-const images = import.meta.glob('/art/textures/kit/*.png', { eager: true, query: '?url', import: 'default' })
+const images = import.meta.glob('/art/optimized/leaves.webp', { eager: true, query: '?url', import: 'default' })
 function atlas(name) {
-  const url = images[`/art/textures/kit/${name}.png`]
+  const url = images[`/art/optimized/${name}.webp`]
   if (!url) return null
   const map = new THREE.TextureLoader().load(url)
   map.colorSpace = THREE.SRGBColorSpace
@@ -22,6 +25,10 @@ function atlas(name) {
 export const LEAVES = { map: atlas('leaves'), grid: [2, 2], round: [0, 1], laurel: [1, 1], ivy: [0, 0], grass: [1, 0] }
 
 const sun = uniform(SUN)
+const flowerMetadata = import.meta.glob('/art/optimized/flowers/dimensions.json', { eager: true, import: 'default' })['/art/optimized/flowers/dimensions.json']
+const flowerAtlasUrl = import.meta.glob('/art/optimized/flowers/flowers.webp', { eager: true, query: '?url', import: 'default' })['/art/optimized/flowers/flowers.webp']
+const flowerAtlas = flowerAtlasUrl ? new THREE.TextureLoader().load(flowerAtlasUrl) : null
+if (flowerAtlas) { flowerAtlas.colorSpace = THREE.SRGBColorSpace; flowerAtlas.anisotropy = 4 }
 
 // The wind, one field for the whole garden: gust fronts rolling in from the west with quicker chop on top, as a
 // bend direction on the ground. `calm` scales it (the bushes stir harder once the flowers wake).
@@ -46,7 +53,9 @@ const gust = p => {
 // swells and shrinks the plants rather than popping them. A bigger GROW is a sharper change (more like popping, less
 // blur of the density edge); a smaller one is softer but makes more instances half-grown, which costs vertices for
 // little to see.
-const GROW = 6
+const GROW = 60 // instant: a plant appears or goes at its own distance and never visibly resizes
+const detailDistance = uniform(quality.distance)
+onQualityChange(() => { detailDistance.value = quality.distance })
 // A share curve is [[metres, share], ...], linear between points and held beyond the ends. `shareAt` is the
 // share in JavaScript (what the cells' draw counts follow), `shareNode` the same in the shader.
 export const shareAt = (curve, d) => curve.slice(1).reduce((s, [d1, k1], i) => s + (k1 - curve[i][1]) * Math.min(1, Math.max(0, (d - curve[i][0]) / (d1 - curve[i][0]))), curve[0][1])
@@ -54,7 +63,7 @@ const shareNode = (curve, d) => curve.slice(1).reduce((s, [d1, k1], i) => s.add(
 // How many of a mesh's instances (the first ones, as they are ranked in order) can show at `share`.
 export const drawCount = (full, share) => Math.min(full, Math.ceil(full * share / (1 - 1 / GROW)))
 // The size, 0 to 1, of the plant rooted at `root` (world x, z) under a share curve.
-const grown = (curve, root) => shareNode(curve, root.sub(cameraPosition.xz).length()).sub(attribute('aRank', 'float').mul(1 - 1 / GROW)).mul(GROW).saturate()
+const grown = (curve, root) => shareNode(curve, root.sub(cameraPosition.xz).length().mul(detailDistance)).sub(attribute('aRank', 'float').mul(1 - 1 / GROW)).mul(GROW).saturate()
 
 // What the characters do to the plants rooted at `root` (world x, z): `push`, the sideways shove away from every
 // walker within its radius plus the running gust, and `near`, 1 close to a dancer fading to 0 at 5.5 m.
@@ -85,7 +94,9 @@ export function cardMaterial(sheet, { crown = false, translucency = 0.8, flutter
   const cellUv = uv().div(vec2(...sheet.grid)).add(cell)
   const sample = sheet.map ? texture(sheet.map, cellUv) : vec4(0.36, 0.5, 0.22, smoothstep(0.5, 0.45, uv().sub(vec2(0.5, 0.5)).length()))
   const depth = crown ? positionWorld.sub(base.xyz).length().div(base.w).saturate() : uv().y.mul(0.6).add(0.4)
-  material.colorNode = sample.rgb.mul(mix(0.45, 1, depth))
+  const canopyHeight = positionWorld.y.sub(base.y).div(base.w.max(0.01))
+  const canopyLight = mix(0.48, 1.05, smoothstep(-0.7, 0.65, canopyHeight))
+  material.colorNode = sample.rgb.mul(mix(0.45, 1, depth)).mul(crown ? canopyLight : 0.82)
   material.opacityNode = sample.a
 
   const flap = sin(time.mul(7).add(base.x.mul(3.1)).add(positionLocal.y.mul(4)).add(positionLocal.x.mul(5))).mul(flutter).mul(uv().y)
@@ -138,18 +149,41 @@ export function cards(material, sheet, list, casts = false) {
 // Vertices bend by their height above the clump's foot, so the foot stays put and the heads move: with the breeze,
 // away from the characters, and with the beat near the dancers. Draw it with `flowerMesh`. With `thin`, a share curve
 // (see `shareAt`), the material fades its clumps out with distance, so it is made once per curve and shared.
-export function flowerMaterial(thin) {
+export function flowerMaterial(thin, impostor = false, lod = false) {
   const height = positionGeometry.y, root = attribute('aRoot', 'vec3').xz, { push, near } = touch(root)
-  const material = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.62, side: THREE.DoubleSide })
+  const material = new THREE.MeshStandardNodeMaterial({ vertexColors: !impostor, roughness: 0.8, side: THREE.DoubleSide,
+    ...(impostor && flowerAtlas ? { map: flowerAtlas, alphaTest: 0.45, alphaToCoverage: true } : {}) })
   const bend = gust(positionLocal.xz).mul(BREEZE).mul(wind.bushes.mul(0.5).add(1)).add(push).mul(height.mul(height).mul(0.8))
   material.positionNode = (thin ? positionLocal.mul(grown(thin, root)) : positionLocal).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
+  if(lod){
+    const transition=smoothstep(9,11,root.sub(cameraPosition.xz).length().mul(qualityDistance))
+    const noise=interleavedGradientNoise(screenCoordinate.xy)
+    const coverage=impostor?transition:float(1).sub(transition)
+    material.opacityNode=(impostor&&flowerAtlas?texture(flowerAtlas).a:float(1)).mul(coverage)
+    material.alphaTestNode=impostor?float(1).sub(noise).max(.01):noise.max(.01)
+  }
   return material
 }
 export function flowerClump(name) {
-  const meshes = []
-  model(name).traverse(o => { if (o.isMesh) meshes.push(o) })
-  const geometry = mergeGeometries(meshes.map(m => m.geometry))
-  return { geometry, simple: simplify(geometry, 10), material: flowerMaterial() }
+  const source = model(name), pieces = []
+  source.updateMatrixWorld(true)
+  source.traverse(o => { if (o.isMesh) pieces.push(o.geometry.clone().applyMatrix4(o.matrixWorld)) })
+  const geometry = mergeGeometries(pieces)
+  pieces.forEach(piece => piece.dispose())
+  let simple
+  if (flowerAtlas && flowerMetadata?.[name]) {
+    const spec = flowerMetadata[name], cards = [], rows = Object.keys(flowerMetadata).length
+    for (let side = 0; side < 2; side++) {
+      const card = new THREE.PlaneGeometry(spec.width, spec.height)
+      const uv = card.attributes.uv
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) + side) / 2, 1 - (spec.row + 1 - uv.getY(i)) / rows)
+      card.rotateY(side * Math.PI / 2).translate(...spec.center)
+      cards.push(card)
+    }
+    simple = mergeGeometries(cards)
+    cards.forEach(card => card.dispose())
+  } else simple = simplify(geometry, 6)
+  return { geometry, simple, material: flowerMaterial() }
 }
 
 // A cheap copy of a geometry for distance: vertices snapped to a grid of `divisions` cells across its longest side
