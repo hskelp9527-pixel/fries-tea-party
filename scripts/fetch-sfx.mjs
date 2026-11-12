@@ -35,9 +35,9 @@ const sources = [{ creator: 'Kenney', title: 'Impact Sounds 1.0', sourcePage, do
   files: fs.readdirSync(output).filter(name => /^(footstep_|impact(?:Glass|Plate|Wood)_light_).*\.ogg$/.test(name)) }]
 const additional = [
   { creator: 'cemkalyoncu', title: 'Tick and Tock', sourcePage: 'https://opengameart.org/content/tick-and-tock',
-    downloadUrl: 'https://opengameart.org/sites/default/files/tick.wav', file: 'clock_tick_000.ogg' },
+    downloadUrl: 'https://opengameart.org/sites/default/files/tick.wav', file: 'clock_tick_000.ogg', gain: 23.2 },
   { creator: 'cemkalyoncu', title: 'Tick and Tock', sourcePage: 'https://opengameart.org/content/tick-and-tock',
-    downloadUrl: 'https://opengameart.org/sites/default/files/tick2.wav', file: 'clock_tick_001.ogg' },
+    downloadUrl: 'https://opengameart.org/sites/default/files/tick2.wav', file: 'clock_tick_001.ogg', gain: 20.4 },
   { creator: 'bxyorna', title: 'Water drop / Splash', sourcePage: 'https://freesound.org/people/bxyorna/sounds/410335/',
     downloadUrl: 'https://cdn.freesound.org/previews/410/410335_7963426-hq.mp3', file: 'water_drop_000.ogg' },
 ]
@@ -47,12 +47,13 @@ for (const asset of additional) {
   if (!response.ok) throw new Error(`Could not download ${asset.title}: ${response.status}`)
   const temporary = path.join(output, `source-${path.basename(new URL(asset.downloadUrl).pathname)}`)
   fs.writeFileSync(temporary, Buffer.from(await response.arrayBuffer()))
-  const conversion = spawnSync(ffmpeg, ['-v', 'error', '-y', '-i', temporary, '-ac', '1', '-c:a', 'libopus', '-b:a', '64k',
+  const conversion = spawnSync(ffmpeg, ['-v', 'error', '-y', '-i', temporary, '-ac', '1', ...(asset.gain ? ['-af', `silenceremove=start_periods=1:start_threshold=-50dB,volume=${asset.gain}dB`] : []), '-c:a', 'libopus', '-b:a', '64k',
     '-application', 'audio', path.join(output, asset.file)], { encoding: 'utf8', windowsHide: true })
   if (conversion.status !== 0) throw new Error(conversion.stderr || `Could not convert ${asset.title}`)
   fs.unlinkSync(temporary)
-  sources.push({ ...asset, license: 'CC0-1.0', licenseUrl, files: [asset.file],
-    processing: asset.creator === 'bxyorna' ? 'Public high-quality MP3 preview transcoded to mono Opus. Original AIFF requires login.' : 'Original microphone recording transcoded from WAV to mono Opus.' })
+  const { gain, ...credit } = asset
+  sources.push({ ...credit, license: 'CC0-1.0', licenseUrl, files: [asset.file],
+    processing: asset.creator === 'bxyorna' ? 'Public high-quality MP3 preview transcoded to mono Opus. Original AIFF requires login.' : 'Original microphone recording, leading silence trimmed and peak normalised to about -1 dBFS, transcoded from WAV to mono Opus.' })
 }
 fs.writeFileSync(path.join(output, 'sources.json'), JSON.stringify({ retrieved: '2026-11-11', sources }, null, 2))
 console.log(`Downloaded ${sources.reduce((n, source) => n + source.files.length, 0)} CC0 recordings; provenance saved to sources.json`)

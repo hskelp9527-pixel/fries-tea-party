@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { player, walkTo } from './player.js'
 import { camera, lens } from './scene.js'
-import { playSfx } from './audio.js'
+import { playSfx, duckMusic } from './audio.js'
 import { game } from './state.js'
 import { tr, localizeDOM, onLanguageChange } from './i18n.js'
 
@@ -60,6 +60,7 @@ function complete(success) {
   if (!gearGames.active) return
   gearGames.active = false
   game.miniGame = false
+  duckMusic(false)
   gearGames.handTarget = null
   overlay.hidden = true
   held = false
@@ -102,9 +103,15 @@ function resetRound(all = false) {
   watches.querySelectorAll('button').forEach(button => { button.classList.remove('selected', 'heard'); button.disabled = false })
   message(gearGames.kind === 'tree' ? 'Follow the faint ticking. Rest your hand where the wood feels warm.'
     : gearGames.kind === 'fountain' ? 'Choose a dry lane. Step only while the syrup curtain parts.'
-    : 'Listen to the watches. The one with two close ticks holds the piece.')
+    : 'Listen to the watches. The one that ticks twice, then rests, holds the piece.')
 }
 
+// Tick times (s) of a listening round. The right watch: two ticks 0.22 s apart, a rest, always the same. Every wrong
+// watch ticks singly (never closer than 0.5 s unless it is the evenly fast one): slow, fast, limping, speeding up,
+// skipping beats, a plain steady beat.
+const PAIRS = [0, 0.22, 1.2, 1.42, 2.4, 2.62]
+const WRONG = [[0, 1.5, 3], [0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, 2.4, 2.7, 3, 3.3], [0, 0.9, 1.4, 2.3, 2.8, 3.7], [0, 1.2, 2.2, 3, 3.6],
+  [0, 0.7, 1.4, 2.8, 3.5], [0, 0.8, 1.6, 2.4, 3.2]]
 function listen(index) {
   if (!gearGames.active || gearGames.kind !== 'hall' || gearGames.failed || gearGames.listenRemaining > 0) return
   gearGames.selected = index
@@ -117,7 +124,7 @@ function listen(index) {
 function chooseWatch() {
   if (gearGames.failed || !roundWatches.has(gearGames.selected)) return
   if (gearGames.selected !== gearGames.correctWatch) {
-    fail('A hurried tick, but no gear. Listen to the pause between the pair.')
+    fail('No gear in that one. Listen for two quick ticks, then a long rest.')
     if (!gearGames.failed) resetRound()
     return
   }
@@ -214,6 +221,7 @@ export async function playGearGame(item) {
   gearGames.kind = item.in === 'big_tree' ? 'tree' : item.in === 'house' ? 'hall' : 'fountain'
   game.miniGame = true
   game.sceneSkipping = false
+  if (item.in === 'house') duckMusic(true)
   entry = player.feet.clone()
   // The old entry point was 0.7 m from the gear; closer than 60% of that, start from the 60% point so there is a real crossing.
   if (gearGames.kind === 'fountain' && Math.hypot(entry.x - gear.stand[0], entry.z - gear.stand[2]) < 0.42) entry.set(gear.stand[0] - 0.42, gear.stand[1], gear.stand[2])
@@ -243,7 +251,7 @@ function refreshChallengeText(){
   const copy = {
     tree: ['THE HOLLOW', 'A small piece, a giant hand', 'Use the mouse or arrow keys to feel through the hollow. The ticking quickens and your hand glows warmer as you near a tooth. Hold Space or the mouse there.'],
     fountain: ['THE GROTTO', 'Between the drops', 'A / D chooses your lane. The syrup thins on the safe lane just before it parts; press Space then to take one real step.'],
-    hall: ['THE MANTEL', 'A minute hidden in a tick', 'Listen to the watches with 1–6 or the buttons; each tick also flashes the watch. Open the one with the steady double tick.'],
+    hall: ['THE MANTEL', 'A minute hidden in a tick', 'Listen to the watches with 1–6 or the buttons; each tick also flashes the watch. Open the one that ticks twice, rests, and ticks twice again, always the same.'],
   }[gearGames.kind]
   if(copy){overlay.querySelector('#gear-game-place').textContent=tr(copy[0]);overlay.querySelector('#gear-game-title').textContent=tr(copy[1]);overlay.querySelector('#gear-game-instructions').textContent=tr(copy[2])}
 }
@@ -472,7 +480,7 @@ export function updateGearGames(dt) {
     if (!gearGames.failed) {
       tick -= dt
       const heat = warmth(distance)
-      if (tick <= 0) { playSfx('clock_tick', { pitch: 0.65 + heat * 0.5, gain: 0.08 + heat * 0.42 }); tick = 0.16 + (1 - heat) ** 2 * 1.4 }
+      if (tick <= 0) { playSfx('clock_tick', { pitch: 0.65 + heat * 0.5, gain: (0.08 + heat * 0.42) * 0.08 }); tick = 0.16 + (1 - heat) ** 2 * 1.4 }
       if (held || keys.has('Space')) {
         if (distance < 0.075) { charge += dt; strain = 0 }
         else { charge = Math.max(0, charge - dt); strain += dt }
@@ -495,9 +503,9 @@ export function updateGearGames(dt) {
   } else if (gearGames.listenRemaining > 0 && !gearGames.failed) {
     const listened = 3.6 - gearGames.listenRemaining
     const correct = gearGames.selected === gearGames.correctWatch
-    const pattern = correct ? [0, 0.23, 1.2, 1.43, 2.4, 2.63] : gearGames.selected % 2 ? [0, 0.6, 1.2, 1.8, 2.4, 3] : [0, 0.4, 1.1, 1.8, 2.2, 3.15]
+    const pattern = correct ? PAIRS : WRONG[gearGames.selected]
     if (nextListenTick < pattern.length && listened >= pattern[nextListenTick]) {
-      playSfx('clock_tick', { pitch: 0.75 + gearGames.selected * 0.055, gain: 0.5 })
+      playSfx('watch_tick', { gain: 0.6 })
       const button = watches.children[gearGames.selected]
       button.classList.add('tick')
       button.style.setProperty('--sec', ++button.beats * 36 + 'deg')

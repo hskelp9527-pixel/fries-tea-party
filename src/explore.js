@@ -14,7 +14,7 @@ import { world } from './physics.js'
 import { setMusic, say, speaking, burst, stopSpeaking, playSfx } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { game, setPhase, checkpoint } from './state.js'
-import { teaService, hallNote, insideHall } from './tasks.js'
+import { teaService, hallNote, insideHall, cakeTarget } from './tasks.js'
 import { setFloatingLevel } from './floating.js'
 import { underTable } from './layout.js'
 import { runScene, onSceneCleanup } from './cutscene.js'
@@ -58,11 +58,17 @@ async function sit(chair) {
   await sitScene(chair,repeat)
   hasSat = true
 }
+// The chair's own colliders are off from the moment Fries goes to it until the chair is back home and he stands clear of it.
+const solid = (chair, on) => chair.object.userData.colliders.forEach(c => c.setEnabled(on))
 async function sitScene(chair,repeat=false) {
   player.control = false
   chair.by = 'fries'
+  solid(chair, false)
+  const side = nearSide(chair)
   onSceneCleanup(failed => {
     if (!failed) return
+    player.feet.set(side.x, 0, side.z)
+    solid(chair, true)
     chair.by = null
     seatedPlayer = null
     banter.seated = false
@@ -70,7 +76,6 @@ async function sitScene(chair,repeat=false) {
     for (const name of ['fries', 'hatter', 'hare']) lookAt(name, null)
     return moveChair(chair, 0)
   })
-  const side = nearSide(chair)
   await walkTo([side.x, 0, side.z], chair.rot / DEG)
   await moveChair(chair, PULL)
   await walkTo([chair.step.x, 0, chair.step.z], chair.rot / DEG)
@@ -100,13 +105,16 @@ async function sitScene(chair,repeat=false) {
   for (const name of ['fries', 'hatter', 'hare']) lookAt(name, null)
 }
 async function rise(chair, side) {
+  onSceneCleanup(failed => { if (failed) { player.feet.set(side.x, 0, side.z); solid(chair, true) } })
   await moveChair(chair, PULL, player.feet)
   anim.hold('sit_down', false)
   act('stand_up')
   const from = player.feet.clone(), to = chair.step.clone().setY(0)
   await tween(anim.actions.stand_up.getClip().duration, t => player.feet.lerpVectors(from, to, Math.max(0, t * 1.6 - 0.6)))
   await walkTo([side.x, 0, side.z], chair.rot / DEG)
+  player.feet.set(side.x, 0, side.z)
   await moveChair(chair, 0)
+  solid(chair, true)
   chair.by = null
   banter.seated = false
   player.cinematic = false
@@ -422,12 +430,13 @@ function find(gear) {
 
 // The Dormouse's sleep-talk: after a while without progress, a hint for the nearest gear, clearer each time.
 let sinceGear = 0, hintTier = -1, hintUntil=0, activeGoal=null
+// While the next step is a cake, the hint says where the cake is (text only, id 'cake') instead of a clue about a gear.
+const hintText=id=>id==='cake'?tr(objectiveText(),objectiveValues()):tr('The Dormouse murmurs: {clue}',{clue:dialogue(id)})
 function hint() {
-  const gear=nextGear()
   hintTier=Math.min(2,hintTier+1)
-  const id=gear.hints[hintTier],hint=document.getElementById('task-hint')
-  hint.textContent=tr('The Dormouse murmurs: {clue}',{clue:dialogue(id)});hint.dataset.hint=id;hintUntil=game.elapsed+10
-  say(id,cast.dormouse.object.position.distanceTo(player.feet))
+  const hint=document.getElementById('task-hint'),id=needsCake()?'cake':nextGear().hints[hintTier]
+  hint.textContent=hintText(id);hint.dataset.hint=id;hintUntil=game.elapsed+10
+  if(id!=='cake')say(id,cast.dormouse.object.position.distanceTo(player.feet))
 }
 // The gear the objective strip and the hints point at: the one in reach, else one for Fries's size (a normal-sized
 // Fries is sent to the first gear left: tree, grotto, mantel), else the first left.
@@ -435,7 +444,8 @@ function nextGear() {
   const left=gears.filter(g=>!g.found)
   return left.find(reachable)??(player.size==='normal'?left[0]:left.find(g=>g.by===player.size)??left[0])
 }
-const CAKE='Eat a cake to return to normal size first'
+// Fries is not his usual size and the next step needs it: eat the nearest cake for his size.
+const needsCake=()=>{const gear=nextGear();return player.size!=='normal'&&(game.gears===3||player.size!==gear?.by)}
 const STEPS={
   big:{change:"Drink the blue tea on the table to grow, then reach into the big tree's hollow",far:"Walk to the big tree and reach into its hollow",near:'Press E at the glowing hollow'},
   small:{change:"Drink the pink tea on the table to shrink, then slip into the fountain's grotto",far:"Cross the spoon bridge and slip into the fountain's grotto",near:"Press E at the gear in the grotto"},
@@ -443,15 +453,17 @@ const STEPS={
 }
 const PHASE_STEPS={mending:'The Hatter is mending the watch…',song:'Press Space or click when a cup glows',ending:'Time ticks on to 6:01'}
 // Pure: the strip's next-step message (a source string for tr) for a state; by is the size the current goal gear needs.
-export function objectiveKey({phase,gears,size,by,near}) {
+export function objectiveKey({phase,gears,size,by,near,place}) {
+  const CAKE=place?'Eat the cake {place} to return to normal size':'Eat a cake to return to normal size first'
   if(phase!=='explore')return PHASE_STEPS[phase]??''
   if(gears===3)return size==='normal'?'Take the gears to the Hatter at the table':CAKE
   if(size!==by)return size==='normal'?STEPS[by].change:CAKE
   return STEPS[by][near?'near':'far']
 }
+export const objectiveValues=()=>({place:cakeTarget()?tr(cakeTarget().where):''})
 export function objectiveText() {
   const gear=nextGear()
-  return objectiveKey({phase:game.phase,gears:game.gears,size:player.size,by:gear?.by,near:gear&&reachable(gear)})
+  return objectiveKey({phase:game.phase,gears:game.gears,size:player.size,by:gear?.by,near:gear&&reachable(gear),place:cakeTarget()?.where})
 }
 export const guideGoal=()=>nextGear()?.layer
 function discover(id) { if (!game.discovered.includes(id)) { game.discovered.push(id); checkpoint() } }
@@ -505,12 +517,13 @@ export function updateExplore(dt) {
     activeGoal=goal;hintTier=-1;sinceGear=Math.min(sinceGear,FIRST_HINT)
     if(tutorial.dataset.hint){tutorial.textContent='';delete tutorial.dataset.hint}
   }
+  if(tutorial.dataset.hint==='cake'&&!needsCake()){tutorial.textContent='';delete tutorial.dataset.hint}
   if(tutorial.dataset.onboarding&&(sinceGear>12||game.gears)){tutorial.textContent='';delete tutorial.dataset.onboarding}
   if(tutorial.dataset.hint&&game.elapsed>hintUntil){tutorial.textContent='';delete tutorial.dataset.hint}
   hud.textContent=tr('Gears {count}/3',{count:game.gears})
   const controls=document.getElementById('controls'),keysText=controlsText()
   if(controls.textContent!==keysText)controls.textContent=keysText
-  if(tutorial.dataset.hint)tutorial.textContent=tr('The Dormouse murmurs: {clue}',{clue:dialogue(tutorial.dataset.hint)})
+  if(tutorial.dataset.hint)tutorial.textContent=hintText(tutorial.dataset.hint)
   if(tutorial.dataset.onboarding)tutorial.textContent=tr('Tea changes your size. Look for glints and listen for ticking.')
   target = undefined
   delete prompt.dataset.action
@@ -535,7 +548,7 @@ export function updateExplore(dt) {
   if (target?.model?.endsWith('teacup') && !toldAboutTea) {
     toldAboutTea = true
     say('EX-10', cast.dormouse.object.position.distanceTo(player.feet))
-  } else if (game.gears < 3 && hintTier<2 && sinceGear >= FIRST_HINT+(hintTier+1)*NEXT_HINT && quiet > 3) hint()
+  } else if ((game.gears < 3 || needsCake()) && hintTier<2 && sinceGear >= FIRST_HINT+(hintTier+1)*NEXT_HINT && quiet > 3) hint()
   else updateBanter(dt)
 }
 onLanguageChange(()=>{
@@ -545,6 +558,6 @@ onLanguageChange(()=>{
   if(seatedPlayer&&!game.sceneDepth)prompt.textContent=tr('E  Stand up · WASD  Leave the chair')
   else if(target)prompt.textContent=`E  ${tr(target.label)}`
   const hint=document.getElementById('task-hint')
-  if(hint.dataset.hint)hint.textContent=tr('The Dormouse murmurs: {clue}',{clue:dialogue(hint.dataset.hint)})
+  if(hint.dataset.hint)hint.textContent=hintText(hint.dataset.hint)
   if(hint.dataset.onboarding)hint.textContent=tr('Tea changes your size. Look for glints and listen for ticking.')
 })

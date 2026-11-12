@@ -468,23 +468,23 @@ export const drinks = [
     by: 'normal', clip: 'drink', stand: [-1.45, 0, -4.407], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [0.1, 0, -2.2], becomes: 'normal', grow: [-1.45, 0, -2.2], label: 'Eat the cake',
+    model: 'cake', pos: [0.1, 0, -2.2], becomes: 'normal', where: 'under the table', grow: [-1.45, 0, -2.2], label: 'Eat the cake',
     by: 'small', clip: 'drink', stand: [0.103, 0, -2.155], rot: 180, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [3.4, 0, -1.2], becomes: 'normal', label: 'Eat the cake',
+    model: 'cake', pos: [3.4, 0, -1.2], becomes: 'normal', where: 'on the lawn by the table', label: 'Eat the cake',
     by: 'small', clip: 'drink', stand: [3.3, 0, -1.2], rot: 90, grip: [-0.008, 0.045, 0.003],
   },
   {
-    model: 'cake', pos: [24, 1.8, -19.4], becomes: 'normal', label: 'Eat the cake',
+    model: 'cake', pos: [24, 1.8, -19.4], becomes: 'normal', scale: 4, where: 'near the cottage', label: 'Eat the cake',
     by: 'big', clip: 'drink', stand: [24, 1.8, -18.45], rot: 180, grip: [-0.008, 0.045, 0.003],
   },
   { // on the plaza just outside the grotto's arch (which opens west at x 17.2, z -5), off its 0.4 m wide mouth
-    model: 'cake', pos: [16.4, 0, -5.6], becomes: 'normal', label: 'Eat the cake',
+    model: 'cake', pos: [16.4, 0, -5.6], becomes: 'normal', where: 'outside the grotto arch', label: 'Eat the cake',
     by: 'small', clip: 'drink', stand: [16.5, 0, -5.6], rot: -90, grip: [-0.008, 0.045, 0.003],
   },
   { // on the lawn beside the giant's stand for the tree gear
-    model: 'cake', pos: [-3.4, 0, -11.2], becomes: 'normal', label: 'Eat the cake',
+    model: 'cake', pos: [-3.4, 0, -11.2], becomes: 'normal', scale: 4, where: 'beside the big tree', label: 'Eat the cake',
     by: 'big', clip: 'drink', stand: [-3.4, 0, -10.25], rot: 180, grip: [-0.008, 0.045, 0.003],
   },
 ]

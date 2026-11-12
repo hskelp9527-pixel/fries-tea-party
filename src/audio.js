@@ -5,8 +5,11 @@ import { game } from './state.js'
 import { currentLanguage, setLanguage, dialogue, onLanguageChange } from './i18n.js'
 
 export const ctx = new AudioContext()
-const musicBus = ctx.createGain(), voiceBus = ctx.createGain(), sfxBus = ctx.createGain()
+const musicBus = ctx.createGain(), voiceBus = ctx.createGain(), sfxBus = ctx.createGain(), duck = ctx.createGain()
 musicBus.gain.value = 0.8
+duck.connect(musicBus)
+// Music sits at a quarter of its level while a listening challenge is open.
+export const duckMusic = on => duck.gain.setTargetAtTime(on ? 0.25 : 1, ctx.currentTime, 0.2)
 for (const bus of [musicBus, voiceBus, sfxBus]) bus.connect(ctx.destination)
 
 export function setAudioLevels(levels = {}) {
@@ -85,7 +88,7 @@ function applyMusic(mix, fade) {
       source.buffer = music[role]
       source.loop = MUSIC[role][2]
       gain.gain.value = 0
-      source.connect(gain).connect(musicBus)
+      source.connect(gain).connect(duck)
       source.onended = () => { source.disconnect(); gain.disconnect() }
       source.start(now)
       playing[role] = { source, gain, start: now }
@@ -198,6 +201,7 @@ const sounds = {
   glass: variants('impactGlass_light_'),
   interaction: variants('impactWood_light_'),
   clock_tick: variants('clock_tick_'),
+  watch_tick: variants('clock_tick_001'),
   syrup_drop: variants('water_drop_'),
 }
 const soundLoads = new Map(), soundIndex = {}, activeSounds = new Set()
@@ -233,7 +237,7 @@ export async function playSfx(name, { pitch: playback = 1, gain: volume = 0.4 } 
   return source
 }
 export function burst(rate = 1, volume = 0.4) {
-  if (rate >= 6) return playSfx('clock_tick', { pitch: rate / 7, gain: volume })
+  if (rate >= 6) return playSfx('clock_tick', { pitch: rate / 7, gain: volume * 0.08 }) // the tick file is normalised to -1 dBFS
   if (rate >= 3) return playSfx('interaction', { pitch: rate / 4, gain: volume })
   return playSfx('footstep', { pitch: rate, gain: volume })
 }

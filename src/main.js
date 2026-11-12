@@ -90,7 +90,7 @@ if(quality.mode==='auto'){
 scene.traverse(object=>{if(object.isInstancedMesh&&object.parent===scene){object.updateMatrix();object.updateMatrixWorld(true);object.matrixAutoUpdate=false;object.matrixWorldAutoUpdate=false}})
 await A.prepareMusic('opening', 'frozen')
 ready()
-A.prepareSfx('footstep_grass', 'footstep_wood', 'footstep_stone', 'cup', 'glass', 'interaction', 'clock_tick', 'syrup_drop').catch(console.warn)
+A.prepareSfx('footstep_grass', 'footstep_wood', 'footstep_stone', 'cup', 'glass', 'interaction', 'clock_tick', 'watch_tick', 'syrup_drop').catch(console.warn)
 document.getElementById('backend').textContent = webgpu ? 'Renderer: WebGPU' : 'Renderer: WebGL 2 fallback'
 
 // ?frame=<id> holds one of the visual review's frames (src/frames.js), with no start screen.

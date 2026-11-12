@@ -4,10 +4,10 @@ import { texture, vertexColor, vec2, vec3, float, mix, smoothstep, positionWorld
 import { scene, camera, lens } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { model, addColliders, glow } from './models.js'
-import { things, gears, glints, awake } from './garden.js'
+import { things, gears, glints, awake, drinks } from './garden.js'
 import { player, act, walkTo, anim } from './player.js'
 import { cast, standUp, sitDown, laySpoon } from './cast.js'
-import { say, burst, ting, playing, heard, prepareMusic, setMusic } from './audio.js'
+import { say, burst, playSfx, ting, playing, heard, prepareMusic, setMusic } from './audio.js'
 import { tween, wait } from './tweens.js'
 import { underTable, grotto, hall, overlook, song as songSpot } from './layout.js'
 import { stream, surface, CUP_PROFILE, TEA } from './liquids.js'
@@ -234,6 +234,15 @@ let lane = 1, serving = false, cupTea, servedCup, rhythm, notes, order
 const spot = new THREE.Vector3(...songSpot.fries.pos)
 const at = k => spot.clone().add(new THREE.Vector3(0, 0, LANES[k]))
 // A glint over the cup spot until the tea service has been tried.
+// The nearest cake that returns Fries to normal size from the size he is now (none at normal size), with a pink glint
+// that stays a steady size on screen so a giant sees it from standing height and a tiny Fries from the grotto mouth.
+export const cakeTarget = () => player.size === 'normal' ? undefined : drinks.filter(d => d.becomes === 'normal' && d.by === player.size)
+  .reduce((a, b) => (!a || Math.hypot(b.pos.x - player.feet.x, b.pos.z - player.feet.z) < Math.hypot(a.pos.x - player.feet.x, a.pos.z - player.feet.z) ? b : a), undefined)
+const cakeMaterial = baseGlint.clone()
+cakeMaterial.depthTest = false
+cakeMaterial.colorNode = baseGlint.colorNode.mul(vec3(1, 0.6, 0.78))
+const cakeGlint = new THREE.Sprite(cakeMaterial)
+scene.add(cakeGlint)
 const teaGlint = glints[1].clone()
 teaGlint.position.copy(spot).setY(0.95)
 scene.add(teaGlint)
@@ -358,6 +367,12 @@ async function serve() {
 export function updateTasks(dt, clock) {
   if (game.paused) return
   updateGlints()
+  const cake = cakeTarget()
+  cakeGlint.visible = !!cake
+  if (cake) {
+    cakeGlint.position.copy(cake.pos).setY(cake.pos.y + 0.05 * cake.baseScale.x)
+    cakeGlint.scale.setScalar(Math.min(1.5, Math.max(0.08, 0.03 * camera.position.distanceTo(cakeGlint.position))))
+  }
   teaGlint.visible = game.gears >= 1 && !game.tea.total && player.size === 'normal'
   teaGlint.scale.setScalar(Math.min(0.32, Math.max(0.06, 0.006 * camera.position.distanceTo(teaGlint.position))))
   if (serving) {
@@ -374,11 +389,11 @@ export function updateTasks(dt, clock) {
   }
   // The spoon bridge, the first time a small Fries comes near the cup under the table.
   if (!bridged && player.control && player.size === 'small' && Math.hypot(player.feet.x - ux, player.feet.z - uz) < 0.6) layBridge()
-  // The grotto ticks while gear 2 is still in its valve.
-  const near = Math.hypot(player.feet.x - vx, player.feet.z - vz)
-  if (!gears[1].found && near < 5 && (ticking -= dt) < 0) {
+  // Every gear still missing ticks once a second within 8 m (more for a giant), louder the nearer he is.
+  if (player.control && !game.sceneDepth && (ticking -= dt) < 0) {
     ticking = 1
-    burst(7, 0.35 * (1 - near / 5))
+    const range = 8 * Math.max(1, player.p.scale), near = Math.min(...gears.filter(g => !g.found).map(g => player.feet.distanceTo(g.pos)))
+    if (near < range) playSfx('watch_tick', { gain: 0.05 + 0.4 * (1 - near / range) ** 2 })
   }
   for (const d of drips) {
     const k = ((awake.syrup ? clock * 0.7 : 0) + d.userData.phase) % 1

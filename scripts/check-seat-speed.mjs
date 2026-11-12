@@ -24,6 +24,14 @@ try{
     const exit=rows.length===1?'KeyE':'KeyW'
     await b.key(exit,exit==='KeyE'?'e':'w');await until('__tea.P.player.control')
     rows.at(-1).exit=exit
+    const standing=await b.evaluate(`(()=>{const c=__tea.C.chairs[${chair.i}],s=c.front.distanceTo(__tea.P.player.feet)<c.home.clone().multiplyScalar(2).sub(c.front).setY(0).distanceTo(__tea.P.player.feet)?c.front:c.home.clone().multiplyScalar(2).sub(c.front).setY(0);return {d:Math.hypot(s.x-__tea.P.player.feet.x,s.z-__tea.P.player.feet.z)}})()`)
+    assert.ok(standing.d<0.15,`Fries must stand at the chair side after rising (off by ${standing.d})`)
+    const moved=[]
+    for(const [code,key] of [['KeyW','w'],['KeyA','a'],['KeyS','s'],['KeyD','d']]){
+      const before=await b.evaluate('__tea.P.player.feet.toArray()');await b.send('Input.dispatchKeyEvent',{type:'keyDown',code,key});await sleep(1000);await b.send('Input.dispatchKeyEvent',{type:'keyUp',code,key});const after=await b.evaluate('__tea.P.player.feet.toArray()')
+      moved.push(Math.hypot(after[0]-before[0],after[2]-before[2]));await sleep(150)
+    }
+    assert.ok(moved.filter(d=>d>=0.5).length>=2,`Fries must walk freely after rising, not stuck in the chair (${moved.map(d=>d.toFixed(2))})`)
   }
   fs.writeFileSync(`${output}/seat-speed.json`,JSON.stringify({passed:true,rows},null,2));console.log(rows)
 }finally{await b.close()}

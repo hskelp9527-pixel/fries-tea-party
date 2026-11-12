@@ -68,6 +68,8 @@ const grown = (curve, root) => shareNode(curve, root.sub(cameraPosition.xz).leng
 // 1 for a plant rooted at `root` (world x, z) beyond `far` metres from the camera, shrinking to 0 inside `near`, so
 // nothing grows over the lens.
 const clearOfCamera = (root, near, far) => smoothstep(near, far, root.sub(cameraPosition.xz).length())
+// The position scaled by `k` about the plant's own root (`root3`, world), not the world origin: the meshes sit at the origin.
+const about = (root3, k) => root3.add(positionLocal.sub(root3).mul(k))
 
 // What the characters do to the plants rooted at `root` (world x, z): `push`, the sideways shove away from every
 // walker within its radius plus the running gust, and `near`, 1 close to a dancer fading to 0 at 5.5 m.
@@ -115,7 +117,7 @@ export function cardMaterial(sheet, { crown = false, translucency = 0.8, flutter
   } else {
     const height = positionLocal.y.sub(base.y).max(0), { push, near } = touch(base.xz)
     const bend = gust(base.xz).mul(BREEZE).add(push.mul(0.5)).mul(height.mul(height).mul(base.w))
-    material.positionNode = (thin ? positionLocal.mul(grown(thin, base.xz)) : positionLocal).mul(clearOfCamera(base.xz, 0.4, 1.2)).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.25)), bend.y))
+    material.positionNode = about(base.xyz, (thin ? grown(thin, base.xz) : float(1)).mul(clearOfCamera(base.xz, 0.4, 1.2))).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.25)), bend.y))
     material.normalNode = cameraViewMatrix.mul(vec4(mix(normalWorld, vec3(0, 1, 0), 0.6).normalize(), 0)).xyz
   }
   const toCamera = cameraPosition.sub(positionWorld).normalize()
@@ -164,7 +166,7 @@ export function flowerMaterial(thin, impostor = false, lod = false) {
   const material = new THREE.MeshStandardNodeMaterial({ vertexColors: !impostor, roughness: 0.8, side: THREE.DoubleSide,
     ...(impostor && flowerAtlas ? { map: flowerAtlas, alphaTest: 0.45, alphaToCoverage: true } : {}) })
   const bend = gust(positionLocal.xz).mul(BREEZE).mul(wind.bushes.mul(0.5).add(1)).add(push).mul(height.mul(height).mul(0.8))
-  material.positionNode = (thin ? positionLocal.mul(grown(thin, root)) : positionLocal).mul(clearOfCamera(root, 0.8, 2)).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
+  material.positionNode = about(attribute('aRoot', 'vec3'), (thin ? grown(thin, root) : float(1)).mul(clearOfCamera(root, 0.8, 2))).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
   if(lod){
     const transition=smoothstep(9,11,root.sub(cameraPosition.xz).length().mul(qualityDistance))
     const noise=interleavedGradientNoise(screenCoordinate.xy)

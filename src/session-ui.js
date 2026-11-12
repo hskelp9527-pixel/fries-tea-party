@@ -5,7 +5,7 @@ import { quality, setQuality } from './quality.js'
 import { requestSceneSkip } from './tweens.js'
 import { currentLanguage, tr, onLanguageChange } from './i18n.js'
 import { conversationTotal } from './banter.js'
-import { objectiveText, guideGoal } from './explore.js'
+import { objectiveText, objectiveValues, guideGoal } from './explore.js'
 
 const pause = document.getElementById('pause-menu'), open = document.getElementById('pause-open')
 const resume = document.getElementById('pause-resume'), skip = document.getElementById('scene-skip')
@@ -137,6 +137,7 @@ function renderGuide() {
       <div>${swatch('big')}<span><b>${tr('Blue tea')}</b><small>${tr('Giant')}</small></span></div>
       <div>${swatch('small')}<span><b>${tr('Pink tea')}</b><small>${tr('Tiny')}</small></span></div>
       <div>${swatch('normal', 'cake')}<span><b>${tr('Cake')}</b><small>${tr('Back to normal size')}</small></span></div></div>
+    <p>${tr('Cakes glow when you are not your usual size. Follow the glow.')}</p>
     <h3>${tr('Three gears')} · ${game.gears}/3</h3>${GUIDE_GEARS.map(([layer, place, size, how]) => {
       const done = game.found.includes(layer)
       return `<div class="guide-gear${done ? ' done' : ''}${layer === now ? ' now' : ''}"><span class="tick">${done ? '✓' : ''}</span>${swatch(size, size === 'normal' ? 'cake' : '')}<span><b>${tr(place)}</b>${tr(SIZE_NAME[size])}<small>${tr(how)}</small></span></div>`
@@ -173,11 +174,11 @@ export function updateSessionUI(dt) {
   const playing = game.phase !== 'title' && game.phase !== 'complete'
   open.hidden = guideChip.hidden = !playing
   if (playing) {
-    const step = objectiveText(), shown = [game.phase, game.gears, step && tr(step)].join('|')
+    const step = objectiveText(), shown = [game.phase, game.gears, step && tr(step, objectiveValues())].join('|')
     if (shown !== objectiveShown) {
       objectiveShown = shown
       document.getElementById('objective-count').textContent = game.phase === 'explore' || game.phase === 'mending' ? tr('Gears {count}/3', { count: game.gears }) : ''
-      document.getElementById('objective-step').textContent = step && tr(step)
+      document.getElementById('objective-step').textContent = step && tr(step, objectiveValues())
       objective.hidden = !step
     }
   }

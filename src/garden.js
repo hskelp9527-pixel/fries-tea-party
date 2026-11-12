@@ -24,7 +24,7 @@ function place({ model: name, pos, rot = 0, scale = 1, solid = true, boxes = fal
   object.rotation.y = rot * DEG
   object.scale.setScalar(scale)
   if (!hidden) scene.add(object)
-  if (solid) addColliders(name, object, boxes)
+  if (solid) object.userData.colliders = addColliders(name, object, boxes)
   return object
 }
 
