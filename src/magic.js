@@ -19,7 +19,7 @@ for (let i = 0; i < p.count; i++) p.setZ(i, -12 * (p.getX(i) ** 2 + 0.6 * p.getY
 shell.computeVertexNormals()
 const petalMaterial = new THREE.MeshPhysicalNodeMaterial({ side: THREE.DoubleSide, color: 0xf6b2c6, roughness: 0.45, transparent: true })
 const round = uv().sub(0.5).mul(vec2(1, 1.25)).length()
-petalMaterial.opacityNode = smoothstep(0.5, 0.42, round).mul(0.88)
+petalMaterial.opacityNode = smoothstep(0.5, 0.42, round).mul(0.88).mul(smoothstep(1.2, 3, positionWorld.sub(cameraPosition).length()))
 petalMaterial.emissiveNode = vec3(1, 0.55, 0.62).mul(backlit.mul(0.9).add(0.08))
 const P = effects.petals
 const petals = new THREE.InstancedMesh(shell, petalMaterial, Math.round(P.count * (webgpu ? 1 : 0.5)))

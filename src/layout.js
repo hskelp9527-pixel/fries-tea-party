@@ -479,6 +479,14 @@ export const drinks = [
     model: 'cake', pos: [24, 1.8, -19.4], becomes: 'normal', label: 'Eat the cake',
     by: 'big', clip: 'drink', stand: [24, 1.8, -18.45], rot: 180, grip: [-0.008, 0.045, 0.003],
   },
+  { // on the plaza just outside the grotto's arch (which opens west at x 17.2, z -5), off its 0.4 m wide mouth
+    model: 'cake', pos: [16.4, 0, -5.6], becomes: 'normal', label: 'Eat the cake',
+    by: 'small', clip: 'drink', stand: [16.5, 0, -5.6], rot: -90, grip: [-0.008, 0.045, 0.003],
+  },
+  { // on the lawn beside the giant's stand for the tree gear
+    model: 'cake', pos: [-3.4, 0, -11.2], becomes: 'normal', label: 'Eat the cake',
+    by: 'big', clip: 'drink', stand: [-3.4, 0, -10.25], rot: 180, grip: [-0.008, 0.045, 0.003],
+  },
 ]
 
 // The book page in the ending flies into Fries's palm as he reaches, standing where the song left him.

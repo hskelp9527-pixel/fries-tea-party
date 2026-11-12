@@ -16,7 +16,7 @@ const HEIGHT = 1.2, RADIUS = 0.3, EYE = 1.1, GRAVITY = 18, RUN = 2.6
 // at RUN times that); reach is how far from his body he can take things; voice is the pitch at which he hears
 // the others.
 const SIZES = {
-  small: { scale: 0.18, fov: 82, speed: 0.22, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
+  small: { scale: 0.18, fov: 82, speed: 0.35, jump: 0.2, reach: 0.3, stepPitch: 2.2, stepGain: 0.25, shake: 0, voice: 0.65 },
   normal: { scale: 1, fov: 70, speed: 1.2, jump: 0.7, reach: 0.9, stepPitch: 1, stepGain: 0.5, shake: 0, voice: 1 },
   big: { scale: 5, fov: 62, speed: 4.2, jump: 2.2, reach: 4.5, stepPitch: 0.3, stepGain: 1, shake: 0.12, voice: 1.6 },
 }
@@ -280,6 +280,8 @@ export function nearProp(prop, point) {
 // the trunk must not occlude its own gear or force him onto a root to interact.
 export function nearGear(gear) {
   if (player.size !== gear.by) return false
+  // With challenges the grotto's crossing starts anywhere on its floor within 0.85 m of the gear (the old entry was 0.75 m).
+  if (gear.by === 'small' && game.challenges) return Math.hypot(player.feet.x - gear.pos.x, player.feet.z - gear.pos.z) < 0.85 && Math.abs(player.feet.y - gear.stand[1]) < 0.35 * player.p.scale && sees(gear.pos)
   if (gear.in === 'big_tree') {
     const [x, y, z] = gear.stand, f = player.feet
     return Math.hypot(f.x - x, f.z - z) <= 4 && Math.abs(f.y - y) < 1.75

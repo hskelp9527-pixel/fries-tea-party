@@ -77,7 +77,7 @@ if (backdropUrl) {
   backdropGeometry.computeBoundingSphere()
   const backdrop = new THREE.Mesh(
     backdropGeometry,
-    new THREE.MeshBasicNodeMaterial({ map, side: THREE.BackSide, transparent: true, depthWrite: false,fog:false }),
+    new THREE.MeshBasicNodeMaterial({ map, color: 0xffe8cc, side: THREE.BackSide, transparent: true, depthWrite: false,fog:false }),
   )
   backdrop.name = 'Painted distance'
   backdrop.position.set(0, LOOK.backdrop.altitude, -4)
@@ -90,13 +90,13 @@ const skyOnly = new THREE.Scene()
 skyOnly.backgroundNode = skyRadiance(normalWorldGeometry)
 scene.environment = pmrem.fromScene(skyOnly, 0.04).texture
 scene.environmentIntensity = LOOK.environment
-const skyFill = new THREE.HemisphereLight(LOOK.palette.frozen.shadow, LOOK.palette.frozen.secondary, LOOK.hemisphere)
+const skyFill = new THREE.HemisphereLight(LOOK.palette.frozen.shadow, LOOK.palette.frozen.ground, LOOK.hemisphere)
 const eveningFill = skyFill.color.clone(), rosyFill = new THREE.Color(LOOK.palette.sixOhOne.roseSky).lerp(new THREE.Color(0xffffff),.6)
 scene.add(skyFill)
 
 // The sun: warm, low, with soft shadows. The shadow map covers 56 m round the point the camera looks at and moves
 // in whole texels, so shadows never crawl as the camera moves.
-export const sun = new THREE.DirectionalLight(new THREE.Color(LOOK.palette.frozen.main).lerp(new THREE.Color(0xffffff), 0.5), LOOK.sunIntensity)
+export const sun = new THREE.DirectionalLight(new THREE.Color(LOOK.palette.frozen.main).lerp(new THREE.Color(0xffffff), 0.3), LOOK.sunIntensity)
 sun.castShadow = true
 const SHADOW = { size: 56, map: 2048 }
 sun.shadow.autoUpdate = false
@@ -171,7 +171,7 @@ export function updateSun() {
   skyFill.color.lerpColors(eveningFill, rosyFill, pink.value)
   skyFill.intensity = LOOK.hemisphere + 0.08 * pink.value
   renderer.toneMappingExposure = LOOK.exposure + 0.04 * pink.value
-  for (const key of ['horizon', 'zenith', 'glow']) {
+  for (const key of ['horizon', 'dusk', 'zenith', 'glow']) {
     air[key].value.lerpColors(phaseColors.frozen[key], phaseColors.awake[key], lookPhase.awake.value)
     air[key].value.lerp(phaseColors.sixOhOne[key], pink.value)
   }

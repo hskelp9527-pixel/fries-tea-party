@@ -252,7 +252,6 @@ async function ending() {
   document.exitPointerLock()
   const minutes = Math.floor(game.elapsed / 60), seconds = Math.floor(game.elapsed % 60)
   document.getElementById('result-time').textContent = `${minutes}:${String(seconds).padStart(2, '0')}`
-  document.getElementById('result-rhythm').textContent = tr('{hits}/{total} notes · best streak {best}',{hits:game.rhythm.hits,total:game.rhythm.total,best:game.rhythm.best})
   document.getElementById('results').hidden = false
   document.getElementById('replay').focus()
   renderer.setAnimationLoop(null)

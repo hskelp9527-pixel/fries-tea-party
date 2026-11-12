@@ -52,8 +52,6 @@ export function routeDriver(browser,{skipScenes=true,autoJump=false}={}) {
     }else if(kind==='hall'){
       while(await evaluate('__tea.gearGames.active')){
         const goal=await evaluate('__tea.gearGames.correctWatch'),round=await evaluate('__tea.gearGames.round')
-        const indexes=[...new Set([0,2,goal])];if(indexes.length<3)indexes.push(1)
-        for(const index of indexes){await browser.key('Digit'+(index+1),String(index+1));await until('__tea.gearGames.listenRemaining===0',6)}
         await browser.key('Digit'+(goal+1),String(goal+1));await until('__tea.gearGames.listenRemaining===0',6)
         await browser.key('Space',' ');await until(`!__tea.gearGames.active||__tea.gearGames.round>${round}`,5)
       }
@@ -69,7 +67,7 @@ export function routeDriver(browser,{skipScenes=true,autoJump=false}={}) {
         await browser.key('Space',' ');await until(`!__tea.gearGames.active||__tea.gearGames.round>${state.round}||__tea.gearGames.mistakes>${state.mistakes}`,7);await sleep(800)
       }
     }
-    await until('__tea.P.player.control',60)
+    await until('__tea.P.player.control',180)
   }
   return {until,walk,path,interact,puzzle,down,up}
 }

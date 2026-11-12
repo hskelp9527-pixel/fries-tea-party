@@ -8,7 +8,7 @@ This standalone three.js chapter is the active game on `grey-box`. Local media a
 
 Read [the implementation record](optimization-2026-11-11.md), [the ordinary-play contract](ordinary-play-contract.md), [the gameplay revision](gameplay-revision.md), and [the per-file sizes](asset-sizes-2026-11-11.md). Individual evidence is indexed in `diagnosis-completion.json`. November 3 and the initial November 11 visual reviews are historical baselines.
 
-Standard play uses three reachable size-specific gears, size toys, scored rhythm, results/replay, pause/settings, safe checkpoints, recorded Foley and live Chinese/English product text. Three extra gear challenges require `?challenges`. Revised proportions, contact IK, posture masks, secondary bones and surface-fitted speech mouths are implemented. The cottage is a connected furnished home with a readable E-triggered note. Art being implemented does not establish its acceptance.
+Standard play uses three reachable size-specific gears, size toys, scored rhythm, results/replay, pause/settings, safe checkpoints, recorded Foley and live Chinese/English product text. Three short gear challenges are part of standard play (`?nochallenges` skips them). Revised proportions, contact IK, posture masks, secondary bones and surface-fitted speech mouths are implemented. The cottage is a connected furnished home with a readable E-triggered note. Art being implemented does not establish its acceptance.
 
 ## Commands
 

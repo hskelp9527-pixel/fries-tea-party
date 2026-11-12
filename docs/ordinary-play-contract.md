@@ -4,8 +4,8 @@ The latest user instruction supersedes the earlier decision to make three new
 puzzles mandatory. Standard play follows the original core: enter the tea party,
 understand that three watch gears are missing, explore, change size with tea/cake,
 recover each size-specific gear, repair the watch, tap the highlighted cups,
-reach 6:01, see the rose path, and replay. The optional `?challenges` path must
-not block this ordinary flow.
+reach 6:01, see the rose path, and replay. The short gear challenges are part of this flow
+(`?nochallenges` skips them) and must stay completable.
 
 The normal interface defaults to Simplified Chinese, with English voices. One
 language preference owns title, hints, objectives, prompts, dialogue, settings,

@@ -4,6 +4,7 @@ import { ctx, setAudioLevels, setSubtitleLanguage, stopSpeaking } from './audio.
 import { quality, setQuality } from './quality.js'
 import { requestSceneSkip } from './tweens.js'
 import { currentLanguage, tr, onLanguageChange } from './i18n.js'
+import { conversationTotal } from './banter.js'
 
 const pause = document.getElementById('pause-menu'), open = document.getElementById('pause-open')
 const resume = document.getElementById('pause-resume'), skip = document.getElementById('scene-skip')
@@ -53,7 +54,7 @@ export function setPaused(paused) {
     player.control = controlsBeforePause
     pause.hidden = true
     if (audioWasRunning) ctx.resume().catch(() => {})
-    if (focusBeforePause?.isConnected) focusBeforePause.focus()
+    if (focusBeforePause?.isConnected && focusBeforePause !== open) focusBeforePause.focus()
   }
 }
 function skipScene() {
@@ -91,9 +92,14 @@ addEventListener('keydown', event => {
 }, true)
 addEventListener('blur', () => { if (game.phase !== 'title' && game.phase !== 'complete') setPaused(true) })
 
+const PLACES = { tea: 'Hollow', syrup: 'Grotto', flowers: 'Mantel' }
 function updateResults() {
-  document.getElementById('result-discoveries').textContent = tr('{count} conversations · {gears}/3 gears',{count:game.discovered.length,gears:game.gears})
-  document.getElementById('result-rhythm').textContent = tr('{hits}/{total} notes · best streak {best}',{hits:game.rhythm.hits,total:game.rhythm.total,best:game.rhythm.best})
+  const { hits, total, best } = game.rhythm, ratio = hits / total
+  const grade = ratio >= 0.9 ? 'Brilliant' : ratio >= 0.7 ? 'Good' : ratio >= 0.5 ? 'Steady' : 'Rusty'
+  document.getElementById('result-discoveries').textContent = tr('{count} / {total} conversations · {gears}/3 gears',{count:game.discovered.length,total:conversationTotal,gears:game.gears})
+  document.getElementById('result-rhythm').textContent = tr('{hits}/{total} notes · best streak {best} · {grade}',{hits,total,best,grade:tr(grade)})
+  document.getElementById('result-puzzles').textContent = Object.entries(game.puzzles).filter(([, p]) => p.seconds !== undefined)
+    .map(([layer, p]) => tr('{place} {seconds} s · {mistakes} slips',{place:tr(PLACES[layer]),seconds:p.seconds,mistakes:p.mistakes})).join(' · ') || '—'
 }
 onLanguageChange(()=>{
   if(game.phase==='complete')updateResults()

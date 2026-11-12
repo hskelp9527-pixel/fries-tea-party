@@ -1,7 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { player, walkTo } from './player.js'
 import { camera, lens } from './scene.js'
-import { things } from './garden.js'
 import { playSfx } from './audio.js'
 import { game } from './state.js'
 import { tr, localizeDOM, onLanguageChange } from './i18n.js'
@@ -11,7 +10,7 @@ import { tr, localizeDOM, onLanguageChange } from './i18n.js'
 export const gearGames = {
   active: false, kind: null, elapsed: 0, round: 0, progress: 0, mistakes: 0,
   cursor: { x: 0.5, y: 0.5 }, target: null, handTarget: null, safeLane: 1,
-  lane: 1, open: false, gate: -1, selected: -1, correctWatch: -1,
+  lane: 1, open: false, warn: false, gate: -1, selected: -1, correctWatch: -1,
   listened: [], listenRemaining: 0, status: '', failed: false,
 }
 const overlay = document.createElement('section')
@@ -34,9 +33,10 @@ const status = overlay.querySelector('#gear-game-status'), score = overlay.query
 const meter = overlay.querySelector('progress'), watches = overlay.querySelector('#watch-choices')
 const retry = overlay.querySelector('#gear-game-retry'), choose = overlay.querySelector('#gear-game-choose')
 const keys = new Set()
-const TREE_POINTS = [[0.27, 0.28], [0.67, 0.35], [0.43, 0.68], [0.76, 0.69], [0.30, 0.52], [0.56, 0.24], [0.62, 0.65], [0.36, 0.36], [0.55, 0.48]]
-const SAFE_LANES = [1, 0, 2, 1, 2, 0, 1, 2, 0]
-const WATCH_GOALS = [4, 1, 5]
+const TREE_POINTS = [[0.27, 0.28], [0.67, 0.35], [0.43, 0.68], [0.76, 0.69]], TREE_HOLD = 1.6
+const SAFE_LANES = [1, 0, 2, 1, 0], GATE_SECONDS = 2.6, GATE_OPENS = 1.1, GATE_OPEN_FOR = 0.75, GATE_WARNS = 0.5
+// 0 far from the tooth, 1 on it, over the whole search area
+const warmth = distance => THREE.MathUtils.clamp(1 - distance / 0.85, 0, 1)
 let finish, held = false, charge = 0, strain = 0, tick = 0, lastTick = -1, nextListenTick = 0
 let view, gear, treeCenter, entry, moving = false, movingPromise = Promise.resolve(), roundWatches = new Set()
 let messageKey='',messageValues={}
@@ -83,12 +83,16 @@ function resetRound(all = false) {
   if (all) {
     gearGames.elapsed = 0; gearGames.round = 0; gearGames.progress = 0; gearGames.mistakes = 0
     gearGames.gate = -1; gearGames.lane = 1; gearGames.cursor.x = 0.5; gearGames.cursor.y = 0.5
+    if (gearGames.kind === 'fountain') {
+      moving = true
+      movingPromise = walkTo(entry.toArray(), 90).finally(() => { moving = false })
+    }
   }
   gearGames.failed = false
   gearGames.selected = -1
   gearGames.listened = []
   gearGames.listenRemaining = 0
-  gearGames.correctWatch = WATCH_GOALS[gearGames.round % WATCH_GOALS.length]
+  gearGames.correctWatch = Math.floor(Math.random() * 6)
   roundWatches.clear()
   charge = strain = tick = 0
   lastTick = -1
@@ -98,7 +102,7 @@ function resetRound(all = false) {
   watches.querySelectorAll('button').forEach(button => { button.classList.remove('selected', 'heard'); button.disabled = false })
   message(gearGames.kind === 'tree' ? 'Follow the faint ticking. Rest your hand where the wood feels warm.'
     : gearGames.kind === 'fountain' ? 'Choose a dry lane. Step only while the syrup curtain parts.'
-    : 'Compare at least three watches. The one with two close ticks holds the piece.')
+    : 'Listen to the watches. The one with two close ticks holds the piece.')
 }
 
 function listen(index) {
@@ -106,22 +110,21 @@ function listen(index) {
   gearGames.selected = index
   gearGames.listenRemaining = 3.6
   nextListenTick = 0
-  choose.disabled = true
+  choose.disabled = !roundWatches.has(index)
   watches.querySelectorAll('button').forEach((button, i) => button.classList.toggle('selected', i === index))
   message('Listening to watch {number}…',{number:index+1})
 }
 function chooseWatch() {
-  if (gearGames.failed || gearGames.listenRemaining > 0 || gearGames.listened.length < 3 || gearGames.selected < 0) return
+  if (gearGames.failed || !roundWatches.has(gearGames.selected)) return
   if (gearGames.selected !== gearGames.correctWatch) {
     fail('A hurried tick, but no gear. Listen to the pause between the pair.')
     if (!gearGames.failed) resetRound()
     return
   }
   gearGames.round++
-  gearGames.progress = gearGames.round / 3
+  gearGames.progress = 1
   playSfx('success', { pitch: 1.1, gain: 0.35 })
-  if (gearGames.round >= 3) complete(true)
-  else resetRound()
+  complete(true)
 }
 retry.addEventListener('click', () => resetRound(true))
 choose.addEventListener('click', chooseWatch)
@@ -170,7 +173,7 @@ addEventListener('keyup', event => { keys.delete(event.code) }, true)
 
 async function crossGate() {
   if (moving) return
-  const gate = Math.floor(gearGames.elapsed / 3.8)
+  const gate = Math.floor(gearGames.elapsed / GATE_SECONDS)
   if (!gearGames.open || gearGames.lane !== gearGames.safeLane || gate === gearGames.gate) {
     fail('A splash! Wait for a clear gap before taking the next step.')
     return
@@ -180,7 +183,7 @@ async function crossGate() {
   gearGames.progress = gearGames.round / SAFE_LANES.length
   playSfx('success', { pitch: 1.6, gain: 0.2 })
   moving = true
-  step.set(entry.x + (gear.stand[0] - entry.x) * gearGames.progress, gear.stand[1], entry.z + (gearGames.lane - 1) * 0.055)
+  step.set(entry.x + (gear.stand[0] - entry.x) * gearGames.progress, gear.stand[1], entry.z + (gear.stand[2] - entry.z) * gearGames.progress + (gearGames.lane - 1) * 0.055)
   movingPromise = walkTo(step.toArray(), 90)
   try { await movingPromise }
   catch (error) { console.error('The grotto step was interrupted', error); complete(false); return }
@@ -196,12 +199,12 @@ export async function playGearGame(item) {
   view = { position: camera.position.clone(), rotation: camera.quaternion.clone(), fov: camera.fov,
     playerView: player.view, cinematic: player.cinematic }
   gearGames.kind = item.in === 'big_tree' ? 'tree' : item.in === 'house' ? 'hall' : 'fountain'
-  if (gearGames.kind === 'fountain') {
-    entry = new THREE.Vector3(things.fountain.position.x - 1.05, 0, things.fountain.position.z)
-    await walkTo(entry.toArray(), 90)
-  }
-  gearGames.active = true
   game.miniGame = true
+  game.sceneSkipping = false
+  entry = player.feet.clone()
+  // The old entry point was 0.7 m from the gear; closer than 60% of that, start from the 60% point so there is a real crossing.
+  if (gearGames.kind === 'fountain' && Math.hypot(entry.x - gear.stand[0], entry.z - gear.stand[2]) < 0.42) entry.set(gear.stand[0] - 0.42, gear.stand[1], gear.stand[2])
+  gearGames.active = true
   player.control = false
   player.cinematic = true
   if (gearGames.kind === 'tree') {
@@ -225,9 +228,9 @@ function refreshChallengeText(){
   ;[...watches.children].forEach((button,i)=>{button.textContent=tr('Listen {number}',{number:i+1});button.setAttribute('aria-label',tr('Listen to pocket watch {number}',{number:i+1}))})
   if(messageKey)message(messageKey,messageValues)
   const copy = {
-    tree: ['THE HOLLOW', 'A small piece, a giant hand', 'Use the mouse or arrow keys to feel through the hollow. Hold Space or the mouse where the ticking grows warm.'],
-    fountain: ['THE GROTTO', 'Between the drops', 'A / D chooses your lane. Space takes one real step across the wet floor when the syrup parts.'],
-    hall: ['THE MANTEL', 'A minute hidden in a tick', 'Listen to the watches with 1–6 or the buttons. Compare three before choosing the steady double tick.'],
+    tree: ['THE HOLLOW', 'A small piece, a giant hand', 'Use the mouse or arrow keys to feel through the hollow. The ticking quickens and your hand glows warmer as you near a tooth. Hold Space or the mouse there.'],
+    fountain: ['THE GROTTO', 'Between the drops', 'A / D chooses your lane. The syrup thins on the safe lane just before it parts; press Space then to take one real step.'],
+    hall: ['THE MANTEL', 'A minute hidden in a tick', 'Listen to the watches with 1–6 or the buttons; each tick also flashes the watch. Open the one with the steady double tick.'],
   }[gearGames.kind]
   if(copy){overlay.querySelector('#gear-game-place').textContent=tr(copy[0]);overlay.querySelector('#gear-game-title').textContent=tr(copy[1]);overlay.querySelector('#gear-game-instructions').textContent=tr(copy[2])}
 }
@@ -244,23 +247,26 @@ function drawTree() {
   for (let ring = 0; ring < 12; ring++) {
     paint.beginPath(); paint.ellipse(360, 178, 90 + ring * 24, 42 + ring * 10, -0.12, 0, Math.PI * 2); paint.stroke()
   }
-  const heat = THREE.MathUtils.clamp(1 - proximity * 2, 0, 1)
-  paint.fillStyle = `rgba(237,200,137,${0.08 + heat * 0.25})`
-  paint.beginPath(); paint.arc(point[0] * 720, point[1] * 350, 17 + charge * 5, 0, Math.PI * 2); paint.fill()
+  // No target is drawn: only the hand's glow warms as it nears the tooth.
+  const heat = warmth(proximity)
+  const glow = paint.createRadialGradient(cursor.x * 720, cursor.y * 350, 4, cursor.x * 720, cursor.y * 350, 24 + heat * 56)
+  glow.addColorStop(0, `rgba(255,${Math.round(190 + heat * 50)},${Math.round(130 - heat * 40)},${0.08 + heat * heat * 0.7})`); glow.addColorStop(1, 'rgba(255,200,120,0)')
+  paint.fillStyle = glow
+  paint.beginPath(); paint.arc(cursor.x * 720, cursor.y * 350, 24 + heat * 56, 0, Math.PI * 2); paint.fill()
   paint.strokeStyle = heat > 0.8 ? '#f5db9c' : '#d8bb9e'; paint.lineWidth = 3
   paint.beginPath(); paint.arc(cursor.x * 720, cursor.y * 350, 15, 0, Math.PI * 2); paint.stroke()
   paint.beginPath(); paint.moveTo(cursor.x * 720, cursor.y * 350 + 15); paint.lineTo(cursor.x * 720 - 8, cursor.y * 350 + 44); paint.stroke()
   paint.strokeStyle = '#edc889'; paint.lineWidth = 4
-  paint.beginPath(); paint.arc(cursor.x * 720, cursor.y * 350, 23, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * charge / 3.2); paint.stroke()
+  paint.beginPath(); paint.arc(cursor.x * 720, cursor.y * 350, 23, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * charge / TREE_HOLD); paint.stroke()
 }
 function drawFountain() {
   paint.fillStyle = '#151d29'; paint.fillRect(0, 0, 720, 350)
   for (let lane = 0; lane < 3; lane++) {
-    const dry = gearGames.open && gearGames.safeLane === lane
-    paint.fillStyle = dry ? '#91aa91' : '#aa743e'
+    const safe = gearGames.safeLane === lane, dry = gearGames.open && safe, thin = gearGames.warn && safe
+    paint.fillStyle = dry ? '#91aa91' : thin ? '#c19b5c' : '#aa743e'
     paint.fillRect(86 + lane * 192, 30, 164, 220)
     paint.fillStyle = dry ? '#d7e0cb' : '#e0a74e'
-    for (let drop = 0; drop < 7; drop++) {
+    for (let drop = 0; drop < (thin ? 3 : 7); drop++) {
       const y = (gearGames.elapsed * 95 + drop * 36) % 205
       if (!dry) { paint.beginPath(); paint.ellipse(112 + lane * 192 + (drop % 4) * 31, y + 35, 5, 11, 0, 0, Math.PI * 2); paint.fill() }
     }
@@ -282,13 +288,14 @@ export function updateGearGames(dt) {
     gearGames.handTarget = hand.copy(treeCenter).add(step.set((gearGames.cursor.x - 0.5) * 0.8, (0.5 - gearGames.cursor.y) * 0.7, 0.55))
     if (!gearGames.failed) {
       tick -= dt
-      if (distance < 0.3 && tick <= 0) { playSfx('clock_tick', { pitch: 0.65 + (1 - distance) * 0.4, gain: 0.18 + (1 - distance / 0.3) * 0.3 }); tick = 0.25 + distance * 1.8 }
+      const heat = warmth(distance)
+      if (tick <= 0) { playSfx('clock_tick', { pitch: 0.65 + heat * 0.5, gain: 0.08 + heat * 0.42 }); tick = 0.16 + (1 - heat) ** 2 * 1.4 }
       if (held || keys.has('Space')) {
         if (distance < 0.075) { charge += dt; strain = 0 }
         else { charge = Math.max(0, charge - dt); strain += dt }
         if (strain > 1.8) { strain = charge = 0; fail('Only rough bark there. Ease your hand towards the ticking.') }
       } else { strain = 0; charge = Math.max(0, charge - dt * 0.3) }
-      if (charge >= 3.2) {
+      if (charge >= TREE_HOLD) {
         charge = 0; gearGames.round++; playSfx('success', { gain: 0.22, pitch: 0.8 + gearGames.round * 0.04 })
         gearGames.progress = gearGames.round / TREE_POINTS.length
         if (gearGames.round >= TREE_POINTS.length) { complete(true); return }
@@ -296,9 +303,10 @@ export function updateGearGames(dt) {
       }
     }
   } else if (gearGames.kind === 'fountain') {
-    const gate = Math.floor(gearGames.elapsed / 3.8), phase = gearGames.elapsed % 3.8
+    const gate = Math.floor(gearGames.elapsed / GATE_SECONDS), phase = gearGames.elapsed % GATE_SECONDS
     gearGames.safeLane = SAFE_LANES[gearGames.round % SAFE_LANES.length]
-    gearGames.open = !gearGames.failed && phase > 1 && phase < 1.75 && gate !== gearGames.gate
+    gearGames.open = !gearGames.failed && phase > GATE_OPENS && phase < GATE_OPENS + GATE_OPEN_FOR && gate !== gearGames.gate
+    gearGames.warn = !gearGames.failed && phase > GATE_OPENS - GATE_WARNS && phase <= GATE_OPENS && gate !== gearGames.gate
     if (gate !== lastTick) { lastTick = gate; playSfx('syrup_drop', { gain: 0.28, pitch: 1.25 }) }
     drawFountain()
   } else if (gearGames.listenRemaining > 0 && !gearGames.failed) {
@@ -317,8 +325,8 @@ export function updateGearGames(dt) {
       roundWatches.add(gearGames.selected)
       gearGames.listened = [...roundWatches]
       watches.children[gearGames.selected].classList.add('heard')
-      choose.disabled = roundWatches.size < 3
-      message(roundWatches.size < 3 ? 'Compared {count}/3 watches. Listen to another.' : 'Which pause sounded calm? Select its watch again, then open it.',{count:roundWatches.size})
+      choose.disabled = false
+      message('Heard watch {number}. Open it, or listen to another.',{number:gearGames.selected+1})
     }
   }
   meter.value = gearGames.progress

@@ -128,6 +128,9 @@ addEventListener('keydown', e => {
   }
 })
 
+// A giant can also play with the drifting cups (see floating.js).
+const controlsText = () => tr(player.size === 'big' ? 'WASD move · Shift run · Space jump · E interact · V view · G / right mouse hold a cup · Esc pause'
+  : 'WASD move · Shift run · Space jump · E interact · V view · Esc pause')
 let exploring = false, onMended
 // Hands control to the player. onMended runs once the three gears are back in the watch.
 export function startExplore(mended) {
@@ -137,7 +140,7 @@ export function startExplore(mended) {
   player.cinematic = false
   setPhase('explore')
   sinceGear = 0; hintTier = -1
-  document.getElementById('controls').textContent = tr('WASD move · Shift run · Space jump · E interact · V view · Esc pause')
+  document.getElementById('controls').textContent = controlsText()
   hud.textContent=tr('Gears {count}/3',{count:game.gears})
   if(!game.gears){document.getElementById('task-hint').textContent=tr('Tea changes your size. Look for glints and listen for ticking.');document.getElementById('task-hint').dataset.onboarding='true'}
   setMusic({ frozen: 1 - game.gears / 3, awake: game.gears / 3 })
@@ -495,6 +498,8 @@ export function updateExplore(dt) {
   if(tutorial.dataset.onboarding&&(sinceGear>12||game.gears)){tutorial.textContent='';delete tutorial.dataset.onboarding}
   if(tutorial.dataset.hint&&game.elapsed>hintUntil){tutorial.textContent='';delete tutorial.dataset.hint}
   hud.textContent=tr('Gears {count}/3',{count:game.gears})
+  const controls=document.getElementById('controls'),keysText=controlsText()
+  if(controls.textContent!==keysText)controls.textContent=keysText
   document.getElementById('objective').textContent=tr(objectiveText(),{count:game.gears})
   if(tutorial.dataset.hint)tutorial.textContent=tr('The Dormouse murmurs: {clue}',{clue:dialogue(tutorial.dataset.hint)})
   if(tutorial.dataset.onboarding)tutorial.textContent=tr('Tea changes your size. Look for glints and listen for ticking.')
@@ -526,7 +531,7 @@ export function updateExplore(dt) {
 }
 onLanguageChange(()=>{
   if(!exploring)return
-  document.getElementById('controls').textContent=tr('WASD move · Shift run · Space jump · E interact · V view · Esc pause')
+  document.getElementById('controls').textContent=controlsText()
   hud.textContent=tr('Gears {count}/3',{count:game.gears})
   document.getElementById('objective').textContent=tr(objectiveText(),{count:game.gears})
   if(seatedPlayer&&!game.sceneDepth)prompt.textContent=tr('E  Stand up · WASD  Leave the chair')

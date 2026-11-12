@@ -7,6 +7,7 @@ export const SUN = new THREE.Vector3(...LOOK.sun).normalize()
 const sunDirection = uniform(SUN)
 export const air = {
   horizon: uniform(phaseColors.frozen.horizon.clone()),
+  dusk: uniform(phaseColors.frozen.dusk.clone()),
   zenith: uniform(phaseColors.frozen.zenith.clone()),
   glow: uniform(phaseColors.frozen.glow.clone()),
 }
@@ -17,8 +18,9 @@ const SUN_RADIUS = LOOK.sunRadius * Math.PI / 180
 export const skyRadiance = Fn(([direction]) => {
   const up = direction.y.max(0)
   const angleSquared = float(1).sub(dot(direction, sunDirection)).max(0).mul(2)
-  const halo = exp(angleSquared.div(-0.002)).mul(0.3).add(exp(angleSquared.div(-0.035)).mul(0.12))
-  return mix(air.horizon, air.zenith, pow(up, 0.55)).add(air.glow.mul(halo))
+  const halo = exp(angleSquared.div(-0.002)).mul(0.3).add(exp(angleSquared.div(-0.035)).mul(0.14)).add(exp(angleSquared.div(-0.35)).mul(0.22))
+  const low = mix(air.dusk, air.horizon, dot(direction, sunDirection).max(0).pow(0.9))
+  return mix(low, air.zenith, pow(up, 0.55)).add(air.glow.mul(halo))
 })
 
 // Bake two painted cloud layers once. Rounded lobes establish cumulus masses and flatter,
@@ -82,7 +84,7 @@ export const paintedSky = Fn(([direction, cloudView]) => {
   const highCover = high.mul(altitude).mul(0.42)
   const coverage = float(1).sub(float(1).sub(lowCover).mul(float(1).sub(highCover)))
   const towardSun = dot(direction, sunDirection).max(0)
-  const shade = air.zenith.mul(0.5).add(air.horizon.mul(0.3))
+  const shade = air.zenith.mul(0.6).add(air.dusk.mul(0.25))
   const lit = air.horizon.mul(0.8).add(air.glow.mul(towardSun.mul(0.4).add(0.2)))
   const lowColor = mix(shade, lit, low.g.mul(0.75).add(0.25))
   const highColor = air.horizon.mul(0.65).add(air.zenith.mul(0.25)).add(air.glow.mul(0.15))

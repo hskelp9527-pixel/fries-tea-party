@@ -90,6 +90,8 @@ export async function playSong() {
   rhythm = createRhythm(notes)
   game.rhythm = rhythm.stats
   active = true
+  game.miniGame = true
+  game.sceneSkipping = false
   rhythmCue.hidden = false
   document.getElementById('controls').textContent = tr('Space or click · Tap when the cup glows · Extra taps break your streak')
   await new Promise(resolve => { done = resolve })
@@ -105,14 +107,11 @@ function shoot(from, to, k) {
 
 export function updateSong() {
   if (!active || game.paused) return
-  if (game.sceneSkipping) {
-    finishSong()
-    return
-  }
   const t = heard() - start
   rhythm.update(t)
   const visibleCue = rhythm.cue(t), cueLight = visibleCue.open
   rhythmCue.dataset.open = String(cueLight)
+  rhythmCue.dataset.scoring = String(visibleCue.scoring)
   rhythmCue.dataset.note = String(visibleCue.index)
   rhythmCue.style.setProperty('--approach', Math.max(0, Math.min(1, 1 - visibleCue.remaining / .55)))
   instruction.textContent = tr(t < notes[0] - .55 ? 'Listen first. Join in when the cup begins to glow.'
@@ -153,10 +152,12 @@ export function updateSong() {
   }
   placeProps()
 }
-function finishSong() {
+export function finishSong() {
   active = false
+  game.miniGame = false
   rhythmCue.hidden = true
   delete rhythmCue.dataset.open
+  delete rhythmCue.dataset.scoring
   game.pulse = 0; game.pass = -1; game.hop = null; cupJump = 0
   for (const cup of cups) cup.scale.setScalar(1)
   tapCup.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = 0 })

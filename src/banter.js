@@ -55,6 +55,9 @@ export const EVENTS = {
   standUp: { lines: ['BK-05'], to: 'fries' },
 }
 
+// Every conversation the results can count: the distinct keys run() records, plus the four seated exchanges and the hall note.
+export const conversationTotal = new Set([...EXCHANGES, ...Object.values(EVENTS).flat()].map(e => e.id ?? e.lines.join(','))).size + 5
+
 const where = name => name === 'fries' ? player.feet : cast[name].object.position
 const distance = name => where(name).distanceTo(player.feet)
 let talk = null, queued = null, busy = false, gap = 12, idle = 0

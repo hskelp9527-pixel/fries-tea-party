@@ -24,15 +24,18 @@ test('blind rapid taps earn less garden movement than following the notes', () =
   assert.ok(spam.strength() < 0.3)
 })
 
-test('the visible cue opens only when a tap can score and closes once hit', () => {
+test('the cup lights 0.15 s early, a tap scores only within 0.12 s, and the cue closes once hit', () => {
   const rhythm = createRhythm([1, 2])
-  assert.equal(rhythm.cue(0.8).open, false)
-  assert.equal(rhythm.cue(0.92).open, true)
-  assert.equal(rhythm.tap(0.92), true)
+  assert.equal(rhythm.cue(0.7).open, false)
+  assert.equal(rhythm.cue(0.8).open, true)
+  assert.equal(rhythm.cue(0.8).scoring, false)
+  assert.equal(rhythm.tap(0.8), null)
+  assert.equal(rhythm.cue(0.9).scoring, true)
+  assert.equal(rhythm.tap(0.9), true)
   assert.equal(rhythm.cue(0.93).open, false)
-  assert.equal(rhythm.cue(2.08).open, true)
-  assert.equal(rhythm.tap(2.08), true)
-  assert.equal(rhythm.cue(2.1).open, false)
+  assert.equal(rhythm.cue(2.1).scoring, true)
+  assert.equal(rhythm.tap(2.1), true)
+  assert.equal(rhythm.cue(2.2).open, false)
 })
 
 test('a failed animation rejects once while other animations continue', async () => {

@@ -202,6 +202,7 @@ export async function standUp(name) {
 export async function changeSeats(name) {
   const m = cast[name], free = chairs.filter(c => !c.by)
   const chair = free[Math.floor(Math.random() * free.length)]
+  chair.by = name // claimed now, so Fries cannot take it while the Hare is still getting up
   await standUp(name)
   await sitDown(name, chair)
 }

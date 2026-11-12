@@ -1,6 +1,6 @@
 // Progress shared by the systems that react to it.
 export const game = {
-  challenges: false,
+  challenges: true,
   phase: 'title',
   elapsed: 0,
   paused: false,

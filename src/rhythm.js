@@ -1,5 +1,7 @@
 // Scoring uses the audio clock, independent of rendering speed or key repeat.
-export function createRhythm(notes, window = 0.09) {
+// `open` lights the cup LEAD seconds before the scoring window; `scoring` is exactly when a tap scores.
+const LEAD = 0.15
+export function createRhythm(notes, window = 0.12) {
   const judged = new Set()
   const stats = { hits: 0, misses: 0, stray: 0, combo: 0, best: 0, total: notes.length }
   let expired = 0
@@ -8,7 +10,7 @@ export function createRhythm(notes, window = 0.09) {
     cue(time) {
       const index = notes.findIndex((at, i) => !judged.has(i) && at + window >= time)
       const remaining = index < 0 ? Infinity : notes[index] - time
-      return { index, remaining, open: Math.abs(remaining) <= window }
+      return { index, remaining, open: remaining >= -window && remaining <= window + LEAD, scoring: Math.abs(remaining) <= window }
     },
     tap(time) {
       if (time < notes[0] - window) return null

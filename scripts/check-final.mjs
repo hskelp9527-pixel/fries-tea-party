@@ -10,7 +10,6 @@ const jobs=[
   ['views',node,['scripts/capture-review.mjs'],production],
   ['compose',process.env.PYTHON_PATH??'E:/Python/python.exe',['scripts/compose-review.py']],
   ['ordinary-natural',node,['scripts/gameplay.mjs','--no-skip'],production],
-  ['optional-challenges',node,['scripts/gameplay.mjs','--challenges'],production],
   ['contact-fixtures',node,['scripts/capture-contacts.mjs']],
   ['all-clip-contacts',node,['scripts/audit-contacts.mjs','--capture']],
   ['skin',node,['scripts/audit-skin.mjs']],

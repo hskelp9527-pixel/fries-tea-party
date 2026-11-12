@@ -174,7 +174,7 @@ for (let gx = x0; gx < x1; gx += spacing) {
     for (const turn of [0, Math.PI / 2]) {
       cell(grassCells, GRASS_CELL, x, z, () => ({ list: [] })).list.push({
         position: new THREE.Vector3(x, y, z), quaternion: lean ? lean.clone().multiply(upright(yaw + turn)) : upright(yaw + turn), scale: new THREE.Vector3(height * 2.1, height * 1.08, 1),
-        cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(1.1 - 0.3 * l + 0.25 * sun, 1, 0.65 + 0.15 * rand() - 0.2 * sun).multiplyScalar((m ? 0.9 : 0.6 + 0.6 * sun) + 0.3 * rand()),
+        cell: LEAVES.grass, base: [x, y, z, 6], tint: new THREE.Color(0.95 - 0.25 * l + 0.2 * sun, 1, 0.6 + 0.15 * rand() - 0.2 * sun).multiplyScalar((m ? 0.9 : 0.6 + 0.6 * sun) + 0.3 * rand()),
       })
     }
   }

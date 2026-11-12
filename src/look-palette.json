@@ -1,23 +1,32 @@
 {
   "frozen": {
+    "dusk": "#a09ed0",
+    "zenithSky": "#6a7cc8",
+    "ground": "#6a6a3e",
     "source": "art/storyboard/s01.png",
     "main": "#dd9457",
     "secondary": "#423d24",
     "accent": "#851f1c",
     "shadow": "#9d96a8",
-    "sky": "#f6c181",
+    "sky": "#ffc078",
     "roseSky": "#a87882"
   },
   "awake": {
+    "dusk": "#9c9ccf",
+    "zenithSky": "#6678c4",
+    "ground": "#6a6a3e",
     "source": "art/storyboard/s14.png",
     "main": "#dc9957",
     "secondary": "#444221",
     "accent": "#a23937",
     "shadow": "#7c7693",
-    "sky": "#eead76",
+    "sky": "#ffb86e",
     "roseSky": "#c296a5"
   },
   "sixOhOne": {
+    "dusk": "#d890a8",
+    "zenithSky": "#8f78b8",
+    "ground": "#6a5040",
     "source": "art/storyboard/s15.png",
     "main": "#de8f50",
     "secondary": "#3d3b1e",

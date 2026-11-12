@@ -1,16 +1,17 @@
-# Locked color script
+# Color script
 
-Reference colors are median RGB samples selected by hue/value masks from the supplied concepts.
-Dominant warm light: 60%; muted foliage/wood: 30%; rose and blue accents: 10%. Dark/middle/high value regions remain legible without post-processing.
+Golden-hour garden: warm sun, cool violet shadows, green lawn, a sky that runs peach-gold at the sun to periwinkle overhead. All values are authored in `src/look-palette.json` and `src/look.js`; the concept sampling (`main`, `secondary`, `accent`, `shadow`, `roseSky`) only seeds sun colour, hemisphere sky and the 6:01 rose.
 
-| Moment | Main | Secondary | Accent | Shadow | Sky | Reference |
-|---|---|---|---|---|---|---|
-| frozen | #dd9457 | #423d24 | #851f1c | #9d96a8 | #f6c181 | art/storyboard/s01.png |
-| awake | #dc9957 | #444221 | #a23937 | #7c7693 | #eead76 | art/storyboard/s14.png |
-| sixOhOne | #de8f50 | #3d3b1e | #9c403b | #625366 | #f9a375 | art/storyboard/s15.png |
+| Moment | Sun-side sky | Away (dusk) | Zenith | Glow (main) |
+|---|---|---|---|---|
+| frozen | #ffc078 | #a09ed0 | #6a7cc8 | #dd9457 |
+| awake | #ffb86e | #9c9ccf | #6678c4 | #dc9957 |
+| sixOhOne | #d57a92 | #d890a8 | #8f78b8 | #de8f50 |
 
-The low sun is framed above and to the right of the cottage in the shared song overview. Its direction is [0.86, 0.22, -0.46], approximately 13 degrees above the horizon. The canopy shades the hosts; environment 0.24, hemisphere 0.14 and a 0.12 cool violet fill preserve face detail without filling the shadows flat. Exposure is 0.98.
-The awakening raises motion and warm light without adding more saturated hues. At 6:01 the sky moves toward the sampled rose light.
+Surface albedo (sRGB): dry grass #c8d85a, lush #92b640, moss #5f8236, path sand #eab870 / #f6d595. Sunlit lawn lands near #7d9a3a-#93a845 and tree shade near #3c5528-#4a6332 after lighting. Grass card tints follow the ground (less red, so tufts match the floor).
+
+Lighting: sun 4.4 golden (white mix 0.3) at [0.86, 0.22, -0.46] (about 13 degrees up); shadow fill is violet: environment 0.36, hemisphere 0.26 (sky #9d96a8, ground #6a6a3e), bounce 0.2 (#8796c3), grade shadowCool 0.04. Exposure 1.04; grade contrast 1.07, saturation 1.06; glow x3.6; backdrop multiplied by #ffe8cc. Haze stays warm because it samples the sky low on the horizon.
+
 src/look.js owns exposure, lighting ratios, sky, fog, surface palette and the one display-domain LUT. No other module owns a creative grade.
 Review cameras: s01 over-shoulder, s14 garden overview, s12 table detail. All eighteen frames must be captured for final review.
 

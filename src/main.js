@@ -13,7 +13,7 @@ import { updateTweens } from './tweens.js'
 import { begin } from './story.js'
 import { updateExplore } from './explore.js'
 import { updateFloating, prewarmFloating } from './floating.js'
-import { updateSong } from './song.js'
+import { updateSong, finishSong } from './song.js'
 import { updateCast, cast } from './cast.js'
 import { updateGaze } from './gaze.js'
 import { updateLooks, banter } from './banter.js'
@@ -40,9 +40,9 @@ import { updateGearGames, gearGames } from './gear-games.js'
 import { setInteractionHandTarget } from './hands.js'
 
 const params = new URLSearchParams(location.search)
-game.challenges=params.has('challenges')
+game.challenges=!params.has('nochallenges')
 const frameAudit={maximum:0,spikes:[]}
-if (params.has('diagnostics')) window.__tea = { P, S, G, L, C, A, T, M, K, PS, scene, camera, renderer, world,runScene, gearGames,frameAudit,render,lens,look:{LOOK,phaseColors,sun,bounce},liquids:{surface,stream,counts:liquidCounts} }
+if (params.has('diagnostics')) window.__tea = { P, S, G, L, C, A, T, M, K, PS, scene, camera, renderer, world,runScene, gearGames,finishSong,frameAudit,render,lens,look:{LOOK,phaseColors,sun,bounce},liquids:{surface,stream,counts:liquidCounts} }
 const qualitySelect = document.getElementById('quality')
 qualitySelect.value = quality.mode
 qualitySelect.addEventListener('change', () => setQuality(qualitySelect.value))
