@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
-import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_noise_float } from 'three/tsl'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { texture, vertexColor, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_noise_float } from 'three/tsl'
 import { scene, camera, lens } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { model, addColliders, glow } from './models.js'
@@ -118,33 +119,40 @@ async function layBridge() {
 // The grotto under the fountain's basin: a wet stone floor, syrup dripping from the basin's underside, moss, and
 // a little valve with gear 2 jammed in its wheel, lit warm and ticking, which shows through the arch.
 const fountain = things.fountain.position
-const wet = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3d3c44, roughness: 0.12, metalness: 0.1 }))
-wet.position.set(fountain.x, 0.004, fountain.z)
-scene.add(wet)
 // The grotto's walls (the fountain scan's inside, within 1.35 m of its axis and 0.7 m of the floor) darken to rock: the
 // scan's colour under layered noise, strata and a cool tone, so the gear's warm light is the brightest thing in view.
-const shell = things.fountain.getObjectByProperty('isMesh', true), scan = shell.material
+const shell = things.fountain.getObjectByName('fountain'), scan = shell.material
 const rockMaterial = new THREE.MeshStandardNodeMaterial({ roughness: scan.roughness, metalness: scan.metalness, normalMap: scan.normalMap, normalScale: scan.normalScale })
 const inside = float(1).sub(smoothstep(1.2, 1.4, positionWorld.xz.sub(vec2(fountain.x, fountain.z)).length())).mul(float(1).sub(smoothstep(0.55, 0.75, positionWorld.y)))
 const rock = mx_noise_float(positionWorld.mul(9)).mul(0.5).add(mx_noise_float(positionWorld.mul(31)).mul(0.25)).add(mx_noise_float(vec3(positionWorld.x.mul(2), positionWorld.y.mul(26), positionWorld.z.mul(2))).mul(0.2))
 rockMaterial.colorNode = mix(texture(scan.map).rgb, texture(scan.map).rgb.mul(vec3(0.95, 0.82, 0.74)).mul(rock.add(1.2)), inside.mul(0.8))
 shell.material = rockMaterial
-const brass = new THREE.MeshStandardMaterial({ color: 0xc89a48, metalness: 0.8, roughness: 0.35 })
+// The modelled grotto (rock, syrup, candied crystals): vertex-coloured, with fine grain on the rock and the gems glowing.
+const grottoRock = things.fountain.getObjectByName('grotto_rock'), gems = things.fountain.getObjectByName('grotto_crystal')
+grottoRock.material = new THREE.MeshStandardNodeMaterial({ roughness: 0.88 })
+grottoRock.material.colorNode = vertexColor().mul(mx_noise_float(positionWorld.mul(60)).mul(0.25).add(0.92))
+gems.material = new THREE.MeshStandardNodeMaterial({ roughness: 0.25 })
+gems.material.colorNode = vertexColor()
+gems.material.emissiveNode = vertexColor().mul(4)
+// The valve: a brass pipe down from the basin with collars and a lever, and a hand wheel on the floor with gear 2 in it.
 const [vx, vz] = grotto.valve
-const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 10), brass)
-pipe.position.set(vx + 0.045, 0.2, vz)
-const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.005, 6, 20).rotateX(Math.PI / 2), brass)
-wheel.position.set(vx + 0.045, 0.024, vz)
-for (let k = 0; k < 4; k++) wheel.add(new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.004, 0.006).rotateY(k * Math.PI / 4), brass))
+const cyl = (r, h, y, x = 0) => new THREE.CylinderGeometry(r, r, h, 12).translate(x, y, 0)
+const spokes = Array.from({ length: 6 }, (_, k) => new THREE.BoxGeometry(0.09, 0.004, 0.006).rotateY(k * Math.PI / 6).translate(0, 0.024, 0))
+const brass = new THREE.Mesh(mergeGeometries([
+  cyl(0.014, 0.4, 0.2), cyl(0.026, 0.008, 0.33), cyl(0.022, 0.05, 0.11), cyl(0.026, 0.006, 0.082), cyl(0.026, 0.006, 0.138),
+  new THREE.BoxGeometry(0.006, 0.006, 0.06).translate(0, 0.11, 0.04), new THREE.SphereGeometry(0.009, 8, 6).translate(0, 0.11, 0.072),
+  cyl(0.012, 0.012, 0.027), new THREE.TorusGeometry(0.045, 0.005, 6, 24).rotateX(Math.PI / 2).translate(0, 0.024, 0), ...spokes,
+]), new THREE.MeshStandardMaterial({ color: 0xe0a848, metalness: 0.85, roughness: 0.3, emissive: 0x6a3a08, emissiveIntensity: 0.6 }))
+brass.position.set(vx + 0.045, 0, vz)
 // This is a centimetre-scale alcove: inverse-square falloff makes a full-size
 // lamp wash out the valve and ceiling at these distances.
-const lamp = new THREE.PointLight(0xffb060, 0.018, 1.2)
+const lamp = new THREE.PointLight(0xffb060, 0.045, 1.6)
 lamp.position.set(vx, 0.18, vz)
-scene.add(pipe, wheel, lamp)
+scene.add(brass, lamp)
 const moss = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: 0x4a6a2a, roughness: 1 }), 40)
 for (let i = 0; i < moss.count; i++) {
   const a = rand() * Math.PI * 2, r = 0.95 + rand() * 0.15, s = 0.02 + rand() * 0.04
-  moss.setMatrixAt(i, m4.compose(new THREE.Vector3(fountain.x + Math.cos(a) * r, s * 0.3, fountain.z + Math.sin(a) * r), q.identity(), new THREE.Vector3(s, s * 0.35, s)))
+  moss.setMatrixAt(i, m4.compose(new THREE.Vector3(fountain.x + Math.cos(a) * r, 0.012 + s * 0.3, fountain.z + Math.sin(a) * r), q.identity(), new THREE.Vector3(s, s * 0.35, s)))
 }
 scene.add(moss)
 const drip = new THREE.MeshPhysicalMaterial({ color: 0xe8901c, roughness: 0.05, transmission: 0, transparent: true, opacity: 0.85 })

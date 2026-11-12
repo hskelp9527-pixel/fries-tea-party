@@ -32,6 +32,7 @@ for obj in parts:
     bmesh.ops.delete(bm,geom=remove,context='FACES');bm.to_mesh(obj.data);bm.free();obj.data.update()
     print(f'Removed duplicate static flow: {len(remove)} faces from {obj.name}')
 bpy.data.objects.remove(cutter,do_unlink=True)
+exec(compile(open(root/'scripts/fountain-grotto.py').read(),'fountain-grotto.py','exec'))
 out=root/'art/props/finished/fountain.glb';out.parent.mkdir(parents=True,exist_ok=True)
-bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB')
+bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',export_vertex_color='MATERIAL')
 print('GROTTO clearance: 0.50 m wide x 0.38 m high; small character: 0.216 m')
