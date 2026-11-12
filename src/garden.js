@@ -41,12 +41,17 @@ for (const entry of layout.placed) {
 
 // Repeated inert pieces (walls, wall caps, fences, arches, steps) draw as one instanced mesh per part instead of one
 // mesh each: several hundred fewer draws, in the shadow pass as well. Their colliders stay where they were placed.
+// The cottage's retaining walls and steps face away from the sun, so their stone is lifted to a warm sandstone
+// (linear multipliers on the texture) to read as stone rather than shadow.
+const WARM = { wall_stone: [2.9, 2.3, 1.55], wall_cap_flowers: [1.6, 1.5, 1.0], steps_stone: [1.6, 1.4, 1.15] }
 for (const name of ['wall_stone', 'wall_cap_flowers', 'fence_picket', 'fence_broken', 'rose_arch', 'steps_stone', 'flagstone_a', 'flagstone_b', 'flagstone_c', 'flagstone_d']) {
   const objects = placedAll[name], parts = []
   objects.forEach(o => o.updateMatrixWorld(true))
   objects[0].traverse(m => { if (m.isMesh) parts.push(m) })
   parts.forEach((part, k) => {
-    const mesh = new THREE.InstancedMesh(part.geometry, part.material, objects.length)
+    const material = WARM[name] ? part.material.clone() : part.material
+    if (WARM[name]) material.color.multiply(new THREE.Color().setRGB(...WARM[name]))
+    const mesh = new THREE.InstancedMesh(part.geometry, material, objects.length)
     objects.forEach((o, i) => {
       let n = 0
       o.traverse(m => { if (m.isMesh && n++ === k) mesh.setMatrixAt(i, m.matrixWorld) })

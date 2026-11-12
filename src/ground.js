@@ -97,6 +97,12 @@ const tile=positionWorld.xz.mul(1.45),tx=tile.x.fract(),tz=tile.y.fract()
 const joint=tx.min(float(1).sub(tx)).min(tz.min(float(1).sub(tz)))
 const paver=mix(color(0x9e8b71),color(0xbdab8b),smoothstep(-.3,.4,mx_noise_float(tile.floor().mul(3.1))))
 pavingMaterial.colorNode=mix(color(0x61594e),paver.mul(speckle.mul(.045).add(.975)),smoothstep(.012,.035,joint))
+// Under the fountain's basin (the grotto floor) the paving is wet stone stained with syrup: glossy where the syrup lies.
+const grotto = float(1).sub(smoothstep(1.15, 1.4, positionWorld.xz.sub(vec2(plaza[0], plaza[1])).length()))
+const syrup = smoothstep(0.05, 0.4, mx_noise_float(positionWorld.xz.mul(4.5))).mul(grotto)
+const grottoStone = mix(mix(color(0x6a5f58), color(0xa09078), smoothstep(-0.3, 0.5, mx_noise_float(positionWorld.xz.mul(14)))), color(0xd48a28), syrup.mul(0.75))
+pavingMaterial.colorNode = mix(pavingMaterial.colorNode, grottoStone, grotto)
+pavingMaterial.roughnessNode = mix(float(0.87), mix(float(0.6), float(0.08), syrup), grotto)
 const paving = new THREE.Mesh(new THREE.CircleGeometry(plaza[2], 48).rotateX(-Math.PI / 2), pavingMaterial)
 paving.position.set(plaza[0], 0.015, plaza[1])
 paving.receiveShadow = true

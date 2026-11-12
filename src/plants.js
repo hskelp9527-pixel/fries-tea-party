@@ -65,6 +65,10 @@ export const drawCount = (full, share) => Math.min(full, Math.ceil(full * share 
 // The size, 0 to 1, of the plant rooted at `root` (world x, z) under a share curve.
 const grown = (curve, root) => shareNode(curve, root.sub(cameraPosition.xz).length().mul(detailDistance)).sub(attribute('aRank', 'float').mul(1 - 1 / GROW)).mul(GROW).saturate()
 
+// 1 for a plant rooted at `root` (world x, z) beyond `far` metres from the camera, shrinking to 0 inside `near`, so
+// nothing grows over the lens.
+const clearOfCamera = (root, near, far) => smoothstep(near, far, root.sub(cameraPosition.xz).length())
+
 // What the characters do to the plants rooted at `root` (world x, z): `push`, the sideways shove away from every
 // walker within its radius plus the running gust, and `near`, 1 close to a dancer fading to 0 at 5.5 m.
 function touch(root) {
@@ -96,24 +100,30 @@ export function cardMaterial(sheet, { crown = false, translucency = 0.8, flutter
   const depth = crown ? positionWorld.sub(base.xyz).length().div(base.w).saturate() : uv().y.mul(0.6).add(0.4)
   const canopyHeight = positionWorld.y.sub(base.y).div(base.w.max(0.01))
   const canopyLight = mix(0.48, 1.05, smoothstep(-0.7, 0.65, canopyHeight))
-  material.colorNode = sample.rgb.mul(mix(0.45, 1, depth)).mul(crown ? canopyLight : 0.82)
+  // Crowns face the sun: the side towards it turns warm yellow-green, the side away deep and cool.
+  const outward = positionWorld.sub(base.xyz).normalize()
+  const sunSide = smoothstep(-0.3, 0.8, outward.dot(sun))
+  const golden = mix(vec3(0.62, 0.82, 1.0), vec3(1.4, 1.22, 0.62), sunSide)
+  material.colorNode = sample.rgb.mul(mix(0.45, 1, depth)).mul(crown ? canopyLight : 0.82).mul(crown ? golden : 1)
   material.opacityNode = sample.a
 
   const flap = sin(time.mul(7).add(base.x.mul(3.1)).add(positionLocal.y.mul(4)).add(positionLocal.x.mul(5))).mul(flutter).mul(uv().y)
   if (crown) {
     const drift = gust(base.xz).mul(base.y.max(0).mul(sway)).mul(float(1).add(wind.bushes.mul(base.y.lessThan(2.5).select(1, 0))))
     material.positionNode = positionLocal.add(vec3(drift.x.add(flap), flap.mul(0.6), drift.y.sub(flap)))
-    const outward = positionWorld.sub(base.xyz).normalize()
     material.normalNode = cameraViewMatrix.mul(vec4(outward.add(normalWorld.mul(0.3)).normalize(), 0)).xyz
   } else {
     const height = positionLocal.y.sub(base.y).max(0), { push, near } = touch(base.xz)
     const bend = gust(base.xz).mul(BREEZE).add(push.mul(0.5)).mul(height.mul(height).mul(base.w))
-    material.positionNode = (thin ? positionLocal.mul(grown(thin, base.xz)) : positionLocal).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.25)), bend.y))
+    material.positionNode = (thin ? positionLocal.mul(grown(thin, base.xz)) : positionLocal).mul(clearOfCamera(base.xz, 0.4, 1.2)).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.25)), bend.y))
     material.normalNode = cameraViewMatrix.mul(vec4(mix(normalWorld, vec3(0, 1, 0), 0.6).normalize(), 0)).xyz
   }
   const toCamera = cameraPosition.sub(positionWorld).normalize()
   const through = pow(dot(toCamera, sun.negate()).saturate(), 3).mul(depth)
-  material.emissiveNode = sample.rgb.mul(vec3(1, 0.75, 0.4)).mul(through).mul(translucency)
+  // Light that has come through the leaves: the back-lit glow, and for crowns a warm green floor so the leaves
+  // overhead do not go black from underneath.
+  const glow = sample.rgb.mul(vec3(1, 0.75, 0.4)).mul(through).mul(translucency)
+  material.emissiveNode = crown ? glow.add(sample.rgb.mul(vec3(0.5, 0.62, 0.1)).mul(float(1).sub(sunSide.mul(0.6))).mul(0.2)) : glow
   return material
 }
 
@@ -154,7 +164,7 @@ export function flowerMaterial(thin, impostor = false, lod = false) {
   const material = new THREE.MeshStandardNodeMaterial({ vertexColors: !impostor, roughness: 0.8, side: THREE.DoubleSide,
     ...(impostor && flowerAtlas ? { map: flowerAtlas, alphaTest: 0.45, alphaToCoverage: true } : {}) })
   const bend = gust(positionLocal.xz).mul(BREEZE).mul(wind.bushes.mul(0.5).add(1)).add(push).mul(height.mul(height).mul(0.8))
-  material.positionNode = (thin ? positionLocal.mul(grown(thin, root)) : positionLocal).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
+  material.positionNode = (thin ? positionLocal.mul(grown(thin, root)) : positionLocal).mul(clearOfCamera(root, 0.8, 2)).add(vec3(bend.x, bend.length().mul(height).mul(-0.3).add(height.mul(wind.pulse).mul(near).mul(0.12)), bend.y))
   if(lod){
     const transition=smoothstep(9,11,root.sub(cameraPosition.xz).length().mul(qualityDistance))
     const noise=interleavedGradientNoise(screenCoordinate.xy)

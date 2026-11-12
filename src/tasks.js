@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu'
+import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_noise_float } from 'three/tsl'
 import { scene, camera, lens } from './scene.js'
 import { RAPIER, world } from './physics.js'
 import { model, addColliders } from './models.js'
@@ -118,6 +119,14 @@ const fountain = things.fountain.position
 const wet = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3d3c44, roughness: 0.12, metalness: 0.1 }))
 wet.position.set(fountain.x, 0.004, fountain.z)
 scene.add(wet)
+// The grotto's walls (the fountain scan's inside, within 1.35 m of its axis and 0.7 m of the floor) darken to rock: the
+// scan's colour under layered noise, strata and a cool tone, so the gear's warm light is the brightest thing in view.
+const shell = things.fountain.getObjectByProperty('isMesh', true), scan = shell.material
+const rockMaterial = new THREE.MeshStandardNodeMaterial({ roughness: scan.roughness, metalness: scan.metalness, normalMap: scan.normalMap, normalScale: scan.normalScale })
+const inside = float(1).sub(smoothstep(1.2, 1.4, positionWorld.xz.sub(vec2(fountain.x, fountain.z)).length())).mul(float(1).sub(smoothstep(0.55, 0.75, positionWorld.y)))
+const rock = mx_noise_float(positionWorld.mul(9)).mul(0.5).add(mx_noise_float(positionWorld.mul(31)).mul(0.25)).add(mx_noise_float(vec3(positionWorld.x.mul(2), positionWorld.y.mul(26), positionWorld.z.mul(2))).mul(0.2))
+rockMaterial.colorNode = mix(texture(scan.map).rgb, texture(scan.map).rgb.mul(vec3(0.95, 0.82, 0.74)).mul(rock.add(1.2)), inside.mul(0.8))
+shell.material = rockMaterial
 const brass = new THREE.MeshStandardMaterial({ color: 0xc89a48, metalness: 0.8, roughness: 0.35 })
 const [vx, vz] = grotto.valve
 const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 10), brass)
