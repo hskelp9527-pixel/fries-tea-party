@@ -29,6 +29,8 @@ progress { width: 100%; height: 4px; accent-color: var(--gold); }
 #objective { position: fixed; top: 25px; left: 24%; right: 24%; text-align: center; font: 13px/1.7 system-ui, sans-serif; text-shadow: 0 2px 6px #171320; pointer-events: none; }
 #controls { position: fixed; right: 20px; bottom: 18px; font: 11px/1.5 system-ui, sans-serif; color: #e1d8d4; text-shadow: 0 2px 5px #171320; pointer-events: none; }
 #task-hint { position: fixed; left: 50%; transform: translateX(-50%); max-width: 80%; top: 18%; padding: 12px 22px; text-align: center; font: 16px/1.5 system-ui, sans-serif; background: var(--glass); border-radius: 4px; pointer-events: none; }
+#objective-count { margin-right: 0.9em; color: var(--gold); font-weight: 600; }
+#objective-count:empty { display: none; }
 #hud:empty, #prompt:empty, #subtitle:empty, #task-hint:empty { display: none; }
 #perf { position: fixed; top: 78px; right: 14px; z-index: 10; margin: 0; padding: 8px 10px; background: #171320d9; font: 11px/1.5 monospace; pointer-events: none; }
 #results { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: flex-end; padding: 6vw; background: linear-gradient(90deg, transparent 20%, #171320c4); }
@@ -99,3 +101,29 @@ html:lang(zh-CN) #results h2 { font-size: clamp(24px,3.2vw,38px); white-space: n
 .beat-ring { width: 28px; height: 28px; border: 2px solid #ad864f; border-radius: 50%; background: #edc889; opacity: calc(.2 + .5 * var(--approach, 0)); transform: scale(calc(.5 + .5 * var(--approach, 0))); }
 #rhythm-cue[data-open="true"] { border-color: #ffdf85; color: #ffdf85; box-shadow: 0 0 25px #ffd0704d; }
 #rhythm-cue[data-open="true"] .beat-ring { opacity: 1; transform: scale(1); }
+
+#guide-open { position: fixed; z-index: 12; top: 18px; right: 118px; padding: 7px 12px; font: 11px system-ui, sans-serif; background: #211c30c9; }
+#guide-toast { position: fixed; z-index: 11; left: 50%; bottom: 31%; transform: translateX(-50%); padding: 9px 18px; font: 14px/1.5 system-ui, sans-serif; background: var(--glass); border: 1px solid #edc88960; border-radius: 20px; pointer-events: none; }
+#guide { position: fixed; inset: 0; z-index: 61; display: flex; align-items: center; justify-content: center; padding: 24px; background: #15111d99; backdrop-filter: blur(5px); }
+.guide-card { width: min(820px, 96vw); max-height: 94vh; overflow: auto; padding: 24px 32px; border: 1px solid #edc8896b; border-radius: 10px; background: linear-gradient(#2b2030f2, #1e1826f2); box-shadow: 0 18px 70px #15111d99, inset 0 1px 0 #f9eed833; font: 14px/1.6 system-ui, sans-serif; }
+.guide-card h2 { font: 400 clamp(25px, 3vw, 34px) Georgia, serif; margin: 6px 0 14px; }
+.guide-card h3 { margin: 18px 0 8px; font: 11px/1.5 system-ui, sans-serif; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); }
+.guide-card p, .guide-card ul { margin: 0; }
+.guide-card ul { padding-left: 18px; }
+.guide-sizes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.guide-sizes > div, .guide-gear, .guide-keys > div { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #edc88930; border-radius: 6px; background: #15111d55; }
+.guide-sizes small { display: block; color: #ccbfcb; }
+.swatch { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #f9eed8aa; background: var(--c); box-shadow: 0 0 8px color-mix(in srgb, var(--c) 60%, transparent); }
+.swatch.cake { border-radius: 6px 6px 3px 3px; }
+.guide-gear { align-items: flex-start; margin-bottom: 6px; }
+.guide-gear.now { border-color: var(--gold); background: #edc8891f; box-shadow: 0 0 0 1px #edc88966; }
+.guide-gear.done { opacity: 0.65; }
+.guide-gear .tick { flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; border: 1.5px solid #edc88999; font-size: 12px; line-height: 17px; text-align: center; }
+.guide-gear.done .tick { background: #5f7a58; border-color: #cfe2c0; }
+.guide-gear b { margin-right: 8px; }
+.guide-gear small { color: #ccbfcb; display: block; }
+.guide-keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.guide-keys > div { padding: 5px 10px; }
+.guide-keys > div.now { border-color: var(--gold); background: #edc8891f; }
+.guide-keys kbd { flex: none; min-width: 28px; padding: 1px 7px; text-align: center; font: 600 12px system-ui, sans-serif; color: var(--gold); border: 1px solid #edc88980; border-bottom-width: 2px; border-radius: 4px; background: #15111d99; }
+@media (max-width: 700px) { .guide-sizes { grid-template-columns: 1fr; } #guide-open { right: 108px; } }

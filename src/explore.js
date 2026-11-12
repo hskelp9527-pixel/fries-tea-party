@@ -21,18 +21,19 @@ import { runScene, onSceneCleanup } from './cutscene.js'
 import { playGearGame } from './gear-games.js'
 import { tr, dialogue, onLanguageChange } from './i18n.js'
 
-const FIRST_HINT = 45 // seconds without finding a gear before the Dormouse sleep-talks a hint
-const NEXT_HINT = 35
+const FIRST_HINT = 20 // seconds without finding a gear before the Dormouse sleep-talks a hint (then ~47 s, ~74 s)
+const NEXT_HINT = 27
 
 const prompt = document.getElementById('prompt')
 const hud = document.getElementById('hud')
 const head = (character, height) => character.localToWorld(new THREE.Vector3(0, height, 0))
 
+const reachable = gear => !gear.found && nearGear(gear) && (gear.in !== 'house' || insideHall())
 // What E can do: { pos, label, can(), use() }. The nearest one Fries can use is offered.
 const uses = drinks.map(d => ({ ...d, can: () => nearProp(d, d.pos), use: () => drink(d) }))
 for (const gear of gears) uses.push({
   pos: gear.pos, label: 'Pick up the gear', priority: 1,
-  can: () => !gear.found && nearGear(gear) && (gear.in !== 'house' || insideHall()), use: () => pickUp(gear),
+  can: () => reachable(gear), use: () => pickUp(gear),
 })
 uses.push(teaService, hallNote)
 let target, toldAboutTea = false
@@ -420,31 +421,39 @@ function find(gear) {
 }
 
 // The Dormouse's sleep-talk: after a while without progress, a hint for the nearest gear, clearer each time.
-let sinceGear = 0, hintTier = -1, hintUntil=0, hintedGear=null, activeGoal=null
+let sinceGear = 0, hintTier = -1, hintUntil=0, activeGoal=null
 function hint() {
-  const gear = nextGear()
-  hintedGear=gear
+  const gear=nextGear()
   hintTier=Math.min(2,hintTier+1)
   const id=gear.hints[hintTier],hint=document.getElementById('task-hint')
   hint.textContent=tr('The Dormouse murmurs: {clue}',{clue:dialogue(id)});hint.dataset.hint=id;hintUntil=game.elapsed+10
   say(id,cast.dormouse.object.position.distanceTo(player.feet))
 }
+// The gear the objective strip and the hints point at: the one in reach, else one for Fries's size (a normal-sized
+// Fries is sent to the first gear left: tree, grotto, mantel), else the first left.
 function nextGear() {
-  const remaining=gears.filter(g=>!g.found),matching=remaining.filter(g=>g.by===player.size)
-  if(hintedGear&&!hintedGear.found&&(!matching.length||matching.includes(hintedGear)))return hintedGear
-  return (matching.length?matching:remaining).sort((a,b)=>a.pos.distanceTo(player.feet)-b.pos.distanceTo(player.feet))[0]
+  const left=gears.filter(g=>!g.found)
+  return left.find(reachable)??(player.size==='normal'?left[0]:left.find(g=>g.by===player.size)??left[0])
 }
-function objectiveText() {
-  if(game.gears===3)return player.size==='normal'?"Bring the gears back to the Hatter's watch":"Eat a cake to grow back, then return to the Hatter's watch"
-  if(sinceGear<FIRST_HINT+NEXT_HINT)return 'Find the watch gears · {count}/3'
+const CAKE='Eat a cake to return to normal size first'
+const STEPS={
+  big:{change:"Drink the blue tea on the table to grow, then reach into the big tree's hollow",far:"Walk to the big tree and reach into its hollow",near:'Press E at the glowing hollow'},
+  small:{change:"Drink the pink tea on the table to shrink, then slip into the fountain's grotto",far:"Cross the spoon bridge and slip into the fountain's grotto",near:"Press E at the gear in the grotto"},
+  normal:{far:"Open the March Hare's cottage door and look on the mantelpiece",near:'Press E at the gear on the mantelpiece'},
+}
+const PHASE_STEPS={mending:'The Hatter is mending the watch…',song:'Press Space or click when a cup glows',ending:'Time ticks on to 6:01'}
+// Pure: the strip's next-step message (a source string for tr) for a state; by is the size the current goal gear needs.
+export function objectiveKey({phase,gears,size,by,near}) {
+  if(phase!=='explore')return PHASE_STEPS[phase]??''
+  if(gears===3)return size==='normal'?'Take the gears to the Hatter at the table':CAKE
+  if(size!==by)return size==='normal'?STEPS[by].change:CAKE
+  return STEPS[by][near?'near':'far']
+}
+export function objectiveText() {
   const gear=nextGear()
-  if(player.size==='small')return gear.by==='small'
-    ? Math.hypot(player.feet.x-underTable.cup[0],player.feet.z-underTable.cup[1])<1?'Cross the spoon bridge, then look for the crack beneath the fountain':"Slip into the fountain's grotto and find the gear"
-    :'Eat a cake to grow back'
-  if(player.size==='big')return gear.by==='big'?"Reach into the hollow high in the big tree's trunk":'Eat a cake to grow back'
-  return gear.by==='normal'?"Only an ordinary-sized boy can open the March Hare's door: look on the hall's mantelpiece"
-    :gear.by==='big'?'Drink the blue tea to grow tall: something glints high in the big tree':"Drink the pink tea to shrink and slip into the fountain's grotto"
+  return objectiveKey({phase:game.phase,gears:game.gears,size:player.size,by:gear?.by,near:gear&&reachable(gear)})
 }
+export const guideGoal=()=>nextGear()?.layer
 function discover(id) { if (!game.discovered.includes(id)) { game.discovered.push(id); checkpoint() } }
 
 uses.push({
@@ -464,7 +473,6 @@ async function mend() {
   player.control = false
   prompt.textContent = ''
   hud.textContent = ''
-  document.getElementById('objective').textContent = ''
   try { await onMended() }
   catch (error) { exploring = true; throw error }
 }
@@ -502,7 +510,6 @@ export function updateExplore(dt) {
   hud.textContent=tr('Gears {count}/3',{count:game.gears})
   const controls=document.getElementById('controls'),keysText=controlsText()
   if(controls.textContent!==keysText)controls.textContent=keysText
-  document.getElementById('objective').textContent=tr(objectiveText(),{count:game.gears})
   if(tutorial.dataset.hint)tutorial.textContent=tr('The Dormouse murmurs: {clue}',{clue:dialogue(tutorial.dataset.hint)})
   if(tutorial.dataset.onboarding)tutorial.textContent=tr('Tea changes your size. Look for glints and listen for ticking.')
   target = undefined
@@ -535,7 +542,6 @@ onLanguageChange(()=>{
   if(!exploring)return
   document.getElementById('controls').textContent=controlsText()
   hud.textContent=tr('Gears {count}/3',{count:game.gears})
-  document.getElementById('objective').textContent=tr(objectiveText(),{count:game.gears})
   if(seatedPlayer&&!game.sceneDepth)prompt.textContent=tr('E  Stand up · WASD  Leave the chair')
   else if(target)prompt.textContent=`E  ${tr(target.label)}`
   const hint=document.getElementById('task-hint')

@@ -10,14 +10,14 @@
   <div id="start" aria-busy="true">
     <p class="eyebrow">FRIES IN WONDERLAND</p>
     <h1>The Six O'Clock Tea Party</h1>
-    <p class="intro">Find three lost gears and mend the watch. Tea changes your size; cake brings you back.</p>
+    <p class="intro">Find three lost gears, mend the Hatter's watch, then sing time on to 6:01.</p>
     <div id="loading" role="status" aria-live="polite">
       <progress id="loading-progress" max="1" value="0"></progress>
       <p id="loading-status">Opening the garden gate...</p>
     </div>
     <button id="start-label" type="button" disabled>Preparing your seat...</button>
     <button id="continue" hidden>Continue your tea party</button>
-    <p class="keys">WASD move / Mouse look / Shift run / Space jump / E use / V view<br>During the song: Space or click on the beat</p>
+    <p class="keys">WASD move · Mouse look · Shift run · Space jump · E use<br>V view · H guide · Esc pause · Enter skip a scene</p>
     <p id="backend" hidden></p>
     <label class="quality-setting">Picture quality
       <select id="quality" aria-label="Picture quality"><option value="auto">Automatic</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
@@ -25,13 +25,15 @@
   </div>
   <div id="hud"></div>
   <div id="prompt"></div>
-  <div id="objective"></div>
+  <div id="objective" hidden><span id="objective-count"></span><span id="objective-step"></span></div>
   <div id="controls">WASD move  |  Shift run  |  Space jump  |  E interact  |  V change view</div>
   <div id="task-hint"></div>
+  <div id="guide-toast" hidden>Press H for the tea-party guide</div>
   <div id="rhythm-cue" hidden aria-live="off"><span class="beat-ring"></span><span id="rhythm-instruction"></span></div>
   <div id="subtitle"></div>
   <pre id="perf" hidden></pre>
   <button id="pause-open" hidden aria-label="Pause and settings">Esc · Pause</button>
+  <button id="guide-open" hidden aria-label="Tea-party guide">H · Guide</button>
   <button id="scene-skip" hidden>Enter · Skip scene</button>
   <section id="pause-menu" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title">
     <div class="pause-card">
@@ -42,7 +44,14 @@
       <label>Voices<input id="voice-volume" type="range" min="0" max="1" step="0.05"></label>
       <label>Garden sounds<input id="sfx-volume" type="range" min="0" max="1" step="0.05"></label>
       <p id="pause-status" role="status">Your progress is saved at safe chapter checkpoints.</p>
-      <div class="pause-actions"><button id="pause-resume">Return to the garden</button><button id="pause-save">Save progress</button><button id="pause-restart">Return to title</button></div>
+      <div class="pause-actions"><button id="pause-resume">Return to the garden</button><button id="pause-guide">Guide</button><button id="pause-save">Save progress</button><button id="pause-restart">Return to title</button></div>
+    </div>
+  </section>
+  <section id="guide" hidden role="dialog" aria-modal="true" aria-labelledby="guide-title">
+    <div class="guide-card">
+      <p class="eyebrow">A LITTLE HELP AT THE TABLE</p><h2 id="guide-title">Tea-party guide</h2>
+      <div id="guide-body"></div>
+      <div class="pause-actions"><button id="guide-close">Close guide</button></div>
     </div>
   </section>
   <section id="results" hidden aria-labelledby="result-title">
