@@ -35,6 +35,7 @@ export async function begin(from) {
     if (save) {
       game.elapsed = save.elapsed ?? 0
       Object.assign(game.rhythm, save.rhythm)
+      game.tea = save.tea ?? game.tea
       game.discovered = save.discovered ?? []
       game.puzzles = save.puzzles ?? {}
       game.puzzleMistakes = save.puzzleMistakes ?? 0

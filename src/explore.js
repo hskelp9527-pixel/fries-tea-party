@@ -166,9 +166,9 @@ async function drink(d) {
       showEat(d)
       act('pick_up');anim.hold('pick_up')
       await tween(.3,t=>{anim.current.time=contacts.pick_up.time*t})
-      anim.hold('pick_up',false);act('idle');await wait(.35)
+      anim.hold('pick_up',false);anim.play('idle');await wait(.35)
       await cakeBite(d,.18)
-      player.nod=0;anim.hold('pick_up',false);act('idle');await wait(.25)
+      player.nod=0;anim.hold('pick_up',false);anim.play('idle');await wait(.25)
     }
     if (d.grow) await walkTo(d.grow, 90)
     setSize(d.becomes, 0.8)
@@ -193,19 +193,21 @@ async function drink(d) {
 
 // Fries bends to the cake, rises, then eats two magically lifted morsels.
 async function eat(d) {
-  onSceneCleanup(() => { anim.hold('pick_up', false); player.nod = 0 })
+  onSceneCleanup(() => { anim.hold('pick_up', false); player.nod = 0; d.object.scale.copy(d.baseScale) })
   await walkTo(d.stand, d.rot)
   showEat(d)
   act('pick_up')
   await wait(contacts.pick_up.time)
-  act('idle');await wait(.35)
+  anim.play('idle');await wait(.35)
   for (let bite = 0; bite < 2; bite++) {
     await cakeBite(d,.22)
     player.nod = 0
     d.object.scale.multiplyScalar(0.8)
     await wait(0.2)
   }
-  await wait(.2)
+  // The cake regrows, as magical cake should.
+  const bitten = d.object.scale.clone()
+  await tween(1, t => d.object.scale.lerpVectors(bitten, d.baseScale, t))
 }
 
 // A visible magical morsel travels from the cake to the actual lip landmark.

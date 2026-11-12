@@ -5,6 +5,7 @@ import { model } from './models.js'
 import { floating } from './layout.js'
 import { level } from './fields.js'
 import { player } from './player.js'
+import { cast } from './cast.js'
 import { camera } from './scene.js'
 import { game, hop } from './state.js'
 import { meanSize, keepOut } from './garden.js'
@@ -71,7 +72,7 @@ function add(kind, cloud, size = 0.9 + Math.random() * 0.4) {
     kind,
     object,
     batch, slot,
-    size, // near real size, varied
+    size: kind === 'hat' ? size * 0.65 : size, // near real size, varied (the hat model is large)
     home: new THREE.Vector3(...cloud.center.map((c, k) => c + (Math.random() - 0.5) * cloud.size[k])),
     phase: Math.random() * 100,
     wander: 0.3 + Math.random() * 0.5,
@@ -97,6 +98,13 @@ export function prewarmFloating(){
 
 const chest = new THREE.Vector3(), push = new THREE.Vector3(), offset = new THREE.Vector3(), near = new THREE.Vector3()
 let clock = 0
+const hosts = Object.values(cast).map(m => m.object)
+
+// Adds to `into` how far p must move to leave the vertical capsule at (x, z) spanning y0..y1 with radius r.
+function clearCapsule(p, x, z, y0, y1, r, into) {
+  const dx = p.x - x, dy = p.y - Math.min(Math.max(p.y, y0), y1), dz = p.z - z, d = Math.hypot(dx, dy, dz)
+  if (d < r) into.addScaledVector(offset.set(dx, dy, dz), (r - d) / Math.max(d, 1e-4))
+}
 
 // For a big Fries, two teacups and a spoon drift close by his camera, so the giant sees how small they are.
 const ESCORT = [[-1.6, -0.5, -3.2], [1.9, 0.3, -4.2], [0.7, -1.1, -2.6]]
@@ -130,22 +138,25 @@ export function updateFloating(dt) {
     o.position.x += Math.sin(t * 0.31) * it.wander
     o.position.y += Math.sin(t * 0.53) * it.wander * 0.4
     o.position.z += Math.cos(t * 0.27) * it.wander
-    if (!(e >= 0 && giant > 0)) o.position.y = Math.max(o.position.y, level(o.position.x, o.position.z) + MIN_HEIGHT + BOB_ROOM)
+    if (!(e >= 0 && giant > 0)) o.position.y = Math.max(o.position.y, (Math.abs(o.position.x) < 1.2 && Math.abs(o.position.z + 3.5) < 4.3 ? 0.76 : level(o.position.x, o.position.z)) + MIN_HEIGHT + BOB_ROOM)
     o.position.y += Math.sin(t * 0.9 + it.seed) * 0.12 // a slow bob of its own, so nothing ever looks parked
     push.subVectors(o.position, chest)
-    const d = push.length(), clear = 0.6 + 0.8 * s
-    if (it.kind === 'teacup') {
-      push.setLength(d < clear ? (clear - d) * 1.5 : 0)
-      it.away.lerp(push, Math.min(1, dt * 4))
-      o.position.add(it.away)
-      o.rotation.y += it.spin * dt
-    } else if (d < 6) {
+    const d = push.length()
+    if (it.kind === 'teacup') o.rotation.y += it.spin * dt
+    else if (d < 6) {
       const look = Math.atan2(-push.x, -push.z) - o.rotation.y
       o.rotation.y += Math.atan2(Math.sin(look), Math.cos(look)) * Math.min(1, dt * 3)
     } else o.rotation.y += it.spin * dt
     o.rotation.x = Math.sin(t * 0.6 + it.seed) * 0.12
     o.rotation.z = Math.sin(t * 0.7) * 0.15 + hop(it.seed, it.extent * it.size, offset)
     o.position.add(offset)
+    // Glide out of Fries and the hosts, whatever the kind.
+    const half = it.extent * it.size / 2, f = player.feet
+    push.set(0, 0, 0)
+    clearCapsule(o.position, f.x, f.z, f.y + 0.3 * s, f.y + 1.1 * s, 0.5 * s + half, push)
+    for (const h of hosts) clearCapsule(o.position, h.position.x, h.position.z, h.position.y, h.position.y + 1.9, 0.45 + half, push)
+    it.away.lerp(push.multiplyScalar(1.5), Math.min(1, dt * 4))
+    o.position.add(it.away)
     keepOut(o.position, it.extent * it.size / 2)
     if(it===grabbed) o.position.copy(camera.localToWorld(near.set(0.8,-0.7,-2.1)))
     o.scale.setScalar(it.size * it.grow * (1 + 0.3 * game.pulse))

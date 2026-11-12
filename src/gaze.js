@@ -6,7 +6,7 @@ import { player } from './player.js'
 // down from its current chest pose, settling over about 0.7 s. Past that a standing character turns its body;
 // a seated one turns its chest a little. Targets are points that may move (Vector3s), or null for the clip's gaze.
 const DEG = Math.PI / 180, YAW = 70 * DEG, PITCH = 30 * DEG, CHEST = 20 * DEG
-const OMEGA = 8, HEAD_SPEED = 120 * DEG, BODY_SPEED = 90 * DEG
+const CLIP = 0.35, OMEGA = 5, HEAD_SPEED = 80 * DEG, BODY_SPEED = 90 * DEG
 const bone = (object, name) => object.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${name}`))
 const lookers = Object.fromEntries([...Object.values(cast).map(m => [m.name, m.object]), ['fries', player.mesh]].map(([name, object]) => {
   const head = bone(object, 'Head'), neck = bone(object, 'Neck'), chest = bone(object, 'Spine2')
@@ -14,7 +14,7 @@ const lookers = Object.fromEntries([...Object.values(cast).map(m => [m.name, m.o
   object.updateMatrixWorld(true)
   const root = object.getWorldQuaternion(new THREE.Quaternion())
   const frames = new Map([chest, neck, head].map(b => [b, b.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(root)]))
-  return [name, { object, head, neck, chest, frames, angles: new THREE.Vector2(), velocity: new THREE.Vector2(), chestYaw: 0, bodySpeed: 0, target: null }]
+  return [name, { object, head, neck, chest, frames, angles: new THREE.Vector2(), drift: new THREE.Vector2(), goal: new THREE.Vector2(), aim: 0, roll: 0, neckRoll: 0, velocity: new THREE.Vector2(), chestYaw: 0, bodySpeed: 0, target: null }]
 }))
 
 // Where a character's head is now, for others to look at.
@@ -61,9 +61,11 @@ export function updateGaze(dt, seated, free) {
     l.object.updateMatrixWorld(true)
     for (const b of [l.chest, l.neck, l.head]) poses.set(b, { base: b.quaternion.clone() })
     frame.copy(l.chest.getWorldQuaternion(q)).multiply(l.frames.get(l.chest))
+    // A target on top of the head (its own, say) has no direction.
+    const target = l.target && l.target.distanceToSquared(l.head.getWorldPosition(local)) > 0.01 ? l.target : null
     let yaw = 0
-    if (l.target) {
-      local.subVectors(l.target, l.head.getWorldPosition(local)).applyQuaternion(q.copy(frame).invert())
+    if (target) {
+      local.subVectors(target, l.head.getWorldPosition(local)).applyQuaternion(q.copy(frame).invert())
       yaw = Math.atan2(local.x, local.z)
     }
     // Past the neck's reach: a standing character turns towards the target, a seated one turns its chest.
@@ -78,21 +80,25 @@ export function updateGaze(dt, seated, free) {
     frame.multiply(q.setFromEuler(rotation.set(0, l.chestYaw, 0)))
     orient(l.chest, l.frames.get(l.chest), frame)
 
-    // Read the clip's head in the chest frame. Replace its yaw/pitch, rather than adding another 70 degrees.
+    // Read the clip's head in the chest frame. Replace its yaw/pitch, rather than adding another 70 degrees. The clips
+    // swing big heads hard, so what is kept of them (roll, and yaw/pitch with no target) is cut to a third and smoothed.
     q.copy(frame).invert().multiply(l.head.getWorldQuaternion(parent)).multiply(l.frames.get(l.head))
     rotation.setFromQuaternion(q, 'YXZ')
-    const roll = rotation.z
-    desired.set(rotation.y, -rotation.x)
-    if (l.target) {
-      local.subVectors(l.target, l.head.getWorldPosition(local)).applyQuaternion(q.copy(frame).invert())
-      desired.set(Math.atan2(local.x, local.z), Math.atan2(local.y, Math.hypot(local.x, local.z)))
+    const roll = l.roll = THREE.MathUtils.damp(l.roll, rotation.z * CLIP, 6, dt)
+    l.drift.set(THREE.MathUtils.damp(l.drift.x, rotation.y * CLIP, 6, dt), THREE.MathUtils.damp(l.drift.y, -rotation.x * CLIP, 6, dt))
+    desired.copy(l.drift)
+    if (target) {
+      local.subVectors(target, l.head.getWorldPosition(local)).applyQuaternion(q.copy(frame).invert())
+      l.goal.set(Math.atan2(local.x, local.z), Math.atan2(local.y, Math.hypot(local.x, local.z)))
     }
+    // Blend between the clip's own gaze and the target's, so one appearing or going leaves no step.
+    desired.lerp(l.goal, l.aim = THREE.MathUtils.damp(l.aim, target ? 1 : 0, 6, dt))
     desired.x = THREE.MathUtils.clamp(desired.x, -YAW, YAW)
     desired.y = THREE.MathUtils.clamp(desired.y, -PITCH, PITCH)
     follow(l, dt)
     q.copy(frame).invert().multiply(l.neck.getWorldQuaternion(parent)).multiply(l.frames.get(l.neck))
     rotation.setFromQuaternion(q, 'YXZ')
-    const neckRoll = rotation.z
+    const neckRoll = l.neckRoll = THREE.MathUtils.damp(l.neckRoll, rotation.z * CLIP, 6, dt)
     orientation.copy(frame).multiply(q.setFromEuler(rotation.set(-l.angles.y * 0.4, l.angles.x * 0.4, neckRoll)))
     orient(l.neck, l.frames.get(l.neck), orientation)
     orientation.copy(frame).multiply(q.setFromEuler(rotation.set(-l.angles.y, l.angles.x, roll)))

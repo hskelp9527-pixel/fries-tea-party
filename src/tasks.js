@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu'
 import { texture, vec2, vec3, float, mix, smoothstep, positionWorld, color, mx_noise_float } from 'three/tsl'
 import { scene, camera, lens } from './scene.js'
 import { RAPIER, world } from './physics.js'
-import { model, addColliders } from './models.js'
+import { model, addColliders, glow } from './models.js'
 import { things, gears, glints, awake } from './garden.js'
 import { player, act, walkTo, anim } from './player.js'
 import { cast, standUp, sitDown, laySpoon } from './cast.js'
@@ -13,6 +13,8 @@ import { stream, surface, CUP_PROFILE, TEA } from './liquids.js'
 import { toHand, release } from './hands.js'
 import { random } from './fields.js'
 import { game, checkpoint } from './state.js'
+import { createRhythm } from './rhythm.js'
+import { event } from './banter.js'
 import { onSceneCleanup } from './cutscene.js'
 import { spoonBridge } from './prop-staging.js'
 
@@ -211,7 +213,8 @@ export function insideHall() {
   return player.size === 'normal' && Math.abs(p.x - x) < hall.halfWidth && Math.abs(p.z - z) < hall.depth && Math.abs(p.y - y) < 0.35
 }
 
-// Six pours on the explore track's audio clock. A/D slides Fries and the cup along the table edge.
+// Six pours on the explore track's audio clock: the song's rhythm game in small. The cup glows as a pour begins; Space or
+// a click in the same window as the song (see rhythm.js) slides it under the pot and catches the tea.
 const LANES = [-0.42, 0, 0.42], POURS = 6, BEAT = 60 / 108
 const pots = ['teapot', 'pink_teapot', 'blue_teapot']
 export const teaService = {
@@ -219,15 +222,25 @@ export const teaService = {
   can: () => game.gears >= 1 && player.size === 'normal' && teaService.pos.distanceTo(player.feet) < 0.8,
   use: () => serve(),
 }
-let lane = 1, serving = false, cupTea, servedCup
+let lane = 1, serving = false, cupTea, servedCup, rhythm, notes, order
 const spot = new THREE.Vector3(...songSpot.fries.pos)
 const at = k => spot.clone().add(new THREE.Vector3(0, 0, LANES[k]))
-addEventListener('keydown', e => {
-  if (!serving || game.paused || e.repeat) return
-  if (e.code === 'KeyA') lane = Math.max(0, lane - 1)
-  if (e.code === 'KeyD') lane = Math.min(2, lane + 1)
-})
-const musicBeat = () => (heard() - playing.awake.start) / BEAT
+// A glint over the cup spot until the tea service has been tried.
+const teaGlint = glints[1].clone()
+teaGlint.position.copy(spot).setY(0.95)
+scene.add(teaGlint)
+const rhythmCue = document.getElementById('rhythm-cue'), instruction = document.getElementById('rhythm-instruction')
+const musicTime = at => heard(at) - playing.awake.start
+function tap(stamp) {
+  if (!serving || game.paused) return
+  const t = musicTime(stamp), index = rhythm.cue(t).index
+  if (!rhythm.tap(t)) return
+  lane = order[index]
+  ting(1320)
+}
+addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat) tap(e.timeStamp) })
+addEventListener('mousedown', e => { if (e.button === 0 && !e.target.closest('button,select,input,#pause-menu')) tap(e.timeStamp) })
+const musicBeat = () => musicTime() / BEAT
 async function untilBeat(beat) {
   while (!game.sceneSkipping && musicBeat() < beat) await wait(0.01)
 }
@@ -241,6 +254,7 @@ async function serve() {
   cupTea = servedCup = null
   onSceneCleanup(async failed => {
     serving = false
+    rhythmCue.hidden = true
     for (const pour of streams) pour.remove()
     for (const { object, position, rotation } of homes) { object.position.copy(position); object.rotation.copy(rotation) }
     cast.hatter.doing = cast.hatter.aim = null
@@ -257,6 +271,7 @@ async function serve() {
   camera.position.set(spot.x - 1.6, 1.7, spot.z + 0.5)
   camera.lookAt(spot.x + 0.6, 0.95, spot.z)
   servedCup = model('teacup')
+  glow(servedCup, 0xffd070, 0)
   servedCup.position.copy(spot).add(new THREE.Vector3(0.42, 0.95, 0))
   scene.add(servedCup)
   act('reach')
@@ -275,26 +290,29 @@ async function serve() {
   })
   cast.hatter.aim = targets[1]
   await Promise.all(homes.map(({ object, position }, k) => tween(1, t => object.position.lerpVectors(position, targets[k], t))))
-  serving = true
-  document.getElementById('task-hint').textContent = tr('A / D  Move your cup under the pouring teapot')
-  let caught = 0
+  document.getElementById('task-hint').textContent = tr('Space or click when your cup glows, as in the final song')
   const first = Math.ceil(musicBeat()) + 2
+  order = Array.from({ length: POURS }, () => Math.floor(rand() * 3))
+  notes = order.map((_, n) => (first + n * 4) * BEAT)
+  rhythm = createRhythm(notes)
+  rhythmCue.hidden = false
+  serving = true
   for (let n = 0; n < POURS; n++) {
-    const k = Math.floor(rand() * 3), pot = homes[k].object, beat = first + n * 4
+    const k = order[n], pot = homes[k].object, beat = first + n * 4
     cast.hatter.aim = targets[k]
     cast.hatter.anim.play('conduct', true)
     await untilBeat(beat - 1)
+    const before = rhythm.stats.hits
     await tween(BEAT, t => { pot.rotation.x = 0.8 * t })
-    const target = landing(k), spout = pot.localToWorld(spouts[k].clone())
-    const pour = stream(spout, k === lane ? cupTea.disc.getWorldPosition(target) : target, { height: 0, radius: 0.0045, colour: TEA })
+    await untilBeat(beat + 0.25)
+    const caught = rhythm.stats.hits > before, target = landing(k), spout = pot.localToWorld(spouts[k].clone())
+    const pour = stream(spout, caught ? target.clone().setY(cupTea.disc.getWorldPosition(new THREE.Vector3()).y) : target, { height: 0, radius: 0.0045, colour: TEA })
     streams.add(pour)
-    await untilBeat(beat + 1)
+    await untilBeat(beat + 1.25)
     pour.remove()
     streams.delete(pour)
-    if (servedCup.position.distanceTo(target) < 0.13) {
-      caught++
-      ting(1100 + caught * 120)
-      cupTea.set(caught / POURS)
+    if (caught) {
+      cupTea.set(rhythm.stats.hits / POURS)
     } else {
       burst(5, 0.6)
       const miss = stream(target, target.clone().setY(0.78), { height: 0, radius: 0.0045, colour: TEA })
@@ -303,10 +321,17 @@ async function serve() {
       miss.remove()
       streams.delete(miss)
     }
-    document.getElementById('task-hint').textContent = tr('A / D  Move your cup - Tea caught {caught}/{total}',{caught,total:POURS})
+    document.getElementById('task-hint').textContent = tr('Space or click when your cup glows · Tea caught {caught}/{total}', { caught: rhythm.stats.hits, total: POURS })
     await tween(BEAT, t => { pot.rotation.x = 0.8 * (1 - t) })
   }
   serving = false
+  rhythmCue.hidden = true
+  const caught = rhythm.stats.hits
+  if (!game.sceneSkipping) {
+    if (caught >= game.tea.hits) game.tea = { hits: caught, total: POURS }
+    if (!game.discovered.includes('tea-service')) game.discovered.push('tea-service')
+    checkpoint()
+  }
   await Promise.all(homes.map(({ object, position, rotation }) => {
     const from = object.position.clone()
     return tween(1, t => object.position.lerpVectors(from, position, t)).then(() => object.rotation.copy(rotation))
@@ -316,6 +341,7 @@ async function serve() {
   cupTea.remove()
   servedCup.removeFromParent()
   anim.hold('reach', false)
+  if (caught >= POURS * 0.7 && !game.sceneSkipping) { act('cheer'); burst(8, 0.8); event('teaWell') }
   await sitDown('hatter', chair)
   document.getElementById('task-hint').textContent = ''
   player.cinematic = false
@@ -324,9 +350,19 @@ async function serve() {
 export function updateTasks(dt, clock) {
   if (game.paused) return
   updateGlints()
+  teaGlint.visible = game.gears >= 1 && !game.tea.total && player.size === 'normal'
+  teaGlint.scale.setScalar(Math.min(0.32, Math.max(0.06, 0.006 * camera.position.distanceTo(teaGlint.position))))
   if (serving) {
     player.feet.lerp(at(lane), Math.min(1, dt * 12))
     servedCup.position.copy(player.feet).add(new THREE.Vector3(0.42, 0.95, 0))
+    const t = musicTime(), { open, scoring, index, remaining } = rhythm.cue(t)
+    rhythm.update(t)
+    rhythmCue.dataset.open = String(open)
+    rhythmCue.dataset.scoring = String(scoring)
+    rhythmCue.dataset.note = String(index)
+    rhythmCue.style.setProperty('--approach', Math.max(0, Math.min(1, 1 - remaining / .55)))
+    instruction.textContent = tr(t < notes[0] - .55 ? 'Listen first. Join in when the cup begins to glow.' : open ? 'Space / click · Now!' : 'Follow the pulse. Wait for the golden light.')
+    servedCup.traverse(o => { if (o.isMesh) o.material.emissiveIntensity = open ? 1.8 : 0 })
   }
   // The spoon bridge, the first time a small Fries comes near the cup under the table.
   if (!bridged && player.control && player.size === 'small' && Math.hypot(player.feet.x - ux, player.feet.z - uz) < 0.6) layBridge()

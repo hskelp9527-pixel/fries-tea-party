@@ -203,8 +203,8 @@
     "Rhythm {hits}/{total} · Streak {combo}": "节拍 {hits}/{total} · 连击 {combo}",
     "{hits}/{total} notes · best streak {best} · {grade}": "命中 {hits}/{total} 拍 · 最高连击 {best} · {grade}",
     "{count} / {total} conversations · {gears}/3 gears": "听过 {count} / {total} 段闲聊 · 找回 {gears}/3 枚齿轮",
-    "A / D  Move your cup under the pouring teapot": "A / D 移动茶杯，接住茶壶倒出的茶",
-    "A / D  Move your cup - Tea caught {caught}/{total}": "A / D 移动茶杯 · 已接住 {caught}/{total} 次茶水",
+    "Space or click when your cup glows, as in the final song": "杯子发光时按空格或点击，和最后的歌一样",
+    "Space or click when your cup glows · Tea caught {caught}/{total}": "杯子发光时按空格或点击 · 已接住 {caught}/{total} 次茶水",
     "Setting the tea table...": "正在摆好茶桌……",
     "Warming the evening light...": "正在准备花园的光线……",
     "Preparing the garden...": "正在准备花园……",
@@ -262,6 +262,8 @@
     "Rusty": "生疏",
     "{place} {seconds} s · {mistakes} slips": "{place} {seconds} 秒 · 失误 {mistakes} 次",
     "Your gear challenges": "齿轮挑战",
+    "Your tea service": "茶会侍奉",
+    "caught {hits} / {total}": "接住 {hits} / {total}",
     "WASD move · Shift run · Space jump · E interact · V view · G / right mouse hold a cup · Esc pause": "WASD 移动 · Shift 奔跑 · 空格 跳跃 · E 互动 · V 切换视角 · G / 鼠标右键 抓住茶杯 · Esc 暂停",
     "{progress}% · {mistakes}/3 slips": "{progress}% · 失误 {mistakes}/3 次"
   }

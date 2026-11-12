@@ -447,7 +447,7 @@ scene.add(brassGlints)
 
 export const drinks = layout.drinks.map(d => {
   const object = place({ ...d, solid: false })
-  return { ...d, object, pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + (d.by === 'small' ? 0.01 : 0.05)), home: object.position.clone() }
+  return { ...d, object, baseScale: object.scale.clone(), pos: new THREE.Vector3(...d.pos).setY(d.pos[1] + (d.by === 'small' ? 0.01 : 0.05)), home: object.position.clone() }
 })
 
 // Everything standing on the table, which dances in the final chorus: { object, home, turn, seed, size, on }, where

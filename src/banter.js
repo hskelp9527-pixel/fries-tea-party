@@ -53,6 +53,8 @@ export const EVENTS = {
   firstSit: { lines: ['OP-01', 'OP-02', 'OP-03'], to: 'fries' },
   sit: { lines: ['BK-06', 'BK-04'], to: 'fries' },
   standUp: { lines: ['BK-05'], to: 'fries' },
+  tea: { lines: ['BK-06'], to: 'fries' }, // the invitation to the tea service
+  teaWell: { lines: ['SG-06'], to: 'fries' }, // a good result
 }
 
 // Every conversation the results can count: the distinct keys run() records, plus the four seated exchanges and the hall note.
@@ -62,7 +64,7 @@ const where = name => name === 'fries' ? player.feet : cast[name].object.positio
 const distance = name => where(name).distanceTo(player.feet)
 let talk = null, queued = null, busy = false, gap = 12, idle = 0
 const recent = []
-let eventOrder = 0, observedGears = game.gears
+let eventOrder = 0, observedGears = game.gears, invited = false
 
 // Plays an exchange's lines in turn; `talk` tells gaze who says the current one to whom.
 async function run(exchange) {
@@ -123,6 +125,7 @@ export function updateBanter(dt) {
     observedGears = game.gears
     event('gear')
   }
+  if (!invited && game.gears && !game.tea.total && !queued && !busy && !speaking() && context().size === 'normal' && context().near('table')) { invited = true; event('tea') }
   if (busy || speaking()) return
   if (queued) { const next = queued; queued = null; run(next); return }
   gap -= dt
@@ -148,7 +151,7 @@ export function updateLooks() {
   const speaker = talk?.speaker ?? (currentLine() && speakers[currentLine()]), to = talk?.to
   for (const name of ['hatter', 'hare', 'dormouse', 'fries']) {
     let at = null
-    if (speaker === name && to) at = to
+    if (speaker === name && to && to !== name) at = to
     else if (speaker && speaker !== name) at = speaker
     else if (name !== 'fries' && distance(name) < 6 * player.p.scale) at = 'fries'
     if (name === 'dormouse' && cast.dormouse.anim.current === cast.dormouse.anim.actions.sleep) at = null

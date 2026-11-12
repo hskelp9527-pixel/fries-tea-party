@@ -116,7 +116,7 @@ export async function toHand(object, prop, {seconds=.6,height=.08}={}) {
 export function hold(object, prop) {
   const hand = contacts[prop.clip].hand, grip = prop.grip ?? [0, 0, 0]
   const anchor = object.getWorldPosition(new THREE.Vector3())
-  const how = { hand, grip, clip: prop.clip, anchor }
+  const how = { hand, grip, clip: prop.clip, anchor, rest: held.get(object)?.rest ?? object.quaternion.clone() }
   held.set(object, how)
   if(isPaper(object)){
     how.paper=true;how.wristLocal=player.mesh.worldToLocal(bones[hand].getWorldPosition(new THREE.Vector3()))
@@ -155,7 +155,7 @@ export function holdCast(object, character, hand = 'RightHand', grip = [0, 0, 0]
   const bone = character.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(`mixamorig:${hand}`))
   const rotation = bone.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(object.getWorldQuaternion(new THREE.Quaternion()))
   const side = hand.startsWith('Left') ? 'left' : 'right', anchor = object.getWorldPosition(new THREE.Vector3())
-  castHeld.set(object, { bone, character, side, grip, rotation, anchor, flight: 0 })
+  castHeld.set(object, { bone, character, side, grip, rotation, anchor, flight: 0, rest: castHeld.get(object)?.rest ?? object.quaternion.clone() })
   setHandTarget(character, side, object, target => wristForProp(character, side, anchor, grip, target), 1)
   const otherSide = side === 'left' ? 'right' : 'left'
   setHandTarget(character, otherSide, object, target => {
@@ -186,18 +186,22 @@ export function holdCastAt(object,character,handName,point){
 export function release(object) {
   const owner = castHeld.get(object)?.character ?? player.mesh
   clearHandTarget(owner, object)
+  const rest = (castHeld.get(object) ?? held.get(object))?.rest
+  if (rest) object.quaternion.copy(rest)
   castHeld.delete(object)
   held.delete(object)
 }
 
-let lastUpdate = performance.now()
+let lastUpdate = performance.now(), relax = 0 // how far the upper body is eased to the idle pose for a cup in hand
 export function updateHands(dt) {
   const now = performance.now()
   dt ??= Math.min(0.05, Math.max(0, (now - lastUpdate) / 1000))
   lastUpdate = now
   const cups=[...held].filter(([,how])=>how.cup)
+  relax=THREE.MathUtils.damp(relax,cups.length?1:0,8,dt)
+  if(relax>.001)anim.relaxUpperBody(relax)
   for(const [object]of cups){
-    anim.relaxUpperBody();cupPose(object,cupPoint,cupRotation);worldPosition(object,cupPoint);object.quaternion.copy(cupRotation)
+    cupPose(object,cupPoint,cupRotation);worldPosition(object,cupPoint);object.quaternion.copy(cupRotation)
     if(object.parent)object.quaternion.premultiply(object.parent.getWorldQuaternion(parentTurn).invert())
     object.updateWorldMatrix(true,true)
   }

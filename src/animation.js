@@ -21,7 +21,7 @@ export class Animator {
     if(this.actions.idle){
       const idle=this.actions.idle;idle.reset().play();this.mixer.update(0)
       object.traverse(bone=>{if(bone.isBone&&/(Hips|(?:Left|Right)(?:UpLeg|Leg|Foot|ToeBase|Toe_End))$/.test(bone.name))this.standPose.push({bone,position:bone.position.clone(),quaternion:bone.quaternion.clone()})})
-      object.traverse(bone=>{if(bone.isBone&&!this.standPose.some(p=>p.bone===bone)&&!bone.name.startsWith('secondary_'))this.upperPose.push({bone,position:bone.position.clone(),quaternion:bone.quaternion.clone()})})
+      object.traverse(bone=>{if(bone.isBone&&!this.standPose.some(p=>p.bone===bone)&&!bone.name.startsWith('secondary_')&&!/(Neck|Head)$/.test(bone.name))this.upperPose.push({bone,position:bone.position.clone(),quaternion:bone.quaternion.clone()})})
       idle.stop()
     }
     if (object.parent) {
@@ -36,21 +36,21 @@ export class Animator {
   standLowerBody(){
     for(const pose of this.standPose){pose.bone.position.copy(pose.position);pose.bone.quaternion.copy(pose.quaternion)}
   }
-  relaxUpperBody(){
-    for(const pose of this.upperPose){pose.bone.position.copy(pose.position);pose.bone.quaternion.copy(pose.quaternion)}
+  relaxUpperBody(weight=1){
+    for(const pose of this.upperPose){pose.bone.position.lerp(pose.position,weight);pose.bone.quaternion.slerp(pose.quaternion,weight)}
     this.object.updateWorldMatrix(true,true)
   }
 
   // Crossfades to a clip that loops, or with `once` plays a single time and holds its last frame.
-  play(name, once = undefined, reverse = false) {
+  play(name, once = undefined, reverse = false, fade = FADE) {
     const next = this.actions[name]
     const metadata = clipInfo(name)
     once ??= !metadata.loop
     if (!next || (next === this.current && !once)) return
     if (next === this.current) next.reset()
     else {
-      this.current?.fadeOut(FADE)
-      next.reset().fadeIn(FADE)
+      this.current?.fadeOut(fade)
+      next.reset().fadeIn(fade)
     }
     next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity)
     next.clampWhenFinished = once

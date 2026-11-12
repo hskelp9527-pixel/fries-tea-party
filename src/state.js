@@ -13,6 +13,7 @@ export const game = {
   puzzleMistakes: 0,
   found: [],
   rhythm: { hits: 0, misses: 0, combo: 0, best: 0, total: 0 },
+  tea: { hits: 0, total: 0 }, // best tea service: tea caught of pours
   gears: 0, // gears found
   pulse: 0, // 1 on each beat of the song, decaying to 0
   pass: -1, // which pass of the song is playing, -1 when none
@@ -26,7 +27,7 @@ export const onPhaseChange = listener => { phaseListeners.add(listener); return 
 export function checkpoint() {
   if (!phases.includes(game.phase)) return
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 1, phase: game.phase,
-    found: game.found, elapsed: game.elapsed, rhythm: game.rhythm,
+    found: game.found, elapsed: game.elapsed, rhythm: game.rhythm, tea: game.tea,
     discovered: game.discovered, puzzles: game.puzzles, puzzleMistakes: game.puzzleMistakes })) } catch {}
 }
 export function savedGame() {

@@ -233,6 +233,7 @@ export async function walkTo([x, y, z], rot) {
 
 // Locomotion from his real ground speed: idle, walk or run paced so the feet do not slide, jump in the air,
 // talk while one of his own lines plays, and a look around after 8 s standing still.
+let lowerHold = 0
 function animate(dt, speed, airborne) {
   const s = player.p.scale
   const moving = speed > 0.1 * s
@@ -245,12 +246,14 @@ function animate(dt, speed, airborne) {
       const gait = speed > 1.5 * player.p.speed ? 'run' : 'walk'
       anim.play(gait)
       anim.pace(gait, speed, s)
-    } else if (currentSpeaker() === 'fries') anim.play('talk')
+    } else if (currentSpeaker() === 'fries') anim.play('talk', undefined, false, 0.5)
     else if (still > 8 && still - dt <= 8) act('look_around')
     else anim.play('idle')
   }
   anim.mixer.update(dt)
-  if(clipInfo(anim.current?.getClip().name??'idle').posture==='upper')anim.standLowerBody()
+  // Keep the legs and hips on the standing pose through the fade out of an upper-body clip too, or they snap to its lean.
+  lowerHold=clipInfo(anim.current?.getClip().name??'idle').posture==='upper'?0.25:Math.max(0,lowerHold-dt)
+  if(lowerHold>0)anim.standLowerBody()
   if (player.nod) player.mesh.getObjectByName('mixamorigHead').rotateX(player.nod)
   blink.update(dt, anim.current?.getClip().name.includes('sleep'))
 }

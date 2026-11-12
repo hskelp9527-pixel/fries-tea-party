@@ -234,12 +234,12 @@ function play(m, line) {
     // Asleep on the plate; on each of its lines it wakes, sits up and talks, then sleeps again.
     if (!speaking) {
       m.woken = false
-      m.anim.play('sleep')
+      m.anim.play('sleep', undefined, false, 1.2)
     } else if (!m.woken) {
       m.woken = true
-      m.anim.play('wake', true)
-    } else if (m.anim.current !== m.anim.actions.wake || !m.anim.current.isRunning()) m.anim.play('sit_talk')
-  } else m.anim.play((m.seated ? SEATED_GESTURES : STANDING_GESTURES)[(line && BEATS[line]?.[m.name]) ?? (speaking ? 'talk' : 'idle')])
+      m.anim.play('wake', true, false, 2)
+    } else if (m.anim.current !== m.anim.actions.wake || !m.anim.current.isRunning()) m.anim.play('sit_talk', undefined, false, 0.6)
+  } else m.anim.play((m.seated ? SEATED_GESTURES : STANDING_GESTURES)[(line && BEATS[line]?.[m.name]) ?? (speaking ? 'talk' : 'idle')], undefined, false, 0.5)
 }
 
 const lift = new THREE.Vector3(), parentScale = new THREE.Vector3()

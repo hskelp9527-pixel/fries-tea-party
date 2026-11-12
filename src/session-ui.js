@@ -100,6 +100,7 @@ function updateResults() {
   document.getElementById('result-rhythm').textContent = tr('{hits}/{total} notes · best streak {best} · {grade}',{hits,total,best,grade:tr(grade)})
   document.getElementById('result-puzzles').textContent = Object.entries(game.puzzles).filter(([, p]) => p.seconds !== undefined)
     .map(([layer, p]) => tr('{place} {seconds} s · {mistakes} slips',{place:tr(PLACES[layer]),seconds:p.seconds,mistakes:p.mistakes})).join(' · ') || '—'
+  document.getElementById('result-tea').textContent = game.tea.total ? tr('caught {hits} / {total}',game.tea) : '—'
 }
 onLanguageChange(()=>{
   if(game.phase==='complete')updateResults()
